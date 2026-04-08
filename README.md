@@ -1,0 +1,2 @@
+# mini-concert-booking-app
+An internship project: A booking application using Apache Kafka to handle high throughput with minimum latency, while addressing race conditions and transaction locking issues
