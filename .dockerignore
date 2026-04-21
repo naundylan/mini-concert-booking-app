@@ -1,0 +1,16 @@
+# Bỏ qua thư mục build cũ ở máy thật
+build/
+target/
+out/
+
+# Bỏ qua thư mục cache của Gradle
+.gradle/
+
+# Bỏ qua cấu hình IDE
+.idea/
+.vscode/
+*.iml
+
+# Bỏ qua Git
+.git/
+.gitignore

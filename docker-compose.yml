@@ -1,0 +1,94 @@
+services:
+  # 1. DATABASE POSTGRESQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: ticket_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: ticket_booking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. REDIS
+  redis:
+    image: redis:7-alpine
+    container_name: ticket_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. BACKEND SPRING BOOT
+  app:
+    build: .
+    container_name: ticket_backend
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ticket_booking_db
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+
+  # 4. PGADMIN 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ticket_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  # ==============================================================
+  # 5. KAFKA & ZOOKEEPER (Dành cho Phase 3 - Đang tạm tắt)
+  # Bỏ dấu # đi khi bạn bắt đầu làm chức năng Hàng chờ ảo (Queue)
+  # ==============================================================
+  # zookeeper:
+  #   image: bitnami/zookeeper:latest
+  #   container_name: ticket_zookeeper
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  #   ports:
+  #     - "2181:2181"
+  #
+  # kafka:
+  #   image: bitnami/kafka:latest
+  #   container_name: ticket_kafka
+  #   depends_on:
+  #     - zookeeper
+  #   environment:
+  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+  #     - ALLOW_PLAINTEXT_LISTENER=yes
+  #   ports:
+  #     - "9092:9092"
+
+  # =========================================================
+  # 5. FRONTEND (Mở comment khi bạn code xong frontend)
+  # Lưu ý: Cần tạo 1 file Dockerfile RIÊNG bên trong thư mục frontend/
+  # =========================================================
+  # frontend:
+  #   build: ./frontend    # Dòng này trỏ vào thư mục frontend/
+  #   container_name: ticket_frontend
+  #   restart: always
+  #   ports:
+  #     - "3000:80"
+  #   depends_on:
+  #     - app
+
+volumes:
+  postgres_data:
+  redis_data:
