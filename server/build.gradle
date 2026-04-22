@@ -70,6 +70,20 @@ dependencies {
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Bảo mật & OAuth2
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // WebSocket cho Real-time
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // Redis (VŨ KHÍ BÍ MẬT để chống Race Condition)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    
+    // Thư viện hỗ trợ Map dữ liệu (tùy chọn nhưng nên có)
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

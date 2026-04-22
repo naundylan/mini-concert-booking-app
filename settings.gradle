@@ -10,6 +10,6 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-rootProject.name = 'mini-concert-booking-service'
-include('backend')
+rootProject.name = 'mini-concert-booking-app'
+include('server')
 // include('frontend')
