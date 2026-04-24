@@ -9,3 +9,6 @@ build
 
 # Ignore .env file
 .env
+
+/server/bin/
+.class
