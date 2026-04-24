@@ -65,6 +65,10 @@ public class JwtService {
     return extractAllClaims(token).getExpiration().toInstant();
   }
 
+  public Instant getTokenIssuedAt(String token) {
+    return extractAllClaims(token).getIssuedAt().toInstant();
+  }
+
   private Claims extractAllClaims(String token) {
     return Jwts.parser()
         .verifyWith(this.getSignKey())

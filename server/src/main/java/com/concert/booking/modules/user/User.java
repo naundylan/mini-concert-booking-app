@@ -5,6 +5,7 @@ import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -65,6 +66,9 @@ public class User extends AbstractAuditEntity {
 
   @Column(name = "password_hash", length = 255)
   String passwordHash; // Chỉ có khi authProvider = LOCAL (Admin/Staff)
+
+  @Column(name = "tokens_valid_from")
+  Instant tokensValidFrom; // Timestamp để invalidate tất cả tokens cũ
 
   // createdAt, updatedAt, createdBy, updatedBy inherited from AbstractAuditEntity
 }
