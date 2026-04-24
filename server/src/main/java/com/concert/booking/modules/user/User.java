@@ -1,78 +1,70 @@
 package com.concert.booking.modules.user;
 
-import jakarta.persistence.*;
-import java.time.Instant;
-import java.util.UUID;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+import com.concert.booking.common.entity.AbstractAuditEntity;
 import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
-import org.hibernate.annotations.CreationTimestamp;
+import jakarta.persistence.*;
+import java.util.UUID;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
 @Table(
     name = "users",
     indexes = {
-        @Index(name = "idx_user_phone", columnList = "phone"),
-        @Index(name = "idx_user_email", columnList = "email"),
-        @Index(name = "idx_user_role", columnList = "role"),
-        @Index(name = "idx_user_status", columnList = "status")
-    }
-)
+      @Index(name = "idx_user_phone", columnList = "phone"),
+      @Index(name = "idx_user_email", columnList = "email"),
+      @Index(name = "idx_user_role", columnList = "role"),
+      @Index(name = "idx_user_status", columnList = "status")
+    })
 @Getter
 @Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@SuperBuilder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class User {
-    
-    @Id
-    @GeneratedValue
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
-    UUID id;
-    
-    @Column(length = 20, nullable = false, unique = true)
-    String phone; // Mỏ neo chính - Bắt buộc với MỌI user
+public class User extends AbstractAuditEntity {
 
-    @Column(length = 100, unique = true)
-    String username; // Chỉ dành cho ADMIN/STAFF (LOCAL)
+  @Id
+  @GeneratedValue
+  @UuidGenerator(style = UuidGenerator.Style.TIME)
+  UUID id;
 
-    @Column(unique = true, length = 255)
-    String email; // Dành cho GĐ2 (GOOGLE) hoặc email nội bộ
+  @Column(length = 20, nullable = false, unique = true)
+  String phone; // Mỏ neo chính - Bắt buộc với MỌI user
 
-    @Column(name = "google_id", unique = true, length = 255)
-    String googleId; // Dành cho GĐ2 (GOOGLE)
+  @Column(length = 100, unique = true)
+  String username; // Chỉ dành cho ADMIN/STAFF (LOCAL)
 
-    // --- USER INFO ---
+  @Column(unique = true, length = 255)
+  String email; // Dành cho GĐ2 (GOOGLE) hoặc email nội bộ
 
-    @Column(name = "full_name", length = 255, nullable = false)
-    String fullName;
+  @Column(name = "google_id", unique = true, length = 255)
+  String googleId; // Dành cho GĐ2 (GOOGLE)
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    UserRole role = UserRole.CUSTOMER;
+  // --- USER INFO ---
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(name = "auth_provider", nullable = false, length = 20)
-    AuthProvider authProvider = AuthProvider.LOCAL;
+  @Column(name = "full_name", length = 255, nullable = false)
+  String fullName;
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    UserStatus status = UserStatus.ACTIVE;
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  UserRole role = UserRole.CUSTOMER;
 
-    @Column(name = "password_hash", length = 255)
-    String passwordHash; // Chỉ có khi authProvider = LOCAL (Admin/Staff)
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(name = "auth_provider", nullable = false, length = 20)
+  AuthProvider authProvider = AuthProvider.LOCAL;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false, nullable = false)
-    Instant createdAt;
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  UserStatus status = UserStatus.ACTIVE;
 
-    @Column(name = "created_by")
-    UUID createdBy; // Lưu ID của Admin/Staff tạo ra record này (nếu có)
+  @Column(name = "password_hash", length = 255)
+  String passwordHash; // Chỉ có khi authProvider = LOCAL (Admin/Staff)
+
+  // createdAt, updatedAt, createdBy, updatedBy inherited from AbstractAuditEntity
 }

@@ -1,5 +1,9 @@
 package com.concert.booking.modules.auth.filter;
 
+import com.concert.booking.core.auth.TokenBlacklistService;
+import com.concert.booking.modules.auth.security.CustomUserDetails;
+import com.concert.booking.modules.auth.security.JwtService;
+import com.concert.booking.modules.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,9 +15,6 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import com.concert.booking.modules.auth.security.CustomUserDetails;
-import com.concert.booking.modules.auth.security.JwtService;
-import com.concert.booking.modules.user.UserService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -27,6 +28,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
   JwtService jwtService;
   UserService userService;
+  TokenBlacklistService tokenBlacklistService;
 
   @Override
   protected void doFilterInternal(
@@ -45,6 +47,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
       try {
+        // Check if token is blacklisted
+        if (tokenBlacklistService.isBlacklisted(token)) {
+          log.warn("[LOG] Token is blacklisted");
+          filterChain.doFilter(request, response);
+          return;
+        }
+
         UUID userId = jwtService.extractUserId(token);
 
         if (userId != null) {

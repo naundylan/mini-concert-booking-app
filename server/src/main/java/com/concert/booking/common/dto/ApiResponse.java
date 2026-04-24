@@ -1,10 +1,10 @@
 package com.concert.booking.common.dto;
 
+import com.concert.booking.common.exception.AppException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
-import com.concert.booking.common.exception.AppException;
 import org.springframework.http.HttpStatus;
 
 @Getter
