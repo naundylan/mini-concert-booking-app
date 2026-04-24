@@ -12,11 +12,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateCustomerDTO {
 
-    @NotBlank(message = "Họ tên không được để trống")
-    @Size(max = 255, message = "Họ tên không được vượt quá 255 ký tự")
-    String fullName;
+  @NotBlank(message = "Họ tên không được để trống")
+  @Size(max = 255, message = "Họ tên không được vượt quá 255 ký tự")
+  String fullName;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
-    @Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự")
-    String phone;
+  @NotBlank(message = "Số điện thoại không được để trống")
+  @Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự")
+  String phone;
 }

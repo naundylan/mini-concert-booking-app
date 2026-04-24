@@ -1,8 +1,7 @@
 package com.concert.booking.modules.auth;
 
-import java.util.UUID;
 import com.concert.booking.modules.auth.dto.*;
-
+import java.util.UUID;
 
 public interface AuthService {
   // Chỉ dành cho Admin & Staff đăng nhập
@@ -14,7 +13,7 @@ public interface AuthService {
 
   void changePassword(UUID userId, ChangePasswordDTO dto);
 
-//   void forgotPassword(ForgotPasswordDTO dto);
+  //   void forgotPassword(ForgotPasswordDTO dto);
 
-//   void resetPassword(ResetPasswordDTO dto);
+  //   void resetPassword(ResetPasswordDTO dto);
 }

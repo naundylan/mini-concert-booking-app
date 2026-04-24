@@ -17,4 +17,5 @@ public class SuperUserProperties {
   String password;
   String email;
   String fullName;
+  String phone;
 }

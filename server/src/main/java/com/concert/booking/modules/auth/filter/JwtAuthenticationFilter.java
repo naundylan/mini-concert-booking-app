@@ -1,5 +1,8 @@
 package com.concert.booking.modules.auth.filter;
 
+import com.concert.booking.modules.auth.security.CustomUserDetails;
+import com.concert.booking.modules.auth.security.JwtService;
+import com.concert.booking.modules.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,9 +14,6 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import com.concert.booking.modules.auth.security.CustomUserDetails;
-import com.concert.booking.modules.auth.security.JwtService;
-import com.concert.booking.modules.user.UserService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;

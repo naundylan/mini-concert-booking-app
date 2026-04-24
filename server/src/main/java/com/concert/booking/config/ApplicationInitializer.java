@@ -1,13 +1,13 @@
 package com.concert.booking.config;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import lombok.extern.slf4j.Slf4j;
 import com.concert.booking.common.constants.SuperUserProperties;
 import com.concert.booking.modules.user.User;
 import com.concert.booking.modules.user.UserRepository;
 import com.concert.booking.modules.user.enums.UserRole;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +27,10 @@ public class ApplicationInitializer {
       if (!userRepository.existsByUsername(superuser.getUsername())) {
         userRepository.save(
             User.builder()
+                .phone(
+                    superuser.getPhone() != null && !superuser.getPhone().isBlank()
+                        ? superuser.getPhone()
+                        : "0000000000")
                 .username(superuser.getUsername())
                 .passwordHash(passwordEncoder.encode(superuser.getPassword()))
                 .email(superuser.getEmail())

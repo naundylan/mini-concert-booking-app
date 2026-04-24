@@ -1,5 +1,6 @@
 package com.concert.booking.modules.auth.security;
 
+import com.concert.booking.common.constants.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -10,7 +11,6 @@ import javax.crypto.SecretKey;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import com.concert.booking.common.constants.JwtProperties;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,6 +29,15 @@ public class JwtService {
         .subject(id.toString())
         .issuedAt(new Date())
         .expiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessTokenExpiration()))
+        .signWith(this.getSignKey())
+        .compact();
+  }
+
+  public String generateRefreshToken(UUID id) {
+    return Jwts.builder()
+        .subject(id.toString())
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshTokenExpiration())) // Sử dụng expiration của Refresh Token
         .signWith(this.getSignKey())
         .compact();
   }

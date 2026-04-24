@@ -1,10 +1,5 @@
 package com.concert.booking.modules.auth;
 
-import java.time.Instant;
-import java.util.UUID;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import com.concert.booking.common.constants.JwtProperties;
 import com.concert.booking.common.exception.AppException;
 import com.concert.booking.core.file.FileService;
@@ -12,12 +7,15 @@ import com.concert.booking.core.mail.MailService;
 // import com.concert.booking.modules.audit.AuditLogService;
 import com.concert.booking.modules.audit.enums.*;
 import com.concert.booking.modules.auth.dto.*;
-import com.concert.booking.modules.auth.security.AuthUtils;
 import com.concert.booking.modules.auth.security.JwtService;
 import com.concert.booking.modules.user.*;
 import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
+import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,7 +33,8 @@ public class AuthServiceImpl implements AuthService {
   MailService mailService;
   FileService fileService;
   ModelMapper modelMapper;
-//   AuditLogService auditLogService;
+
+  //   AuditLogService auditLogService;
 
   @Override
   @Transactional
@@ -49,17 +48,21 @@ public class AuthServiceImpl implements AuthService {
     validateUserCanAuthenticate(user);
 
     String accessToken = jwtService.generateAccessToken(user.getId());
+    String refreshToken = jwtService.generateRefreshToken(user.getId());
 
     return TokenDTO.builder()
         .accessToken(accessToken)
+        .refreshToken(refreshToken)
         .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
+        .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
         .build();
   }
 
   @Override
   @Transactional
   public TokenDTO refresh(RefreshTokenDTO dto) {
-    throw new AppException(HttpStatus.NOT_IMPLEMENTED, "Refresh token chưa được hỗ trợ trong Phase 1");
+    throw new AppException(
+        HttpStatus.NOT_IMPLEMENTED, "Refresh token chưa được hỗ trợ trong Phase 1");
   }
 
   @Override
@@ -84,87 +87,87 @@ public class AuthServiceImpl implements AuthService {
     userRepository.save(user);
   }
 
-//   @Override
-//   public void forgotPassword(ForgotPasswordDTO dto) {
-//     User user = userRepository.findByEmail(dto.getEmail()).orElse(null);
-//     if (user == null) {
-//       auditLogService.log(
-//           null,
-//           dto.getEmail(),
-//           AuditLogAction.FORGOT_PASSWORD,
-//           AuditLogEntity.AUTH,
-//           null,
-//           AuditLogStatus.FAILED,
-//           "Gửi yêu cầu quên mật khẩu cho email không tồn tại");
-//       return;
-//     }
+  //   @Override
+  //   public void forgotPassword(ForgotPasswordDTO dto) {
+  //     User user = userRepository.findByEmail(dto.getEmail()).orElse(null);
+  //     if (user == null) {
+  //       auditLogService.log(
+  //           null,
+  //           dto.getEmail(),
+  //           AuditLogAction.FORGOT_PASSWORD,
+  //           AuditLogEntity.AUTH,
+  //           null,
+  //           AuditLogStatus.FAILED,
+  //           "Gửi yêu cầu quên mật khẩu cho email không tồn tại");
+  //       return;
+  //     }
 
-//     String token = AuthUtils.generateToken(64);
-//     String tokenHash = AuthUtils.hashToken(token);
+  //     String token = AuthUtils.generateToken(64);
+  //     String tokenHash = AuthUtils.hashToken(token);
 
-//     user.setResetPasswordTokenHash(tokenHash);
-//     user.setResetPasswordTokenExpiredAt(Instant.now().plusSeconds(15 * 60));
+  //     user.setResetPasswordTokenHash(tokenHash);
+  //     user.setResetPasswordTokenExpiredAt(Instant.now().plusSeconds(15 * 60));
 
-//     userRepository.save(user);
+  //     userRepository.save(user);
 
-//     mailService.sendForgotPasswordMail(user.getEmail(), token);
-//     auditLogService.log(
-//         user.getId(),
-//         user.getUsername(),
-//         AuditLogAction.FORGOT_PASSWORD,
-//         AuditLogEntity.USER,
-//         user.getId().toString(),
-//         AuditLogStatus.SUCCESS,
-//         "Gửi email đặt lại mật khẩu thành công");
-//   }
+  //     mailService.sendForgotPasswordMail(user.getEmail(), token);
+  //     auditLogService.log(
+  //         user.getId(),
+  //         user.getUsername(),
+  //         AuditLogAction.FORGOT_PASSWORD,
+  //         AuditLogEntity.USER,
+  //         user.getId().toString(),
+  //         AuditLogStatus.SUCCESS,
+  //         "Gửi email đặt lại mật khẩu thành công");
+  //   }
 
-//   @Override
-//   @Transactional
-//   public void resetPassword(ResetPasswordDTO dto) {
-//     String tokenHash = AuthUtils.hashToken(dto.getToken());
+  //   @Override
+  //   @Transactional
+  //   public void resetPassword(ResetPasswordDTO dto) {
+  //     String tokenHash = AuthUtils.hashToken(dto.getToken());
 
-//     User user =
-//         userRepository
-//             .findByResetPasswordTokenHash(tokenHash)
-//             .orElseThrow(this::invalidResetPasswordTokenException);
+  //     User user =
+  //         userRepository
+  //             .findByResetPasswordTokenHash(tokenHash)
+  //             .orElseThrow(this::invalidResetPasswordTokenException);
 
-//     Instant now = Instant.now();
-//     Instant resetPasswordTokenExpiredAt = user.getResetPasswordTokenExpiredAt();
-//     if (resetPasswordTokenExpiredAt == null || !resetPasswordTokenExpiredAt.isAfter(now)) {
-//       user.setResetPasswordTokenHash(null);
-//       user.setResetPasswordTokenExpiredAt(null);
-//       userRepository.save(user);
-//       auditLogService.log(
-//           user.getId(),
-//           user.getUsername(),
-//           AuditLogAction.RESET_PASSWORD,
-//           AuditLogEntity.USER,
-//           user.getId().toString(),
-//           AuditLogStatus.FAILED,
-//           "Đặt lại mật khẩu thất bại do token hết hạn");
-//       throw new AppException(
-//           HttpStatus.UNAUTHORIZED, AuthMessage.EXPIRED_RESET_PASSWORD_TOKEN.getMessage());
-//     }
+  //     Instant now = Instant.now();
+  //     Instant resetPasswordTokenExpiredAt = user.getResetPasswordTokenExpiredAt();
+  //     if (resetPasswordTokenExpiredAt == null || !resetPasswordTokenExpiredAt.isAfter(now)) {
+  //       user.setResetPasswordTokenHash(null);
+  //       user.setResetPasswordTokenExpiredAt(null);
+  //       userRepository.save(user);
+  //       auditLogService.log(
+  //           user.getId(),
+  //           user.getUsername(),
+  //           AuditLogAction.RESET_PASSWORD,
+  //           AuditLogEntity.USER,
+  //           user.getId().toString(),
+  //           AuditLogStatus.FAILED,
+  //           "Đặt lại mật khẩu thất bại do token hết hạn");
+  //       throw new AppException(
+  //           HttpStatus.UNAUTHORIZED, AuthMessage.EXPIRED_RESET_PASSWORD_TOKEN.getMessage());
+  //     }
 
-//     user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
-//     user.setPasswordChanged(true);
+  //     user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+  //     user.setPasswordChanged(true);
 
-//     user.setResetPasswordTokenHash(null);
-//     user.setResetPasswordTokenExpiredAt(null);
+  //     user.setResetPasswordTokenHash(null);
+  //     user.setResetPasswordTokenExpiredAt(null);
 
-//     user.setRefreshTokenHash(null);
-//     user.setRefreshTokenExpiredAt(null);
+  //     user.setRefreshTokenHash(null);
+  //     user.setRefreshTokenExpiredAt(null);
 
-//     userRepository.save(user);
-//     auditLogService.log(
-//         user.getId(),
-//         user.getUsername(),
-//         AuditLogAction.RESET_PASSWORD,
-//         AuditLogEntity.USER,
-//         user.getId().toString(),
-//         AuditLogStatus.SUCCESS,
-//         "Đặt lại mật khẩu thành công");
-//   }
+  //     userRepository.save(user);
+  //     auditLogService.log(
+  //         user.getId(),
+  //         user.getUsername(),
+  //         AuditLogAction.RESET_PASSWORD,
+  //         AuditLogEntity.USER,
+  //         user.getId().toString(),
+  //         AuditLogStatus.SUCCESS,
+  //         "Đặt lại mật khẩu thành công");
+  //   }
 
   private User findUserByUsername(String username) {
     return userRepository
@@ -187,26 +190,26 @@ public class AuthServiceImpl implements AuthService {
   }
 
   private AppException invalidCredentialsException(String username) {
-//     auditLogService.log(
-//         null,
-//         username,
-//         AuditLogAction.LOGIN,
-//         AuditLogEntity.AUTH,
-//         null,
-//         AuditLogStatus.FAILED,
-//         "Đăng nhập thất bại do username không tồn tại");
+    //     auditLogService.log(
+    //         null,
+    //         username,
+    //         AuditLogAction.LOGIN,
+    //         AuditLogEntity.AUTH,
+    //         null,
+    //         AuditLogStatus.FAILED,
+    //         "Đăng nhập thất bại do username không tồn tại");
     return new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
   }
 
   private AppException invalidResetPasswordTokenException() {
-//     auditLogService.log(
-//         null,
-//         "anonymous",
-//         AuditLogAction.RESET_PASSWORD,
-//         AuditLogEntity.AUTH,
-//         null,
-//         AuditLogStatus.FAILED,
-//         "Đặt lại mật khẩu thất bại do token không hợp lệ");
+    //     auditLogService.log(
+    //         null,
+    //         "anonymous",
+    //         AuditLogAction.RESET_PASSWORD,
+    //         AuditLogEntity.AUTH,
+    //         null,
+    //         AuditLogStatus.FAILED,
+    //         "Đặt lại mật khẩu thất bại do token không hợp lệ");
     return new AppException(
         HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_RESET_PASSWORD_TOKEN.getMessage());
   }
