@@ -50,6 +50,17 @@ public class JwtService {
     return extractAllClaims(token).getExpiration().before(new Date());
   }
 
+<<<<<<< HEAD
+=======
+  public Instant getTokenExpiration(String token) {
+    return extractAllClaims(token).getExpiration().toInstant();
+  }
+
+  public Instant getTokenIssuedAt(String token) {
+    return extractAllClaims(token).getIssuedAt().toInstant();
+  }
+
+>>>>>>> 772f443 (feature (auth): add change status of staff for admin & add reset staff password)
   private Claims extractAllClaims(String token) {
     return Jwts.parser()
         .verifyWith(this.getSignKey())

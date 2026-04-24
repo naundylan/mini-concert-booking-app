@@ -1,18 +1,16 @@
-package com.concert.booking.modules.auth.dto;
+package com.concert.booking.modules.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-@Getter
-@Setter
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ResetPasswordDTO {
-  @NotBlank(message = "Token không được để trống")
-  String token;
+public class ResetStaffPasswordDTO {
 
   @NotBlank(message = "Mật khẩu mới không được để trống")
   @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")

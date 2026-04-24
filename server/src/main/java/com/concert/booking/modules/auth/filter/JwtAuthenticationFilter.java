@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.NonNull;
@@ -49,6 +50,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (userId != null) {
           CustomUserDetails userDetails = userService.loadUserById(userId);
+
+          // Check if token is issued before tokensValidFrom (force logout)
+          Instant tokenIssuedAt = jwtService.getTokenIssuedAt(token);
+          if (userDetails.getUser().getTokensValidFrom() != null
+              && tokenIssuedAt.isBefore(userDetails.getUser().getTokensValidFrom())) {
+            log.warn("[LOG] Token issued before tokensValidFrom, rejecting");
+            filterChain.doFilter(request, response);
+            return;
+          }
+
           if (jwtService.isTokenValid(token, userDetails)) {
             UsernamePasswordAuthenticationToken authToken =
                 new UsernamePasswordAuthenticationToken(
