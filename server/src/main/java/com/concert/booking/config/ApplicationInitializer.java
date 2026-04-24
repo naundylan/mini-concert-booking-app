@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.concert.booking.common.constants.SuperUserProperties;
 import com.concert.booking.modules.user.User;
 import com.concert.booking.modules.user.UserRepository;
-import com.concert.booking.modules.user.UserRole;
+import com.concert.booking.modules.user.enums.UserRole;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
