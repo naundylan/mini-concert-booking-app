@@ -4,12 +4,9 @@ import com.concert.booking.common.exception.AppException;
 import com.concert.booking.modules.auth.security.CustomUserDetails;
 import com.concert.booking.modules.user.dto.CreateCustomerDTO;
 import com.concert.booking.modules.user.dto.CreateStaffDTO;
-import com.concert.booking.modules.user.dto.ResetStaffPasswordDTO;
-import com.concert.booking.modules.user.dto.UpdateStaffStatusDTO;
 import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
-import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -81,46 +78,46 @@ public class UserServiceImpl implements UserService {
     return CustomUserDetails.builder().user(user).build();
   }
 
-  @Override
-  @Transactional
-  public void updateStaffStatus(UUID staffId, UpdateStaffStatusDTO dto, UUID updatedBy) {
-    User staff =
-        userRepository
-            .findById(staffId)
-            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Staff không tồn tại"));
+  // @Override
+  // @Transactional
+  // public void updateStaffStatus(UUID staffId, UpdateStaffStatusDTO dto, UUID updatedBy) {
+  //   User staff =
+  //       userRepository
+  //           .findById(staffId)
+  //           .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Staff không tồn tại"));
 
-    if (staff.getRole() != UserRole.STAFF) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Người dùng này không phải là Staff");
-    }
+  //   if (staff.getRole() != UserRole.STAFF) {
+  //     throw new AppException(HttpStatus.BAD_REQUEST, "Người dùng này không phải là Staff");
+  //   }
 
-    staff.setStatus(dto.getStatus());
-    staff.setUpdatedBy(updatedBy);
+  //   staff.setStatus(dto.getStatus());
+  //   staff.setUpdatedBy(updatedBy);
 
-    // Force logout if status changed to INACTIVE
-    if (dto.getStatus() == UserStatus.INACTIVE) {
-      staff.setTokensValidFrom(Instant.now());
-    }
+  //   // Force logout if status changed to INACTIVE
+  //   if (dto.getStatus() == UserStatus.INACTIVE) {
+  //     staff.setTokensValidFrom(Instant.now());
+  //   }
 
-    userRepository.save(staff);
-  }
+  //   userRepository.save(staff);
+  // }
 
-  @Override
-  @Transactional
-  public void resetStaffPassword(UUID staffId, ResetStaffPasswordDTO dto, UUID updatedBy) {
-    User staff =
-        userRepository
-            .findById(staffId)
-            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Staff không tồn tại"));
+  // @Override
+  // @Transactional
+  // public void resetStaffPassword(UUID staffId, ResetStaffPasswordDTO dto, UUID updatedBy) {
+  //   User staff =
+  //       userRepository
+  //           .findById(staffId)
+  //           .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Staff không tồn tại"));
 
-    if (staff.getRole() != UserRole.STAFF) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Người dùng này không phải là Staff");
-    }
+  //   if (staff.getRole() != UserRole.STAFF) {
+  //     throw new AppException(HttpStatus.BAD_REQUEST, "Người dùng này không phải là Staff");
+  //   }
 
-    staff.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
-    staff.setUpdatedBy(updatedBy);
-    // Force logout by invalidating all existing tokens
-    staff.setTokensValidFrom(Instant.now());
+  //   staff.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+  //   staff.setUpdatedBy(updatedBy);
+  //   // Force logout by invalidating all existing tokens
+  //   staff.setTokensValidFrom(Instant.now());
 
-    userRepository.save(staff);
-  }
+  //   userRepository.save(staff);
+  // }
 }
