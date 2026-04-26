@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "cloudinary")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CloudinaryProperties {
-    String cloudName;
-    String apiKey;
-    String apiSecret;
-    String folder;
+  String cloudName;
+  String apiKey;
+  String apiSecret;
+  String folder;
 }

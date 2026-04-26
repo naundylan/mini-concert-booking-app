@@ -35,7 +35,7 @@ dependencies {
 
     // Dotenv
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
-    implementation "me.paulschwarz:spring-dotenv:3.0.0"
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
     // Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
@@ -117,4 +117,25 @@ bootJar {
 
 tasks.withType(Test).configureEach {
     enabled = false
+}
+
+
+// Thêm đoạn này vào cuối file build.gradle của module server
+tasks.withType(JavaExec).configureEach {
+    // project.rootDir luôn trỏ về thư mục chứa file settings.gradle (thư mục gốc)
+    def envFile = file("${project.rootDir}/.env")
+    if (envFile.exists()) {
+        envFile.eachLine { line ->
+            def envLine = line.trim()
+            if (envLine && !envLine.startsWith('#')) {
+                def parts = envLine.split('=', 2)
+                if (parts.length == 2) {
+                    environment parts[0].trim(), parts[1].trim()
+                }
+            }
+        }
+        println "✅ Gradle: Loaded environment variables from ${envFile.absolutePath}"
+    } else {
+        println "❌ Gradle: .env file NOT FOUND at ${envFile.absolutePath}"
+    }
 }

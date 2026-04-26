@@ -9,11 +9,11 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public enum MessageConstants {
-    INTERNAL_SERVER_ERROR("Lỗi hệ thống, vui lòng thử lại sau"),
-    BAD_REQUEST("Yêu cầu không hợp lệ"),
-    FORBIDDEN("Bạn không có quyền truy cập"),
-    UNAUTHORIZED("Bạn chưa được xác thực"),
-    RESOURCE_NOT_FOUND("Không tìm thấy tài nguyên");
+  INTERNAL_SERVER_ERROR("Lỗi hệ thống, vui lòng thử lại sau"),
+  BAD_REQUEST("Yêu cầu không hợp lệ"),
+  FORBIDDEN("Bạn không có quyền truy cập"),
+  UNAUTHORIZED("Bạn chưa được xác thực"),
+  RESOURCE_NOT_FOUND("Không tìm thấy tài nguyên");
 
-    String message;
+  String message;
 }
