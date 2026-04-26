@@ -14,6 +14,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SuperBuilder
 @FieldDefaults(level = AccessLevel.PROTECTED)
 public abstract class AbstractAuditEntity {
