@@ -3,11 +3,8 @@ package com.concert.booking.modules.auth;
 import com.concert.booking.common.constants.JwtProperties;
 import com.concert.booking.common.exception.AppException;
 import com.concert.booking.core.auth.TokenBlacklistService;
-import com.concert.booking.core.file.FileService;
-import com.concert.booking.core.mail.MailService;
 import com.concert.booking.core.ratelimit.RateLimiterService;
 // import com.concert.booking.modules.audit.AuditLogService;
-import com.concert.booking.modules.audit.enums.*;
 import com.concert.booking.modules.auth.dto.*;
 import com.concert.booking.modules.auth.security.JwtService;
 import com.concert.booking.modules.user.*;
@@ -19,7 +16,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,9 +29,6 @@ public class AuthServiceImpl implements AuthService {
   JwtProperties jwtProperties;
   UserRepository userRepository;
   PasswordEncoder passwordEncoder;
-  MailService mailService;
-  FileService fileService;
-  ModelMapper modelMapper;
   RateLimiterService rateLimiterService;
   TokenBlacklistService tokenBlacklistService;
 
@@ -253,18 +246,5 @@ public class AuthServiceImpl implements AuthService {
     //         AuditLogStatus.FAILED,
     //         "Đăng nhập thất bại do username không tồn tại");
     return new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
-  }
-
-  private AppException invalidResetPasswordTokenException() {
-    //     auditLogService.log(
-    //         null,
-    //         "anonymous",
-    //         AuditLogAction.RESET_PASSWORD,
-    //         AuditLogEntity.AUTH,
-    //         null,
-    //         AuditLogStatus.FAILED,
-    //         "Đặt lại mật khẩu thất bại do token không hợp lệ");
-    return new AppException(
-        HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_RESET_PASSWORD_TOKEN.getMessage());
   }
 }
