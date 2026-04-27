@@ -1,3 +1,5 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "chat.plugins.enabled": true,
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true
 }

@@ -23,6 +23,8 @@ import org.hibernate.annotations.UuidGenerator;
     })
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class User extends AbstractAuditEntity {

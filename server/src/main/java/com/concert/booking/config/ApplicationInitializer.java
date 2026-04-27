@@ -35,6 +35,7 @@ public class ApplicationInitializer {
                 .passwordHash(passwordEncoder.encode(superuser.getPassword()))
                 .email(superuser.getEmail())
                 .fullName(superuser.getFullName())
+                .phone("0000000000")
                 .role(UserRole.ADMIN)
                 .build());
         log.error("Admin user created with default password, please change it.");

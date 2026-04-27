@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 import javax.crypto.SecretKey;
@@ -57,6 +58,14 @@ public class JwtService {
 
   private boolean isTokenExpired(String token) {
     return extractAllClaims(token).getExpiration().before(new Date());
+  }
+
+  public Instant getTokenExpiration(String token) {
+    return extractAllClaims(token).getExpiration().toInstant();
+  }
+
+  public Instant getTokenIssuedAt(String token) {
+    return extractAllClaims(token).getIssuedAt().toInstant();
   }
 
   private Claims extractAllClaims(String token) {

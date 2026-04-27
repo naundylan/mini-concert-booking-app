@@ -18,9 +18,7 @@ public class AppSecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable()) // Tạm thời disable để test API
-        .authorizeHttpRequests(
-            auth -> auth.anyRequest().permitAll()); // Cho phép tất cả để ta dựng thư mục trước
+    http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
     return http.build();
   }
 }

@@ -1,7 +1,5 @@
 # Ignore Gradle project-specific cache directory
 .gradle/
-
-# Ignore Gradle build output directory
 build/
 
 # Ignore Kotlin plugin data
@@ -9,6 +7,10 @@ build/
 
 # Ignore .env file
 .env
+.env.*
 
-/server/bin/
+# Java
+**/bin/
 *.class
+
+/.github/

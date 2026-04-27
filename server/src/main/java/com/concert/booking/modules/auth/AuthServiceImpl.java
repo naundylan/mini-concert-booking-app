@@ -2,21 +2,20 @@ package com.concert.booking.modules.auth;
 
 import com.concert.booking.common.constants.JwtProperties;
 import com.concert.booking.common.exception.AppException;
-import com.concert.booking.core.file.FileService;
-import com.concert.booking.core.mail.MailService;
+import com.concert.booking.core.auth.TokenBlacklistService;
+import com.concert.booking.core.ratelimit.RateLimiterService;
 // import com.concert.booking.modules.audit.AuditLogService;
-import com.concert.booking.modules.audit.enums.*;
 import com.concert.booking.modules.auth.dto.*;
 import com.concert.booking.modules.auth.security.JwtService;
 import com.concert.booking.modules.user.*;
 import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,15 +29,21 @@ public class AuthServiceImpl implements AuthService {
   JwtProperties jwtProperties;
   UserRepository userRepository;
   PasswordEncoder passwordEncoder;
-  MailService mailService;
-  FileService fileService;
-  ModelMapper modelMapper;
+  RateLimiterService rateLimiterService;
+  TokenBlacklistService tokenBlacklistService;
 
   //   AuditLogService auditLogService;
 
   @Override
   @Transactional
   public TokenDTO signIn(SignInDTO dto) {
+    // Check rate limit before processing
+    if (!rateLimiterService.isAllowed(dto.getUsername(), "signin")) {
+      throw new AppException(
+          HttpStatus.TOO_MANY_REQUESTS,
+          "Vượt quá số lần đăng nhập thất bại. Vui lòng thử lại sau 15 phút.");
+    }
+
     User user = findUserByUsername(dto.getUsername());
 
     if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
@@ -46,6 +51,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     validateUserCanAuthenticate(user);
+
+    // Reset rate limit on successful signin
+    rateLimiterService.reset(dto.getUsername(), "signin");
 
     String accessToken = jwtService.generateAccessToken(user.getId());
     String refreshToken = jwtService.generateRefreshToken(user.getId());
@@ -61,19 +69,50 @@ public class AuthServiceImpl implements AuthService {
   @Override
   @Transactional
   public TokenDTO refresh(RefreshTokenDTO dto) {
-    throw new AppException(
-        HttpStatus.NOT_IMPLEMENTED, "Refresh token chưa được hỗ trợ trong Phase 1");
+    try {
+      UUID userId = jwtService.extractUserId(dto.getRefreshToken());
+      User user =
+          userRepository
+              .findById(userId)
+              .orElseThrow(
+                  () -> new AppException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+
+      validateUserCanAuthenticate(user);
+
+      String accessToken = jwtService.generateAccessToken(user.getId());
+      String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+      return TokenDTO.builder()
+          .accessToken(accessToken)
+          .refreshToken(refreshToken)
+          .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
+          .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+          .build();
+    } catch (Exception e) {
+      throw new AppException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+    }
   }
 
   @Override
   @Transactional
-  public void signOut(UUID userId) {
-    // Phase 1: Không cần làm gì đặc biệt cho sign out
+  public void signOut(UUID userId, String accessToken, Instant tokenExpiration) {
+    // Blacklist the current access token to force logout
+    if (accessToken != null && tokenExpiration != null) {
+      tokenBlacklistService.blacklistToken(accessToken, tokenExpiration);
+    }
   }
 
   @Override
   @Transactional
-  public void changePassword(UUID userId, ChangePasswordDTO dto) {
+  public void changePassword(
+      UUID userId, String accessToken, Instant tokenExpiration, ChangePasswordDTO dto) {
+    // Check rate limit before processing
+    if (!rateLimiterService.isAllowed(userId.toString(), "changePassword")) {
+      throw new AppException(
+          HttpStatus.TOO_MANY_REQUESTS,
+          "Vượt quá số lần đổi mật khẩu. Vui lòng thử lại sau 15 phút.");
+    }
+
     User user =
         userRepository
             .findById(userId)
@@ -85,6 +124,14 @@ public class AuthServiceImpl implements AuthService {
 
     user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
     userRepository.save(user);
+
+    // Blacklist the current access token to force logout after password change
+    if (accessToken != null && tokenExpiration != null) {
+      tokenBlacklistService.blacklistToken(accessToken, tokenExpiration);
+    }
+
+    // Reset rate limit on successful password change
+    rateLimiterService.reset(userId.toString(), "changePassword");
   }
 
   //   @Override
@@ -199,18 +246,5 @@ public class AuthServiceImpl implements AuthService {
     //         AuditLogStatus.FAILED,
     //         "Đăng nhập thất bại do username không tồn tại");
     return new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
-  }
-
-  private AppException invalidResetPasswordTokenException() {
-    //     auditLogService.log(
-    //         null,
-    //         "anonymous",
-    //         AuditLogAction.RESET_PASSWORD,
-    //         AuditLogEntity.AUTH,
-    //         null,
-    //         AuditLogStatus.FAILED,
-    //         "Đặt lại mật khẩu thất bại do token không hợp lệ");
-    return new AppException(
-        HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_RESET_PASSWORD_TOKEN.getMessage());
   }
 }

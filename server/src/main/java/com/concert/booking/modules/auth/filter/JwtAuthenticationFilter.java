@@ -1,5 +1,6 @@
 package com.concert.booking.modules.auth.filter;
 
+import com.concert.booking.core.auth.TokenBlacklistService;
 import com.concert.booking.modules.auth.security.CustomUserDetails;
 import com.concert.booking.modules.auth.security.JwtService;
 import com.concert.booking.modules.user.UserService;
@@ -8,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.NonNull;
@@ -27,6 +29,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
   JwtService jwtService;
   UserService userService;
+  TokenBlacklistService tokenBlacklistService;
 
   @Override
   protected void doFilterInternal(
@@ -45,10 +48,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
       try {
+        // Check if token is blacklisted
+        if (tokenBlacklistService.isBlacklisted(token)) {
+          log.warn("[LOG] Token is blacklisted");
+          filterChain.doFilter(request, response);
+          return;
+        }
+
         UUID userId = jwtService.extractUserId(token);
 
         if (userId != null) {
           CustomUserDetails userDetails = userService.loadUserById(userId);
+
+          // Check if token is issued before tokensValidFrom (force logout)
+          Instant tokenIssuedAt = jwtService.getTokenIssuedAt(token);
+          if (userDetails.getUser().getTokensValidFrom() != null
+              && tokenIssuedAt.isBefore(userDetails.getUser().getTokensValidFrom())) {
+            log.warn("[LOG] Token issued before tokensValidFrom, rejecting");
+            filterChain.doFilter(request, response);
+            return;
+          }
+
           if (jwtService.isTokenValid(token, userDetails)) {
             UsernamePasswordAuthenticationToken authToken =
                 new UsernamePasswordAuthenticationToken(
