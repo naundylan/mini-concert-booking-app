@@ -27,6 +27,10 @@ public class ApplicationInitializer {
       if (!userRepository.existsByUsername(superuser.getUsername())) {
         userRepository.save(
             User.builder()
+                .phone(
+                    superuser.getPhone() != null && !superuser.getPhone().isBlank()
+                        ? superuser.getPhone()
+                        : "0000000000")
                 .username(superuser.getUsername())
                 .passwordHash(passwordEncoder.encode(superuser.getPassword()))
                 .email(superuser.getEmail())
