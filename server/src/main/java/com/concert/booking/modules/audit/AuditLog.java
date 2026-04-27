@@ -1,8 +1,5 @@
 package com.concert.booking.modules.audit;
 
-import com.concert.booking.modules.audit.enums.AuditLogAction;
-import com.concert.booking.modules.audit.enums.AuditLogEntity;
-import com.concert.booking.modules.audit.enums.AuditLogStatus;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
@@ -10,6 +7,10 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
+
+import com.concert.booking.modules.audit.enums.AuditLogAction;
+import com.concert.booking.modules.audit.enums.AuditLogEntity;
+import com.concert.booking.modules.audit.enums.AuditLogStatus;
 
 @Entity
 @Table(

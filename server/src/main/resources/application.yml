@@ -17,8 +17,6 @@ cloudinary:
   folder: ${CLOUDINARY_FOLDER}
 
 spring:
-  # dotenv:
-  #   directory: ../../../../
   application:
     name: ${APPLICATION_NAME}
     version: ${APPLICATION_VERSION}
