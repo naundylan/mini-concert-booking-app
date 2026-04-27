@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "application.security.jwt")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class JwtProperties {
-    String secretKey;
-    Long accessTokenExpiration;
-    Long refreshTokenExpiration;
+  String secretKey;
+  Long accessTokenExpiration;
+  Long refreshTokenExpiration;
 }
