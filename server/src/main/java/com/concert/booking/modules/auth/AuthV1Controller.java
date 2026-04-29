@@ -9,12 +9,17 @@ import com.concert.booking.modules.auth.security.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+
+import java.io.IOException;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -69,6 +74,7 @@ public class AuthV1Controller {
     return DataApiResponse.success(null, "Đổi mật khẩu thành công");
   }
 
+
   @Operation(summary = "Quên mật khẩu", description = "Gửi yêu cầu khôi phục mật khẩu qua email.")
   @PostMapping("/forgot-password")
   //   public DataApiResponse<Void> forgotPassword(@RequestBody @Valid ForgotPasswordDTO dto) {
@@ -79,14 +85,26 @@ public class AuthV1Controller {
     return DataApiResponse.success(null, "Chức năng chưa được hỗ trợ trong Phase 1");
   }
 
-  @Operation(
-      summary = "Đặt lại mật khẩu",
-      description = "Sử dụng mã token trong email để đặt lại mật khẩu mới.")
-  @PostMapping("/reset-password")
-  //   public DataApiResponse<Void> resetPassword(@RequestBody @Valid ResetPasswordDTO dto) {
-  //     authService.resetPassword(dto);
-  //     return DataApiResponse.success(null, "Đặt lại mật khẩu thành công");
-  //   }
+
+  @Operation(summary = "1. Chuyển hướng đến trang Đăng nhập Google", description = "Nút Login with Google trên Frontend sẽ gọi/chuyển hướng vào API này")
+  @GetMapping("/google")
+  public void loginWithGoogle(HttpServletResponse response) throws IOException {
+      // Chuyển hướng nội bộ sang endpoint của Spring Security OAuth2
+      response.sendRedirect("/oauth2/authorization/google");
+  }
+
+
+  @Operation(summary = "2. Hoàn tất đăng nhập OAuth2 (Bổ sung SĐT)", 
+              description = "Frontend gọi API này khi User chưa có SĐT và vừa nhập SĐT vào form")
+  @PostMapping("/customer/complete-phone")
+  public ResponseEntity<OAuth2LoginDTO> completeCustomerPhone(
+          @Valid @RequestBody OAuth2CallbackDTO dto) {
+      
+      OAuth2LoginDTO responseDto = authService.completeOAuth2CustomerPhone(dto);
+      return ResponseEntity.ok(responseDto);
+  }
+
+  
   public DataApiResponse<Void> resetPassword() {
     return DataApiResponse.success(null, "Chức năng chưa được hỗ trợ trong Phase 1");
   }
