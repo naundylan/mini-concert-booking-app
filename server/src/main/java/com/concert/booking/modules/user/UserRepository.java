@@ -22,4 +22,6 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
   boolean existsByEmail(String email);
 
   boolean existsByGoogleId(String googleId);
+
+  Optional<User> findByGoogleId(String googleId);
 }

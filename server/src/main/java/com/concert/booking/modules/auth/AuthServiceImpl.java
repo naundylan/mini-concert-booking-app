@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -246,5 +247,105 @@ public class AuthServiceImpl implements AuthService {
     //         AuditLogStatus.FAILED,
     //         "Đăng nhập thất bại do username không tồn tại");
     return new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
+  }
+
+
+  @Override
+  @Transactional
+  public OAuth2LoginDTO processOAuth2Customer(OAuth2User oAuth2User) {
+    String email = oAuth2User.getAttribute("email");
+    String googleId = oAuth2User.getAttribute("sub");
+    String fullName = oAuth2User.getAttribute("name");
+
+    // Tìm hoặc tạo User
+    User user = userRepository.findByGoogleId(googleId)
+        .map(existingUser -> {
+          existingUser.setFullName(fullName);
+          return userRepository.save(existingUser);
+        })
+        .orElseGet(() -> userRepository.findByEmail(email)
+            .map(existingUser -> {
+              existingUser.setGoogleId(googleId);
+              existingUser.setAuthProvider(AuthProvider.GOOGLE);
+              existingUser.setFullName(fullName);
+              return userRepository.save(existingUser);
+            })
+            .orElseGet(() -> userRepository.save(User.builder()
+                .email(email)
+                .googleId(googleId)
+                .fullName(fullName)
+                .authProvider(AuthProvider.GOOGLE)
+                .role(UserRole.CUSTOMER)
+                .status(UserStatus.ACTIVE)
+                .tokensValidFrom(Instant.now())
+                .build())
+            )
+        );
+
+    // Map UserInfo
+    UserInfo userInfo = UserInfo.builder()
+        .email(user.getEmail())
+        .phone(user.getPhone())
+        .fullName(user.getFullName())
+        .googleId(user.getGoogleId())
+        .role(user.getRole().name())
+        .status(user.getStatus().name())
+        .build();
+
+    // Nếu chưa có số điện thoại -> Chỉ trả về UserInfo để bắt nhập thêm
+    if (user.getPhone() == null) {
+      return OAuth2LoginDTO.builder()
+          .userInfo(userInfo)
+          .build();
+    }
+
+    // Nếu đã có số điện thoại -> Trả về full Token giống format của hàm refresh()
+    String accessToken = jwtService.generateAccessToken(user.getId());
+    String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+    return OAuth2LoginDTO.builder()
+        .accessToken(accessToken)
+        .refreshToken(refreshToken)
+        .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
+        .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+        .userInfo(userInfo)
+        .build();
+  }
+
+  @Override
+  @Transactional
+  public OAuth2LoginDTO completeOAuth2CustomerPhone(OAuth2CallbackDTO dto) {
+    User user = userRepository.findByEmail(dto.getEmail())
+        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Người dùng không tồn tại"));
+
+    if (userRepository.existsByPhone(dto.getPhone())) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Số điện thoại đã tồn tại trên hệ thống");
+    }
+
+    // Cập nhật SĐT và vô hiệu hóa các token cũ
+    user.setPhone(dto.getPhone());
+    user.setTokensValidFrom(Instant.now());
+    userRepository.save(user);
+
+    UserInfo userInfo = UserInfo.builder()
+        .email(user.getEmail())
+        .phone(user.getPhone())
+        .fullName(user.getFullName())
+        .googleId(user.getGoogleId())
+        .role(user.getRole().name())
+        .status(user.getStatus().name())
+        .build();
+
+    // Sinh token chuẩn format
+    String accessToken = jwtService.generateAccessToken(user.getId());
+    String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+    return OAuth2LoginDTO.builder()
+        .accessToken(accessToken)
+        .refreshToken(refreshToken)
+        .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
+        .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+        .userInfo(userInfo)
+        .build();
   }
 }

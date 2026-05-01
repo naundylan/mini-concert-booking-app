@@ -34,7 +34,7 @@ public class User extends AbstractAuditEntity {
   @UuidGenerator(style = UuidGenerator.Style.TIME)
   UUID id;
 
-  @Column(length = 20, nullable = false, unique = true)
+  @Column(length = 20, nullable = true, unique = true)
   String phone; // Mỏ neo chính - Bắt buộc với MỌI user
 
   @Column(length = 100, unique = true)
