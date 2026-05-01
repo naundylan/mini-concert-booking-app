@@ -120,7 +120,6 @@ tasks.withType(Test).configureEach {
 }
 
 
-// Thêm đoạn này vào cuối file build.gradle của module server
 tasks.withType(JavaExec).configureEach {
     // project.rootDir luôn trỏ về thư mục chứa file settings.gradle (thư mục gốc)
     def envFile = file("${project.rootDir}/.env")
