@@ -17,4 +17,5 @@ public class TokenDTO {
   String refreshToken;
   Long accessTokenExpiration;
   Long refreshTokenExpiration;
+  String role;
 }

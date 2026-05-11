@@ -42,6 +42,14 @@ public class EventV1Controller {
         return DataApiResponse.success(event, "Tạo sự kiện thành công");
     }
 
+    @Operation(summary = "Lấy danh sách sự kiện", description = "Lấy tất cả sự kiện.")
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public DataApiResponse<List<Event>> getAllEvents() {
+        List<Event> events = eventService.getAllEvents();
+        return DataApiResponse.success(events, "Lấy danh sách sự kiện thành công");
+    }
+
     /**
      * [US-A03] Định giá vé - Tạo tối thiểu 3 hạng vé
      */
@@ -115,6 +123,15 @@ public class EventV1Controller {
         UUID currentUserId = AuthUtils.getCurrentUserId();
         Event event = eventService.updateEventStatus(id, dto, currentUserId);
         return DataApiResponse.success(event, "Cập nhật trạng thái thành công");
+    }
+
+    @Operation(summary = "Cập nhật thông tin sự kiện")
+    @PatchMapping("/{id}")
+    public DataApiResponse<Event> updateEvent(
+            @PathVariable UUID id, @RequestBody @Valid EventUpdateDTO dto) {
+        UUID currentUserId = AuthUtils.getCurrentUserId();
+        Event event = eventService.updateEvent(id, dto, currentUserId);
+        return DataApiResponse.success(event, "Cập nhật sự kiện thành công");
     }
 
     /**

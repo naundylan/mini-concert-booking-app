@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:3000")
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Tag(
     name = "Authentication",
@@ -97,11 +98,11 @@ public class AuthV1Controller {
   @Operation(summary = "2. Hoàn tất đăng nhập OAuth2 (Bổ sung SĐT)", 
               description = "Frontend gọi API này khi User chưa có SĐT và vừa nhập SĐT vào form")
   @PostMapping("/customer/complete-phone")
-  public ResponseEntity<OAuth2LoginDTO> completeCustomerPhone(
+  public DataApiResponse<OAuth2LoginDTO> completeCustomerPhone(
           @Valid @RequestBody OAuth2CallbackDTO dto) {
       
       OAuth2LoginDTO responseDto = authService.completeOAuth2CustomerPhone(dto);
-      return ResponseEntity.ok(responseDto);
+      return DataApiResponse.success(responseDto, "Đăng nhập thành công");
   }
 
   
