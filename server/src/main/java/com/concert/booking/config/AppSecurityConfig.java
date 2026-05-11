@@ -26,6 +26,9 @@ import com.concert.booking.modules.auth.security.JwtService;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.concert.booking.modules.auth.AuthService;
+import com.concert.booking.modules.auth.dto.OAuth2LoginDTO;
+
 @Configuration
 @EnableWebSecurity
 public class AppSecurityConfig {
