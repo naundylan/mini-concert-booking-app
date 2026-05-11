@@ -16,4 +16,10 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     @Query("SELECT e FROM Event e WHERE e.status = :status AND e.endTime <= :now")
     List<Event> findEventsToEnd(EventStatus status, Timestamp now);
+
+    
+    /**
+     * Lấy danh sách tất cả sự kiện
+     */
+    List<Event> findAll();
 }

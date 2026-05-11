@@ -12,6 +12,7 @@ import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,7 @@ public class AuthServiceImpl implements AuthService {
         .refreshToken(refreshToken)
         .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
         .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+        .role(user.getRole().name())
         .build();
   }
 
@@ -257,7 +259,7 @@ public class AuthServiceImpl implements AuthService {
     String googleId = oAuth2User.getAttribute("sub");
     String fullName = oAuth2User.getAttribute("name");
 
-    // Tìm hoặc tạo User
+    // Tìm User
     User user = userRepository.findByGoogleId(googleId)
         .map(existingUser -> {
           existingUser.setFullName(fullName);
@@ -270,63 +272,134 @@ public class AuthServiceImpl implements AuthService {
               existingUser.setFullName(fullName);
               return userRepository.save(existingUser);
             })
-            .orElseGet(() -> userRepository.save(User.builder()
-                .email(email)
-                .googleId(googleId)
-                .fullName(fullName)
-                .authProvider(AuthProvider.GOOGLE)
-                .role(UserRole.CUSTOMER)
-                .status(UserStatus.ACTIVE)
-                .tokensValidFrom(Instant.now())
-                .build())
-            )
+            .orElse(null) // Nếu không tìm thấy, trả về null
         );
 
-    // Map UserInfo
-    UserInfo userInfo = UserInfo.builder()
-        .email(user.getEmail())
-        .phone(user.getPhone())
-        .fullName(user.getFullName())
-        .googleId(user.getGoogleId())
-        .role(user.getRole().name())
-        .status(user.getStatus().name())
-        .build();
+    UserInfo userInfo;
+    if (user != null) {
+      // User tồn tại
+      userInfo = UserInfo.builder()
+          .email(user.getEmail())
+          .phone(user.getPhone())
+          .fullName(user.getFullName())
+          .googleId(user.getGoogleId())
+          .role(user.getRole().name())
+          .status(user.getStatus().name())
+          .build();
 
-    // Nếu chưa có số điện thoại -> Chỉ trả về UserInfo để bắt nhập thêm
-    if (user.getPhone() == null) {
+      // Nếu có số điện thoại -> Sinh token
+      if (user.getPhone() != null) {
+        String accessToken = jwtService.generateAccessToken(user.getId());
+        String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+        return OAuth2LoginDTO.builder()
+            .accessToken(accessToken)
+            .refreshToken(refreshToken)
+            .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
+            .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+            .userInfo(userInfo)
+            .build();
+      } else {
+        // Có user nhưng không có phone -> Chỉ trả về UserInfo để FE nhập thêm
+        return OAuth2LoginDTO.builder()
+            .userInfo(userInfo)
+            .build();
+      }
+    } else {
+      // User mới (chưa có trong DB)
+      userInfo = UserInfo.builder()
+          .email(email)
+          .phone(null)
+          .fullName(fullName)
+          .googleId(googleId)
+          .role(UserRole.CUSTOMER.name())
+          .status(UserStatus.ACTIVE.name())
+          .build();
+
+      // Trả về UserInfo để FE nhập phone
       return OAuth2LoginDTO.builder()
           .userInfo(userInfo)
           .build();
     }
-
-    // Nếu đã có số điện thoại -> Trả về full Token giống format của hàm refresh()
-    String accessToken = jwtService.generateAccessToken(user.getId());
-    String refreshToken = jwtService.generateRefreshToken(user.getId());
-
-    return OAuth2LoginDTO.builder()
-        .accessToken(accessToken)
-        .refreshToken(refreshToken)
-        .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
-        .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
-        .userInfo(userInfo)
-        .build();
   }
 
   @Override
   @Transactional
   public OAuth2LoginDTO completeOAuth2CustomerPhone(OAuth2CallbackDTO dto) {
-    User user = userRepository.findByEmail(dto.getEmail())
-        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Người dùng không tồn tại"));
+    String email = dto.getEmail();
+    String phone = dto.getPhone();
+    String googleId = dto.getGoogleId();
+    String fullName = dto.getFullName();
 
-    if (userRepository.existsByPhone(dto.getPhone())) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Số điện thoại đã tồn tại trên hệ thống");
+    // Tìm user bằng email HOẶC phone (merge logic: user POS có phone nhưng chưa có email)
+    Optional<User> userByEmail = userRepository.findByEmail(email);
+    Optional<User> userByPhone = userRepository.findByPhone(phone);
+
+    User user;
+
+    if (userByEmail.isPresent() && userByPhone.isPresent()) {
+      // Cả email và phone đều tồn tại → phải là cùng một user
+      User userFromEmail = userByEmail.get();
+      User userFromPhone = userByPhone.get();
+
+      if (!userFromEmail.getId().equals(userFromPhone.getId())) {
+        // Email và phone thuộc về 2 user khác nhau → lỗi
+        throw new AppException(HttpStatus.BAD_REQUEST, 
+            "Email và số điện thoại không thuộc về cùng một tài khoản. Vui lòng liên hệ hỗ trợ.");
+      }
+
+      user = userFromEmail; // Cùng user
+    } else if (userByEmail.isPresent()) {
+      user = userByEmail.get();
+      // User có email nhưng chưa có phone (chưa hoàn tất OAuth2) → update phone
+    } else if (userByPhone.isPresent()) {
+      user = userByPhone.get();
+      // User từ POS có phone nhưng chưa có email → merge email, googleId, fullName
+    } else {
+      // Không tìm thấy user nào → tạo mới
+      user = null;
     }
 
-    // Cập nhật SĐT và vô hiệu hóa các token cũ
-    user.setPhone(dto.getPhone());
-    user.setTokensValidFrom(Instant.now());
-    userRepository.save(user);
+    if (user != null) {
+      // User tồn tại (từ web hoặc POS) → merge thông tin
+      // Kiểm tra trùng lặp nếu thay đổi email/phone
+      if ((user.getEmail() == null || !email.equals(user.getEmail())) && userRepository.existsByEmail(email)) {
+        throw new AppException(HttpStatus.BAD_REQUEST, "Email đã được sử dụng bởi tài khoản khác");
+      }
+      if ((user.getPhone() == null || !phone.equals(user.getPhone())) && userRepository.existsByPhone(phone)) {
+        throw new AppException(HttpStatus.BAD_REQUEST, "Số điện thoại đã được sử dụng bởi tài khoản khác");
+      }
 
+      user.setEmail(email);
+      user.setGoogleId(googleId);
+      user.setFullName(fullName);
+      user.setPhone(phone);
+      user.setAuthProvider(AuthProvider.GOOGLE);
+      user.setTokensValidFrom(Instant.now()); // Invalidate old tokens
+      userRepository.save(user);
+    } else {
+      // Tạo user mới hoàn toàn
+      if (userRepository.existsByEmail(email)) {
+        throw new AppException(HttpStatus.BAD_REQUEST, "Email đã tồn tại trên hệ thống");
+      }
+      if (userRepository.existsByPhone(phone)) {
+        throw new AppException(HttpStatus.BAD_REQUEST, "Số điện thoại đã tồn tại trên hệ thống");
+      }
+
+      user = User.builder()
+          .email(email)
+          .googleId(googleId)
+          .fullName(fullName)
+          .phone(phone)
+          .authProvider(AuthProvider.GOOGLE)
+          .role(UserRole.CUSTOMER)
+          .status(UserStatus.ACTIVE)
+          .tokensValidFrom(Instant.now())
+          .build();
+      userRepository.save(user);
+    }
+
+    // Tạo token và trả về
     UserInfo userInfo = UserInfo.builder()
         .email(user.getEmail())
         .phone(user.getPhone())
@@ -336,7 +409,6 @@ public class AuthServiceImpl implements AuthService {
         .status(user.getStatus().name())
         .build();
 
-    // Sinh token chuẩn format
     String accessToken = jwtService.generateAccessToken(user.getId());
     String refreshToken = jwtService.generateRefreshToken(user.getId());
 

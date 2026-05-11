@@ -1,7 +1,5 @@
 package com.concert.booking.modules.auth;
-
 import com.concert.booking.modules.auth.dto.*;
-import com.concert.booking.modules.user.User;
 
 import java.time.Instant;
 import java.util.UUID;

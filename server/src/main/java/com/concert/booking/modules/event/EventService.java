@@ -47,6 +47,10 @@ public interface EventService {
      */
     Event updateEventStatus(UUID eventId, EventStatusUpdateDTO dto, UUID updatedBy);
 
+
+    Event updateEvent(UUID eventId, EventUpdateDTO dto, UUID updatedBy);
+
+
     /**
      * Lấy thông tin chi tiết sự kiện
      */
@@ -71,4 +75,9 @@ public interface EventService {
      * Kiểm tra xem có vé SOLD cho ticket class nào của sự kiện hay không
      */
     boolean hasAnySoldSeatsInEvent(UUID eventId);
+
+    /**
+     * Lấy danh sách tất cả sự kiện
+     */
+    List<Event> getAllEvents();
 }

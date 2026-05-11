@@ -225,6 +225,61 @@ public class EventServiceImpl implements EventService {
         return eventRepository.save(event);
     }
 
+    @Override
+    @Transactional
+    public Event updateEvent(UUID eventId, EventUpdateDTO dto, UUID updatedBy) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy sự kiện"));
+
+        EventStatus currentStatus = event.getStatus();
+
+        // CANCELED và ENDED không được làm gì
+        if (currentStatus == EventStatus.CANCELED || currentStatus == EventStatus.ENDED) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Không thể chỉnh sửa sự kiện đã hủy hoặc đã kết thúc");
+        }
+
+        // ONSALE: chỉ được chuyển sang CANCELED
+        if (currentStatus == EventStatus.ONSALE) {
+            if (dto.getStatus() != null && dto.getStatus() == EventStatus.CANCELED) {
+                event.setStatus(EventStatus.CANCELED);
+            } else {
+                throw new AppException(HttpStatus.BAD_REQUEST,
+                        "Sự kiện đang ONSALE chỉ có thể bị hủy");
+            }
+            event.setUpdatedBy(updatedBy);
+            return eventRepository.save(event);
+        }
+
+        // TEASING: chỉ được sửa name, banner, location hoặc chuyển sang CANCELED
+        if (currentStatus == EventStatus.TEASING) {
+            if (dto.getStatus() != null && dto.getStatus() == EventStatus.CANCELED) {
+                event.setStatus(EventStatus.CANCELED);
+            } else if (dto.getStatus() != null) {
+                throw new AppException(HttpStatus.BAD_REQUEST,
+                        "Sự kiện đang TEASING chỉ có thể bị hủy");
+            }
+            if (dto.getName() != null) event.setName(dto.getName());
+            if (dto.getBannerUrl() != null) event.setBannerUrl(dto.getBannerUrl());
+            if (dto.getLocation() != null) event.setLocation(dto.getLocation());
+            event.setUpdatedBy(updatedBy);
+            return eventRepository.save(event);
+        }
+
+        // DRAFT: được sửa tất cả
+        if (dto.getName() != null) event.setName(dto.getName());
+        if (dto.getLocation() != null) event.setLocation(dto.getLocation());
+        if (dto.getBannerUrl() != null) event.setBannerUrl(dto.getBannerUrl());
+        if (dto.getTeasingTime() != null) event.setTeasingTime(dto.getTeasingTime());
+        if (dto.getOpenTime() != null) event.setOpenTime(dto.getOpenTime());
+        if (dto.getStartTime() != null) event.setStartTime(dto.getStartTime());
+        if (dto.getEndTime() != null) event.setEndTime(dto.getEndTime());
+        if (dto.getStatus() != null) event.setStatus(dto.getStatus());
+        event.setUpdatedBy(updatedBy);
+
+        return eventRepository.save(event);
+    }
+
     /**
      * Lấy thông tin chi tiết sự kiện
      */
@@ -280,5 +335,14 @@ public class EventServiceImpl implements EventService {
     @Transactional(readOnly = true)
     public boolean hasAnySoldSeatsInEvent(UUID eventId) {
         return seatRepository.existsByEventIdAndStatus(eventId, SeatStatus.SOLD);
+    }
+
+    /**
+     * Lấy danh sách tất cả sự kiện
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Event> getAllEvents() {
+        return eventRepository.findAll();
     }
 }
