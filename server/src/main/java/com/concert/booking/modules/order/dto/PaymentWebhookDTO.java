@@ -1,4 +1,4 @@
-package com.concert.booking.modules.booking.dto;
+package com.concert.booking.modules.order.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,12 +11,14 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class VnpayWebhookRequest {
+public class PaymentWebhookDTO {
   @NotBlank(message = "Mã đơn hàng không được để trống")
-  String bookingCode;
+  String orderCode;
 
   @NotNull(message = "Trạng thái thanh toán không được để trống")
   Boolean success;
 
   BigDecimal amount;
+
+  String transactionRef;
 }

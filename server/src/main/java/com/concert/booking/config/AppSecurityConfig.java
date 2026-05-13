@@ -47,7 +47,7 @@ public class AppSecurityConfig {
   }
 
   static String[] SWAGGER_WHITELIST = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
-  static String[] PUBLIC_ENDPOINTS = {"/", "/api/v1/bookings/webhooks/**"};
+  static String[] PUBLIC_ENDPOINTS = {"/", "/api/v1/orders/webhooks/**"};
   static String[] AUTH_ENDPOINTS = {
       "/api/v1/auth/**", // Cho phép tất cả login/register/refresh
       "/oauth2/**",      // OAuth2 endpoints (authorization, callback)

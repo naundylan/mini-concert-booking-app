@@ -1,4 +1,4 @@
-package com.concert.booking.modules.booking.enums;
+package com.concert.booking.modules.order.enums;
 
 public enum PaymentMethod {
   CASH,

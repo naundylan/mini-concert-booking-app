@@ -1,7 +1,7 @@
 export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'VNPAY'
 export type SeatStatus = 'AVAILABLE' | 'MAINTENANCE' | 'SOLD' | 'LOCKED'
 
-export interface PosCustomerLookupResponse {
+export interface CustomerLookupDTO {
   found: boolean
   customerId?: string
   phone: string
@@ -19,50 +19,52 @@ export interface PosEvent {
   status: string
 }
 
-export interface PosTicketClass {
-  id: string
-  name: string
-  colorCode?: string | null
-  price: number
-}
-
-export interface PosSeat {
-  id: string
+export interface OrderItemResponseDTO {
+  id?: string
+  seatId: string
   ticketClassId: string
-  ticketClassName: string
+  seatLabel: string
+  ticketClassName?: string | null
   price: number
-  gridRow: number
-  gridColumn: number
-  label: string
-  status: SeatStatus
+  gridRow?: number
+  gridColumn?: number
+  seatStatus?: SeatStatus
 }
 
-export interface PosCatalog {
+export interface SeatCatalogDTO {
   eventId: string
   eventName: string
-  ticketClasses: PosTicketClass[]
-  seats: PosSeat[]
+  ticketClasses: Array<{
+    id: string
+    name: string
+    colorCode?: string | null
+    price: number
+  }>
+  seats: OrderItemResponseDTO[]
 }
 
-export interface PosBookingCreateRequest {
+export interface PaymentCreateDTO {
+  paymentMethod: PaymentMethod
+  amountReceived?: number
+}
+
+export interface OrderCreateDTO {
   eventId: string
   phone: string
   fullName: string
   email?: string
   seatIds: string[]
-  paymentMethod: PaymentMethod
-  amountReceived?: number
+  payment: PaymentCreateDTO
 }
 
-export interface PosBookingResponse {
-  bookingId: string
-  bookingCode: string
+export interface OrderResponseDTO {
+  orderId: string
+  orderCode: string
   customerId: string
-  status: 'PENDING_PAYMENT' | 'PAID' | 'CANCELED'
-  paymentMethod: PaymentMethod
-  paymentStatus: 'STAFF_CONFIRMATION_REQUIRED' | 'CONFIRMED' | 'WAITING_GATEWAY' | 'FAILED'
+  status: 'PAID' | 'CANCELED'
   totalAmount: number
+  paymentMethod: PaymentMethod
+  paymentStatus: 'CONFIRMED' | 'WAITING_GATEWAY' | 'FAILED'
   amountReceived?: number | null
-  seatLabels: string[]
-  paymentUrl?: string | null
+  items: OrderItemResponseDTO[]
 }

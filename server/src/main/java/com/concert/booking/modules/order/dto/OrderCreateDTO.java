@@ -1,13 +1,11 @@
-package com.concert.booking.modules.booking.dto;
+package com.concert.booking.modules.order.dto;
 
-import com.concert.booking.modules.booking.enums.PaymentMethod;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import lombok.*;
@@ -18,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PosBookingCreateRequest {
+public class OrderCreateDTO {
   @NotNull(message = "Sự kiện không được để trống")
   UUID eventId;
 
@@ -37,9 +35,7 @@ public class PosBookingCreateRequest {
   @NotEmpty(message = "Phải chọn ít nhất một ghế")
   List<UUID> seatIds;
 
-  @NotNull(message = "Phương thức thanh toán không được để trống")
-  PaymentMethod paymentMethod;
-
-  @PositiveOrZero(message = "Số tiền thực nhận không hợp lệ")
-  BigDecimal amountReceived;
+  @Valid
+  @NotNull(message = "Thông tin thanh toán không được để trống")
+  PaymentCreateDTO payment;
 }

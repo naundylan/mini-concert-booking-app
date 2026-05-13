@@ -1,35 +1,35 @@
 import axiosClient from '@/lib/axios'
 import {
-  PosBookingCreateRequest,
-  PosBookingResponse,
-  PosCatalog,
-  PosCustomerLookupResponse,
+  CustomerLookupDTO,
+  OrderCreateDTO,
+  OrderResponseDTO,
   PosEvent,
+  SeatCatalogDTO,
 } from '@/lib/types/pos.type'
 
 export const posService = {
-  lookupCustomer: async (phone: string): Promise<PosCustomerLookupResponse> => {
-    const response = await axiosClient.get<{ data: PosCustomerLookupResponse }>(
-      '/bookings/pos/customers/lookup',
+  lookupCustomer: async (phone: string): Promise<CustomerLookupDTO> => {
+    const response = await axiosClient.get<{ data: CustomerLookupDTO }>(
+      '/orders/pos/customers/lookup',
       { params: { phone } }
     )
     return response.data
   },
 
   getEvents: async (): Promise<PosEvent[]> => {
-    const response = await axiosClient.get<{ data: PosEvent[] }>('/bookings/pos/events')
+    const response = await axiosClient.get<{ data: PosEvent[] }>('/orders/pos/events')
     return response.data
   },
 
-  getCatalog: async (eventId: string): Promise<PosCatalog> => {
-    const response = await axiosClient.get<{ data: PosCatalog }>(
-      `/bookings/pos/events/${eventId}/catalog`
+  getCatalog: async (eventId: string): Promise<SeatCatalogDTO> => {
+    const response = await axiosClient.get<{ data: SeatCatalogDTO }>(
+      `/orders/pos/events/${eventId}/catalog`
     )
     return response.data
   },
 
-  createBooking: async (data: PosBookingCreateRequest): Promise<PosBookingResponse> => {
-    const response = await axiosClient.post<{ data: PosBookingResponse }>('/bookings/pos', data)
+  createOrder: async (data: OrderCreateDTO): Promise<OrderResponseDTO> => {
+    const response = await axiosClient.post<{ data: OrderResponseDTO }>('/orders/pos', data)
     return response.data
   },
 }

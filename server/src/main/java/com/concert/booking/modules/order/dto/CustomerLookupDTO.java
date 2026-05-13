@@ -1,4 +1,4 @@
-package com.concert.booking.modules.booking.dto;
+package com.concert.booking.modules.order.dto;
 
 import java.util.UUID;
 import lombok.*;
@@ -9,7 +9,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PosCustomerLookupResponse {
+public class CustomerLookupDTO {
   boolean found;
   UUID customerId;
   String phone;

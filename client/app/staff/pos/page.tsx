@@ -9,12 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { posService } from '@/lib/services/pos.service'
 import {
+  CustomerLookupDTO,
+  OrderItemResponseDTO,
+  OrderResponseDTO,
   PaymentMethod,
-  PosBookingResponse,
-  PosCatalog,
-  PosCustomerLookupResponse,
   PosEvent,
-  PosSeat,
+  SeatCatalogDTO,
 } from '@/lib/types/pos.type'
 
 const PAYMENT_OPTIONS: Array<{
@@ -22,6 +22,7 @@ const PAYMENT_OPTIONS: Array<{
   title: string
   description: string
   icon: React.ElementType
+  disabled?: boolean
 }> = [
   {
     value: 'CASH',
@@ -38,8 +39,9 @@ const PAYMENT_OPTIONS: Array<{
   {
     value: 'VNPAY',
     title: 'VNPay Gateway',
-    description: 'Giữ ghế và chờ webhook thanh toán tự động',
+    description: 'Demo UI, chưa kích hoạt ở giai đoạn này',
     icon: QrCode,
+    disabled: true,
   },
 ]
 
@@ -49,19 +51,19 @@ const formatMoney = (value: number) =>
 export default function POSPage() {
   const [events, setEvents] = useState<PosEvent[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
-  const [catalog, setCatalog] = useState<PosCatalog | null>(null)
+  const [catalog, setCatalog] = useState<SeatCatalogDTO | null>(null)
   const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([])
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
-  const [customerLookup, setCustomerLookup] = useState<PosCustomerLookupResponse | null>(null)
+  const [customerLookup, setCustomerLookup] = useState<CustomerLookupDTO | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH')
   const [amountReceived, setAmountReceived] = useState('')
   const [loading, setLoading] = useState(true)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [bookingResult, setBookingResult] = useState<PosBookingResponse | null>(null)
+  const [orderResult, setOrderResult] = useState<OrderResponseDTO | null>(null)
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -126,44 +128,46 @@ export default function POSPage() {
 
   const selectedSeats = useMemo(() => {
     if (!catalog) return []
-    return catalog.seats.filter((seat) => selectedSeatIds.includes(seat.id))
+    return catalog.seats.filter((seat) => selectedSeatIds.includes(seat.seatId))
   }, [catalog, selectedSeatIds])
 
   const seatsByRow = useMemo(() => {
     if (!catalog) return []
-    const rows = new Map<number, PosSeat[]>()
+    const rows = new Map<number, OrderItemResponseDTO[]>()
     for (const seat of catalog.seats) {
-      rows.set(seat.gridRow, [...(rows.get(seat.gridRow) || []), seat])
+      rows.set(seat.gridRow ?? 0, [...(rows.get(seat.gridRow ?? 0) || []), seat])
     }
     return Array.from(rows.entries())
       .sort(([a], [b]) => a - b)
       .map(([row, seats]) => ({
         row,
         label: String.fromCharCode(65 + row),
-        seats: seats.sort((a, b) => a.gridColumn - b.gridColumn),
+        seats: seats.sort((a, b) => (a.gridColumn ?? 0) - (b.gridColumn ?? 0)),
       }))
   }, [catalog])
 
   const totalAmount = selectedSeats.reduce((sum, seat) => sum + Number(seat.price), 0)
   const requiresManualConfirmation = paymentMethod === 'CASH' || paymentMethod === 'BANK_TRANSFER'
 
-  const toggleSeat = (seat: PosSeat) => {
-    if (seat.status !== 'AVAILABLE') return
-    setBookingResult(null)
+  const toggleSeat = (seat: OrderItemResponseDTO) => {
+    if (seat.seatStatus !== 'AVAILABLE') return
+    setOrderResult(null)
     setSelectedSeatIds((current) =>
-      current.includes(seat.id) ? current.filter((id) => id !== seat.id) : [...current, seat.id]
+      current.includes(seat.seatId)
+        ? current.filter((id) => id !== seat.seatId)
+        : [...current, seat.seatId]
     )
   }
 
   const clearOrder = () => {
     setSelectedSeatIds([])
-    setBookingResult(null)
+    setOrderResult(null)
     setAmountReceived('')
   }
 
   const handleIssueTickets = async () => {
     setError('')
-    setBookingResult(null)
+    setOrderResult(null)
 
     if (!selectedEventId || !customerPhone.trim() || !customerName.trim() || selectedSeatIds.length === 0) {
       setError('Vui lòng chọn sự kiện, nhập SĐT, tên khách và chọn ít nhất một ghế.')
@@ -178,16 +182,18 @@ export default function POSPage() {
 
     try {
       setSubmitting(true)
-      const response = await posService.createBooking({
+      const response = await posService.createOrder({
         eventId: selectedEventId,
         phone: customerPhone.trim(),
         fullName: customerName.trim(),
         email: customerEmail.trim() || undefined,
         seatIds: selectedSeatIds,
-        paymentMethod,
-        amountReceived: requiresManualConfirmation ? received : undefined,
+        payment: {
+          paymentMethod,
+          amountReceived: requiresManualConfirmation ? received : undefined,
+        },
       })
-      setBookingResult(response)
+      setOrderResult(response)
       setSelectedSeatIds([])
       setAmountReceived('')
       if (selectedEventId) {
@@ -200,12 +206,12 @@ export default function POSPage() {
     }
   }
 
-  const getSeatClassName = (seat: PosSeat) => {
-    const isSelected = selectedSeatIds.includes(seat.id)
+  const getSeatClassName = (seat: OrderItemResponseDTO) => {
+    const isSelected = selectedSeatIds.includes(seat.seatId)
     if (isSelected) return 'bg-amber-300 text-slate-950 ring-2 ring-amber-500'
-    if (seat.status === 'SOLD') return 'bg-slate-300 text-slate-500 cursor-not-allowed'
-    if (seat.status === 'LOCKED') return 'bg-orange-200 text-orange-900 cursor-not-allowed'
-    if (seat.status === 'MAINTENANCE') return 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+    if (seat.seatStatus === 'SOLD') return 'bg-slate-300 text-slate-500 cursor-not-allowed'
+    if (seat.seatStatus === 'LOCKED') return 'bg-orange-200 text-orange-900 cursor-not-allowed'
+    if (seat.seatStatus === 'MAINTENANCE') return 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
     return 'bg-indigo-600 text-white hover:bg-indigo-700'
   }
 
@@ -214,7 +220,7 @@ export default function POSPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">POS bán vé nhanh</h1>
-          <p className="text-sm text-slate-600 mt-1">Chọn ghế, xác nhận thanh toán và sinh mã booking tại quầy.</p>
+          <p className="text-sm text-slate-600 mt-1">Chọn ghế, xác nhận thanh toán và sinh mã order tại quầy.</p>
         </div>
         <select
           value={selectedEventId}
@@ -235,16 +241,17 @@ export default function POSPage() {
         </div>
       )}
 
-      {bookingResult && (
+      {orderResult && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={18} />
             <span>
-              Đã tạo booking <strong>{bookingResult.bookingCode}</strong> cho ghế {bookingResult.seatLabels.join(', ')}.
+              Đã tạo order <strong>{orderResult.orderCode}</strong> cho ghế{' '}
+              {orderResult.items.map((item) => item.seatLabel).join(', ')}.
             </span>
           </div>
           <Badge className="bg-white text-emerald-700 border border-emerald-200">
-            {bookingResult.paymentStatus}
+            {orderResult.paymentStatus}
           </Badge>
         </div>
       )}
@@ -351,14 +358,14 @@ export default function POSPage() {
                         <div className="flex gap-2">
                           {row.seats.map((seat) => (
                             <button
-                              key={seat.id}
+                              key={seat.seatId}
                               type="button"
                               onClick={() => toggleSeat(seat)}
-                              disabled={seat.status !== 'AVAILABLE'}
-                              title={`${seat.label} - ${seat.ticketClassName} - ${formatMoney(Number(seat.price))}`}
+                              disabled={seat.seatStatus !== 'AVAILABLE'}
+                              title={`${seat.seatLabel} - ${seat.ticketClassName} - ${formatMoney(Number(seat.price))}`}
                               className={`h-8 w-8 rounded-md text-[11px] font-semibold transition ${getSeatClassName(seat)}`}
                             >
-                              {seat.gridColumn + 1}
+                              {(seat.gridColumn ?? 0) + 1}
                             </button>
                           ))}
                         </div>
@@ -387,9 +394,9 @@ export default function POSPage() {
                   <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">Chưa chọn ghế.</p>
                 ) : (
                   selectedSeats.map((seat) => (
-                    <div key={seat.id} className="flex items-center justify-between rounded-lg bg-indigo-50 px-3 py-2">
+                    <div key={seat.seatId} className="flex items-center justify-between rounded-lg bg-indigo-50 px-3 py-2">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Ghế {seat.label}</p>
+                        <p className="text-sm font-semibold text-slate-900">Ghế {seat.seatLabel}</p>
                         <p className="text-xs text-slate-600">{seat.ticketClassName}</p>
                       </div>
                       <p className="text-sm font-semibold text-slate-900">{formatMoney(Number(seat.price))}</p>
@@ -417,10 +424,11 @@ export default function POSPage() {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => setPaymentMethod(option.value)}
+                      onClick={() => !option.disabled && setPaymentMethod(option.value)}
+                      disabled={option.disabled}
                       className={`w-full rounded-lg border-2 p-4 text-left transition ${
                         active ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
+                      } ${option.disabled ? 'cursor-not-allowed opacity-55' : ''}`}
                     >
                       <Icon size={22} className="text-indigo-600 mb-2" />
                       <p className="font-semibold text-slate-900">{option.title}</p>
@@ -456,10 +464,8 @@ export default function POSPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Đang tạo booking...
+                  Đang tạo order...
                 </>
-              ) : paymentMethod === 'VNPAY' ? (
-                'Tạo yêu cầu VNPay'
               ) : (
                 'Xác nhận và xuất vé'
               )}
@@ -467,7 +473,7 @@ export default function POSPage() {
 
             <div className="text-xs text-slate-600 space-y-1 border-t border-slate-200 pt-4">
               <p className="font-semibold text-slate-900">TERMINAL #01</p>
-              <p>Mục tiêu xử lý: chọn ghế đến mã booking dưới 2 giây.</p>
+              <p>Mục tiêu xử lý: chọn ghế đến mã order dưới 2 giây.</p>
             </div>
           </div>
         </div>
