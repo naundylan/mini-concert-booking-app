@@ -1,9 +1,11 @@
 package com.concert.booking.modules.seat;
 
 import com.concert.booking.modules.seat.enums.SeatStatus;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
@@ -34,4 +36,8 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
      */
     @Query("SELECT COUNT(s) > 0 FROM Seat s WHERE s.eventId = :eventId AND s.status = 'MAINTENANCE'")
     boolean hasMaintenanceSeats(UUID eventId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds")
+    List<Seat> findAllByIdForUpdate(List<UUID> seatIds);
 }

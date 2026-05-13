@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -31,6 +32,7 @@ import com.concert.booking.modules.auth.dto.OAuth2LoginDTO;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class AppSecurityConfig {
   private final JwtService jwtService;
   private final CustomAccessDeniedHandler customAccessDeniedHandler;
@@ -45,7 +47,7 @@ public class AppSecurityConfig {
   }
 
   static String[] SWAGGER_WHITELIST = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
-  static String[] PUBLIC_ENDPOINTS = {"/"};
+  static String[] PUBLIC_ENDPOINTS = {"/", "/api/v1/bookings/webhooks/**"};
   static String[] AUTH_ENDPOINTS = {
       "/api/v1/auth/**", // Cho phép tất cả login/register/refresh
       "/oauth2/**",      // OAuth2 endpoints (authorization, callback)

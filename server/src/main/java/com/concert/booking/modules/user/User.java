@@ -72,5 +72,9 @@ public class User extends AbstractAuditEntity {
   @Column(name = "tokens_valid_from")
   Instant tokensValidFrom; // Timestamp để invalidate tất cả tokens cũ
 
+  @Builder.Default
+  @Column(name = "online_verified", nullable = false)
+  Boolean onlineVerified = false;
+
   // createdAt, updatedAt, createdBy, updatedBy inherited from AbstractAuditEntity
 }

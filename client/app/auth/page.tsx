@@ -80,7 +80,7 @@ export default function AuthPage() {
         window.location.href = '/admin/dashboard';
       }
       else if (role === 'STAFF') {
-        window.location.href = '/staff/dashboard';
+        window.location.href = '/staff/pos';
       }
       else {
         alert("Unknown role, cannot redirect!"); 
