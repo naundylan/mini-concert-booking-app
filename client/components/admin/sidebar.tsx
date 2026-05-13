@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { clearAuthSession } from '@/lib/auth-client';
 
 const MENU_ITEMS = [
   { label: 'Dashboard', icon: BarChart3, href: '/admin/dashboard' },
@@ -42,10 +43,7 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('userFullName')
+    clearAuthSession()
     window.location.href = '/auth'
   }
 

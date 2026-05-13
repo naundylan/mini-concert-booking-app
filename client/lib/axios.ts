@@ -2,7 +2,7 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },

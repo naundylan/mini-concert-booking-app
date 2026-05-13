@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, TicketIcon, Heart, LogOut } from 'lucide-react'
+import { clearAuthSession } from '@/lib/auth-client'
 
 export default function CustomerSidebar() {
   const pathname = usePathname()
@@ -13,6 +14,11 @@ export default function CustomerSidebar() {
     { label: 'My Tickets', icon: TicketIcon, href: '/customer/my-tickets' },
     { label: 'Favorites', icon: Heart, href: '/customer/favorites' },
   ]
+
+  const handleLogout = () => {
+    clearAuthSession()
+    window.location.href = '/auth'
+  }
 
   return (
     <aside className="w-56 bg-indigo-950 text-white flex flex-col">
@@ -54,7 +60,10 @@ export default function CustomerSidebar() {
 
       {/* User Profile & Logout */}
       <div className="p-4 border-t border-indigo-900">
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-indigo-200 hover:text-white hover:bg-indigo-900/50 transition-colors">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-indigo-200 hover:text-white hover:bg-indigo-900/50 transition-colors"
+        >
           <LogOut size={20} />
           <span className="text-sm font-medium">Logout</span>
         </button>

@@ -21,28 +21,28 @@ public class OrderV1Controller {
   OrderService orderService;
 
   @GetMapping("/pos/customers/lookup")
-  @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+  @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<CustomerLookupDTO> lookupCustomer(@RequestParam String phone) {
     return DataApiResponse.success(
         orderService.lookupCustomerByPhone(phone), "Tra cứu khách hàng thành công");
   }
 
   @GetMapping("/pos/events")
-  @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+  @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<List<Event>> getOnSaleEvents() {
     return DataApiResponse.success(
         orderService.getOnSaleEvents(), "Lấy danh sách sự kiện đang bán thành công");
   }
 
   @GetMapping("/pos/events/{eventId}/catalog")
-  @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+  @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<SeatCatalogDTO> getSeatCatalog(@PathVariable UUID eventId) {
     return DataApiResponse.success(
         orderService.getSeatCatalog(eventId), "Lấy sơ đồ bán vé thành công");
   }
 
   @PostMapping("/pos")
-  @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+  @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<OrderResponseDTO> createOrder(@RequestBody @Valid OrderCreateDTO request) {
     UUID staffId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(orderService.createOrder(request, staffId), "Tạo đơn hàng thành công");

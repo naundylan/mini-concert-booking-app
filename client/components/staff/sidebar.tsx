@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { clearAuthSession } from '@/lib/auth-client';
 
 const STAFF_MENU_ITEMS = [
   { label: 'POS', icon: ShoppingCart, href: '/staff/pos' },
@@ -30,6 +31,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const handleLogout = () => {
+    clearAuthSession();
     window.location.href = '/auth';
   };
 

@@ -2,21 +2,18 @@
 
 import { ReactNode } from 'react'
 import CustomerSidebar from '@/components/customer/sidebar'
+import RoleGuard from '@/components/auth/role-guard'
 
 export default function CustomerLayout({ children }: { children: ReactNode }) {
   return (
-    <html className="bg-slate-50">
-      <body className="bg-slate-50">
-        <div className="flex h-screen bg-slate-50">
-          {/* Sidebar */}
-          <CustomerSidebar />
+    <RoleGuard allowedRole="CUSTOMER">
+      <div className="flex h-screen bg-slate-50">
+        <CustomerSidebar />
 
-          {/* Main Content */}
-          <main className="flex-1 overflow-y-auto bg-slate-50">
-            {children}
-          </main>
-        </div>
-      </body>
-    </html>
+        <main className="flex-1 overflow-y-auto bg-slate-50">
+          {children}
+        </main>
+      </div>
+    </RoleGuard>
   )
 }

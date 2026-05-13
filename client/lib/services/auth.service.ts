@@ -1,6 +1,7 @@
 // lib/services/auth.service.ts
 import axiosClient from "@/lib/axios";
 import { LoginRequest, LoginResponse, OAuth2LoginResponse } from "../types/auth.type";
+import { clearAuthSession } from "@/lib/auth-client";
 
 const getBaseUrl = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
@@ -30,8 +31,7 @@ export const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    window.location.href = "/auth/login";
+    clearAuthSession();
+    window.location.href = "/auth";
   }
 };

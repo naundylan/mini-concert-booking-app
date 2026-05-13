@@ -1,17 +1,16 @@
-// app/auth/complete-profile/page.tsx
 'use client'
-import { useSearchParams, useRouter } from 'next/navigation'
+
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { authService } from '@/lib/services/auth.service'
+import { clearAuthSession, normalizeRole, saveAuthSession } from '@/lib/auth-client'
 
 export default function CompleteProfile() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Pre-fill from OAuth callback query params
   const email = searchParams.get('email') ?? ''
   const fullName = searchParams.get('fullName') ?? ''
   const googleId = searchParams.get('googleId') ?? ''
@@ -20,6 +19,7 @@ export default function CompleteProfile() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
     try {
       const response = await authService.completeOAuth2Phone({
         email,
@@ -27,14 +27,27 @@ export default function CompleteProfile() {
         googleId,
         phone: phone.trim(),
       })
-      console.log("response từ completeOAuth2Phone:", response) 
-      if (response.accessToken) {
-        localStorage.setItem('accessToken', response.accessToken)
-        localStorage.setItem('refreshToken', response.refreshToken ?? '')
-        window.location.href = '/customer/dashboard';
-      } else {
+
+      if (!response.accessToken) {
         setError('Unexpected response from server')
+        return
       }
+
+      const role = normalizeRole(response.userInfo?.role)
+
+      if (role !== 'CUSTOMER') {
+        clearAuthSession()
+        setError('Tài khoản Google chỉ được dùng cho khách hàng.')
+        return
+      }
+
+      saveAuthSession({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        role,
+        fullName: response.userInfo?.fullName,
+      })
+      window.location.href = '/customer/events'
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Lỗi không xác định')
     } finally {
@@ -89,8 +102,8 @@ export default function CompleteProfile() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Nhập số điện thoại của bạn (ví dụ: 0909123456)"
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-${
-                error ? 'red-500' : 'blue-500'
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${
+                error ? 'focus:ring-red-500' : 'focus:ring-blue-500'
               }`}
             />
           </div>
@@ -110,7 +123,7 @@ export default function CompleteProfile() {
 
         <p className="text-center text-sm text-gray-500">
           Bạn đã có tài khoản?{' '}
-          <a href="/auth/login" className="text-blue-600 hover:underline">
+          <a href="/auth" className="text-blue-600 hover:underline">
             Đăng nhập tại đây
           </a>
         </p>
