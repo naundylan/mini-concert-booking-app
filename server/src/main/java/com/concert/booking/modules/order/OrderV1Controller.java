@@ -48,6 +48,13 @@ public class OrderV1Controller {
     return DataApiResponse.success(orderService.createOrder(request, staffId), "Tạo đơn hàng thành công");
   }
 
+  @GetMapping("/pos/{orderCode}")
+  @PreAuthorize("hasRole('STAFF')")
+  public DataApiResponse<OrderResponseDTO> getPosOrder(@PathVariable String orderCode) {
+    return DataApiResponse.success(
+        orderService.getPosOrderByCode(orderCode), "Lấy thông tin đơn hàng thành công");
+  }
+
   @PostMapping("/webhooks/payment")
   public DataApiResponse<OrderResponseDTO> handlePaymentWebhook(
       @RequestBody @Valid PaymentWebhookDTO request) {

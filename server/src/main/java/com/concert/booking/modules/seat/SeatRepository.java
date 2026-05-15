@@ -10,7 +10,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
     List<Seat> findByEventId(UUID eventId);
+    List<Seat> findByTicketClassId(UUID ticketClassId);
     boolean existsByEventIdAndStatus(UUID eventId, SeatStatus status);
+    boolean existsByEventIdAndGridRowAndGridColumn(UUID eventId, int gridRow, int gridColumn);
     void deleteByEventId(UUID eventId);
 
     /**
@@ -38,6 +40,6 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     boolean hasMaintenanceSeats(UUID eventId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds")
+    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds ORDER BY s.id")
     List<Seat> findAllByIdForUpdate(List<UUID> seatIds);
 }

@@ -33,6 +33,7 @@ public class OrderCreateDTO {
   String email;
 
   @NotEmpty(message = "Phải chọn ít nhất một ghế")
+  @Size(max = 10, message = "Một đơn hàng chỉ được chọn tối đa 10 ghế")
   List<@NotNull(message = "ID ghế không được để trống") UUID> seatIds;
 
   @Valid

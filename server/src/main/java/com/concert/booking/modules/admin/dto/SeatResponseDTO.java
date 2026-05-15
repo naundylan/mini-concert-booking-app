@@ -1,4 +1,4 @@
-package com.concert.booking.modules.order.dto;
+package com.concert.booking.modules.admin.dto;
 
 import com.concert.booking.modules.seat.enums.SeatStatus;
 import java.math.BigDecimal;
@@ -11,26 +11,20 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class OrderItemResponseDTO {
+public class SeatResponseDTO {
   UUID id;
-  UUID seatId;
-  UUID ticketClassId;
-  String seatLabel;
-  String ticketClassName;
-  BigDecimal price;
-  Integer gridRow;
-  Integer gridColumn;
-  SeatStatus seatStatus;
+  int gridRow;
+  int gridColumn;
   String label;
   SeatStatus status;
-  TicketClassInfoDTO ticketClass;
+  TicketClassDTO ticketClass;
 
   @Data
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
   @FieldDefaults(level = AccessLevel.PRIVATE)
-  public static class TicketClassInfoDTO {
+  public static class TicketClassDTO {
     UUID id;
     String name;
     String colorCode;

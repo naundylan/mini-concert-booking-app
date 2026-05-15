@@ -10,7 +10,16 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
-@Table(name = "seats")
+@Table(
+    name = "seats",
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uk_seat_event_position",
+          columnNames = {"event_id", "grid_row", "grid_column"})
+    },
+    indexes = {
+      @Index(name = "idx_seats_event_status", columnList = "event_id,status")
+    })
 @Getter
 @Setter
 @NoArgsConstructor

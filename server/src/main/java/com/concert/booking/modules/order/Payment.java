@@ -35,6 +35,9 @@ public class Payment extends AbstractAuditEntity {
   @Column(nullable = false)
   BigDecimal amount;
 
+  @Column(name = "amount_received")
+  BigDecimal amountReceived;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "payment_method", nullable = false, length = 30)
   PaymentMethod paymentMethod;
