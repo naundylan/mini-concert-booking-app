@@ -1,7 +1,11 @@
-// lib/services/auth.service.ts
 import axiosClient from "@/lib/axios";
-import { LoginRequest, LoginResponse, OAuth2LoginResponse } from "../types/auth.type";
-import { clearAuthSession } from "@/lib/auth-client";
+import {
+  AuthSessionResponse,
+  CompletePhoneRequest,
+  LoginRequest,
+  LoginResponse,
+  OAuth2LoginResponse,
+} from "../types/auth.type";
 
 const getBaseUrl = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
@@ -9,29 +13,33 @@ const getBaseUrl = () => {
 };
 
 export const authService = {
-  // Backend wrap trong { data: LoginResponse }
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await axiosClient.post<{ data: LoginResponse }>("/auth/sign-in", data);
-    return response.data; // interceptor đã unwrap AxiosResponse, còn lại { data: LoginResponse }
+    return response.data;
+  },
+
+  getMe: async (): Promise<AuthSessionResponse> => {
+    const response = await axiosClient.get<{ data: AuthSessionResponse }>("/auth/me");
+    return response.data;
   },
 
   getOAuthUrl: (provider: "google" | "facebook") => {
     return `${getBaseUrl()}/oauth2/authorization/${provider}`;
   },
 
-  // Backend trả về OAuth2LoginResponse trực tiếp, không wrap
-  completeOAuth2Phone: async (data: {
-    email: string;
-    fullName: string;
-    googleId: string;
-    phone: string;
-  }): Promise<OAuth2LoginResponse> => {
-    const response = await axiosClient.post<{ data: OAuth2LoginResponse }>("/auth/customer/complete-phone", data);
-    return response.data; // TypedAxiosClient trả về { data: OAuth2LoginResponse }, lấy .data
+  completeOAuth2Phone: async (data: CompletePhoneRequest): Promise<OAuth2LoginResponse> => {
+    const response = await axiosClient.post<{ data: OAuth2LoginResponse }>(
+      "/auth/customer/complete-phone",
+      data
+    );
+    return response.data;
   },
 
-  logout: () => {
-    clearAuthSession();
-    window.location.href = "/auth";
+  logout: async () => {
+    try {
+      await axiosClient.post("/auth/sign-out");
+    } finally {
+      window.location.href = "/auth";
+    }
   }
 };

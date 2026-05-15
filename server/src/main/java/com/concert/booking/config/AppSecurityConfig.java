@@ -4,7 +4,9 @@ import com.concert.booking.common.exception.CustomAccessDeniedHandler;
 import com.concert.booking.common.exception.CustomAuthenticationEntryPoint;
 import com.concert.booking.modules.auth.AuthService;
 import com.concert.booking.modules.auth.dto.OAuth2LoginDTO;
+import com.concert.booking.modules.auth.dto.TokenDTO;
 import com.concert.booking.modules.auth.filter.JwtAuthenticationFilter;
+import com.concert.booking.modules.auth.security.AuthCookieService;
 import com.concert.booking.modules.auth.security.JwtService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -33,22 +35,26 @@ public class AppSecurityConfig {
   private final CustomAccessDeniedHandler customAccessDeniedHandler;
   private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
   private final AuthService authService;
+  private final AuthCookieService authCookieService;
 
   public AppSecurityConfig(
       JwtService jwtService,
       CustomAccessDeniedHandler customAccessDeniedHandler,
       CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-      @Lazy AuthService authService) {
+      @Lazy AuthService authService,
+      AuthCookieService authCookieService) {
     this.jwtService = jwtService;
     this.customAccessDeniedHandler = customAccessDeniedHandler;
     this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     this.authService = authService;
+    this.authCookieService = authCookieService;
   }
 
   static String[] SWAGGER_WHITELIST = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
   static String[] PUBLIC_ENDPOINTS = {"/", "/api/v1/orders/webhooks/**"};
   static String[] AUTH_ENDPOINTS = {
       "/api/v1/auth/sign-in",
+      "/api/v1/auth/sign-out",
       "/api/v1/auth/refresh",
       "/api/v1/auth/google",
       "/api/v1/auth/customer/complete-phone",
@@ -100,12 +106,13 @@ public class AppSecurityConfig {
                                   loginData.getUserInfo().getFullName(), StandardCharsets.UTF_8)
                               + "&googleId="
                               + loginData.getUserInfo().getGoogleId()
+                              + "&role="
+                              + loginData.getUserInfo().getRole()
                               + "&hasPhone="
                               + (loginData.getUserInfo().getPhone() != null);
 
                       if (loginData.getAccessToken() != null) {
-                        targetUrl += "&accessToken=" + loginData.getAccessToken();
-                        targetUrl += "&refreshToken=" + loginData.getRefreshToken();
+                        authCookieService.addAuthCookies(response, toTokenDTO(loginData));
                       }
 
                       response.sendRedirect(targetUrl);
@@ -131,5 +138,15 @@ public class AppSecurityConfig {
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", cors);
     return source;
+  }
+
+  private TokenDTO toTokenDTO(OAuth2LoginDTO loginData) {
+    return TokenDTO.builder()
+        .accessToken(loginData.getAccessToken())
+        .refreshToken(loginData.getRefreshToken())
+        .accessTokenExpiration(loginData.getAccessTokenExpiration())
+        .refreshTokenExpiration(loginData.getRefreshTokenExpiration())
+        .role(loginData.getUserInfo().getRole())
+        .build();
   }
 }

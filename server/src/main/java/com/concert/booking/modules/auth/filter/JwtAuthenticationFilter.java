@@ -1,6 +1,7 @@
 package com.concert.booking.modules.auth.filter;
 
 import com.concert.booking.core.auth.TokenBlacklistService;
+import com.concert.booking.modules.auth.security.AuthCookieService;
 import com.concert.booking.modules.auth.security.CustomUserDetails;
 import com.concert.booking.modules.auth.security.JwtService;
 import com.concert.booking.modules.user.UserService;
@@ -30,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   JwtService jwtService;
   UserService userService;
   TokenBlacklistService tokenBlacklistService;
+  AuthCookieService authCookieService;
 
   @Override
   protected void doFilterInternal(
@@ -37,14 +39,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       @NonNull HttpServletResponse response,
       @NonNull FilterChain filterChain)
       throws ServletException, IOException {
-    String header = request.getHeader("Authorization");
+    String token = extractToken(request);
 
-    if (header == null || !header.startsWith("Bearer ")) {
+    if (token == null) {
       filterChain.doFilter(request, response);
       return;
     }
-
-    String token = header.substring(7);
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
       try {
@@ -82,5 +82,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       }
     }
     filterChain.doFilter(request, response);
+  }
+
+  private String extractToken(HttpServletRequest request) {
+    String header = request.getHeader("Authorization");
+    if (header != null && header.startsWith("Bearer ")) {
+      return header.substring(7);
+    }
+    return authCookieService.getAccessToken(request);
   }
 }
