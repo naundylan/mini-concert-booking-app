@@ -1,0 +1,25 @@
+services:
+  app:
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+
+  client:
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
+  postgres:
+    restart: always
+    ports: []
+
+  redis:
+    restart: always
+    ports: []
+
+  pgadmin:
+    profiles:
+      - tools
