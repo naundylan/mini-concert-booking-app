@@ -79,7 +79,9 @@ public class OrderServiceImpl implements OrderService {
   @Transactional
   public List<Event> getOnSaleEvents() {
     ensureDemoEventExists();
+    Timestamp now = Timestamp.from(Instant.now());
     return eventRepository.findByStatus(EventStatus.ONSALE).stream()
+        .filter(event -> event.getStartTime() == null || event.getStartTime().after(now))
         .sorted(Comparator.comparing(Event::getStartTime))
         .toList();
   }
@@ -166,7 +168,7 @@ public class OrderServiceImpl implements OrderService {
                       .ticketClassId(ticketClass.getId())
                       .seatLabel(toSeatLabel(seat))
                       .price(ticketClass.getPrice())
-                      .status(TicketStatus.VALID)
+                      .status(TicketStatus.UNUSED)
                       .createdBy(staffId)
                       .build();
                   return ticket;
@@ -238,11 +240,15 @@ public class OrderServiceImpl implements OrderService {
     if (event.getStatus() != EventStatus.ONSALE) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Sự kiện chưa mở bán");
     }
+    Timestamp now = Timestamp.from(Instant.now());
+    if (event.getStartTime() != null && !event.getStartTime().after(now)) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Sự kiện đã bắt đầu, không thể bán vé");
+    }
     return event;
   }
 
   private void ensureDemoEventExists() {
-    if (!eventRepository.findByStatus(EventStatus.ONSALE).isEmpty()) {
+    if (!eventRepository.findAll().isEmpty()) {
       return;
     }
 

@@ -1,396 +1,337 @@
 'use client'
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Calendar, CreditCard, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { checkInService } from '@/lib/services/check-in.service'
+import { CheckInHistoryItem } from '@/lib/types/check-in.type'
+import {
+  CalendarCheck,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  RefreshCw,
+  Search,
+  TicketCheck,
+  UserCheck,
+} from 'lucide-react'
 
-// Mock Data for Sales History
-const SALES_HISTORY = [
-  {
-    id: '#TK-88219',
-    customer: 'Julianna Dubois',
-    avatar: 'JD',
-    avatarColor: 'bg-indigo-500',
-    amount: '$124.50',
-    method: 'Visa',
-    methodBadgeColor: 'bg-purple-100 text-purple-700',
-    timestamp: 'Oct 24, 2023 • 14:32',
-    action: 'Receipt',
-  },
-  {
-    id: '#TK-88220',
-    customer: 'Marcus Sterling',
-    avatar: 'MS',
-    avatarColor: 'bg-pink-500',
-    amount: '$45.00',
-    method: 'Cash',
-    methodBadgeColor: 'bg-gray-100 text-gray-700',
-    timestamp: 'Oct 24, 2023 • 14:45',
-    action: 'Receipt',
-  },
-  {
-    id: '#TK-88221',
-    customer: 'Elena Lopez',
-    avatar: 'EL',
-    avatarColor: 'bg-indigo-600',
-    amount: '$210.00',
-    method: 'Apple Pay',
-    methodBadgeColor: 'bg-slate-100 text-slate-700',
-    timestamp: 'Oct 24, 2023 • 15:10',
-    action: 'Receipt',
-  },
-  {
-    id: '#TK-88222',
-    customer: 'Brian Kim',
-    avatar: 'BK',
-    avatarColor: 'bg-purple-500',
-    amount: '$89.99',
-    method: 'Mastercard',
-    methodBadgeColor: 'bg-orange-100 text-orange-700',
-    timestamp: 'Oct 24, 2023 • 15:55',
-    action: 'Receipt',
-  },
-  {
-    id: '#TK-88223',
-    customer: 'Sarah Ahmed',
-    avatar: 'SA',
-    avatarColor: 'bg-red-500',
-    amount: '$34.00',
-    method: 'Cash',
-    methodBadgeColor: 'bg-gray-100 text-gray-700',
-    timestamp: 'Oct 24, 2023 • 16:20',
-    action: 'Receipt',
-  },
-]
+const ITEMS_PER_PAGE = 10
 
-// Mock Data for Check-in History
-const CHECKIN_HISTORY = [
-  {
-    id: '#ORD-8829-XJ',
-    customer: 'Sarah Jenkins',
-    avatar: 'SJ',
-    avatarColor: 'bg-teal-500',
-    eventName: 'Neon Nights Festival',
-    seatLocation: 'Sec A, Row 14, Col B2',
-    timestamp: 'Oct 24, 2023 • 19:42',
-    status: 'SUCCESS',
-    action: 'Details',
-  },
-  {
-    id: '#ORD-8830-YK',
-    customer: 'Michael Chen',
-    avatar: 'MC',
-    avatarColor: 'bg-blue-500',
-    eventName: 'Jazz in the Park',
-    seatLocation: 'Gen Admission',
-    timestamp: 'Oct 24, 2023 • 19:55',
-    status: 'SUCCESS',
-    action: 'Details',
-  },
-  {
-    id: '#ORD-8831-ZL',
-    customer: 'Emma Wilson',
-    avatar: 'EW',
-    avatarColor: 'bg-rose-500',
-    eventName: 'A Midsummer Night\'s Dream',
-    seatLocation: 'Sec B, Row 8, Col F5',
-    timestamp: 'Oct 24, 2023 • 20:10',
-    status: 'SUCCESS',
-    action: 'Details',
-  },
-  {
-    id: '#ORD-8832-AM',
-    customer: 'James Rodriguez',
-    avatar: 'JR',
-    avatarColor: 'bg-cyan-500',
-    eventName: 'Tech Summit 2024',
-    seatLocation: 'VIP Section',
-    timestamp: 'Oct 24, 2023 • 20:25',
-    status: 'SUCCESS',
-    action: 'Details',
-  },
-]
+function formatDateTime(value?: string | null) {
+  if (!value) return '-'
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+function formatCurrency(value?: number | null) {
+  if (value == null) return '-'
+
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function getInitials(name?: string | null) {
+  if (!name) return 'KH'
+
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+}
+
+function getErrorMessage(error: unknown) {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: string } } }).response
+    return response?.data?.message || 'Không tải được lịch sử check-in'
+  }
+
+  return 'Không tải được lịch sử check-in'
+}
 
 export default function HistoryPage() {
-  const [activeTab, setActiveTab] = useState<'sales' | 'checkin'>('sales')
+  const [history, setHistory] = useState<CheckInHistoryItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [appliedKeyword, setAppliedKeyword] = useState('')
+  const [selectedEventId, setSelectedEventId] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredSales = SALES_HISTORY.filter(
-    (item) =>
-      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.customer.toLowerCase().includes(searchQuery.toLowerCase())
+  const loadHistory = async (keyword = appliedKeyword) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const data = await checkInService.getHistory({ keyword })
+      setHistory(data)
+      setCurrentPage(1)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadHistory('')
+  }, [])
+
+  const eventOptions = useMemo(() => {
+    const eventMap = new Map<string, string>()
+    history.forEach((item) => {
+      if (item.eventId) {
+        eventMap.set(item.eventId, item.eventName || 'Sự kiện không tên')
+      }
+    })
+
+    return Array.from(eventMap, ([id, name]) => ({ id, name }))
+  }, [history])
+
+  const filteredHistory = useMemo(() => {
+    if (selectedEventId === 'all') return history
+    return history.filter((item) => item.eventId === selectedEventId)
+  }, [history, selectedEventId])
+
+  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / ITEMS_PER_PAGE))
+  const paginatedHistory = filteredHistory.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   )
 
-  const filteredCheckins = CHECKIN_HISTORY.filter(
-    (item) =>
-      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.customer.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const totalTickets = filteredHistory.length
+  const uniqueOrders = new Set(filteredHistory.map((item) => item.orderId).filter(Boolean)).size
+  const latestCheckIn = filteredHistory[0]?.checkInTime
 
-  const displayData = activeTab === 'sales' ? filteredSales : filteredCheckins
-  const totalPages = Math.ceil(displayData.length / itemsPerPage)
-  const paginatedData = displayData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const keyword = searchQuery.trim()
+    setAppliedKeyword(keyword)
+    setSelectedEventId('all')
+    loadHistory(keyword)
+  }
+
+  const handleRefresh = () => {
+    loadHistory(appliedKeyword)
+  }
 
   return (
-    <main className="flex-1 overflow-auto bg-white">
-      {/* Page Header */}
-      <div className="px-8 py-6 border-b border-slate-200">
-        <h1 className="text-3xl font-bold text-slate-900 mb-1">Internal Logs</h1>
+    <main className="flex-1 overflow-auto bg-slate-50">
+      <div className="border-b border-slate-200 bg-white px-8 py-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold text-slate-950">Lịch sử check-in</h1>
+          <p className="text-sm text-slate-600">
+            Theo dõi các vé đã được soát tại cổng, nhân viên xử lý và thời điểm check-in.
+          </p>
+        </div>
       </div>
 
-      <div className="p-8">
-        {/* Tabs */}
-        <div className="flex gap-8 border-b border-slate-200 mb-6">
-          <button
-            onClick={() => {
-              setActiveTab('sales')
-              setCurrentPage(1)
-              setSearchQuery('')
-            }}
-            className={`pb-3 font-medium text-sm transition-colors ${
-              activeTab === 'sales'
-                ? 'text-indigo-600 border-b-2 border-indigo-600'
-                : 'text-slate-600 hover:text-slate-700'
-            }`}
-          >
-            Sales History
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('checkin')
-              setCurrentPage(1)
-              setSearchQuery('')
-            }}
-            className={`pb-3 font-medium text-sm transition-colors ${
-              activeTab === 'checkin'
-                ? 'text-indigo-600 border-b-2 border-indigo-600'
-                : 'text-slate-600 hover:text-slate-700'
-            }`}
-          >
-            Check-in History
-          </button>
+      <div className="space-y-6 p-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+              <TicketCheck size={20} />
+            </div>
+            <p className="text-sm text-slate-500">Vé đã check-in</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-950">{totalTickets}</p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+              <CalendarCheck size={20} />
+            </div>
+            <p className="text-sm text-slate-500">Đơn hàng liên quan</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-950">{uniqueOrders}</p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+              <Clock size={20} />
+            </div>
+            <p className="text-sm text-slate-500">Check-in gần nhất</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">
+              {formatDateTime(latestCheckIn)}
+            </p>
+          </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-              <Input
-                type="text"
-                placeholder={
-                  activeTab === 'sales'
-                    ? 'Search Booking ID or customer...'
-                    : 'Search Order ID or customer...'
-                }
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
+        <div className="rounded-lg border border-slate-200 bg-white">
+          <div className="flex flex-col gap-4 border-b border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <form onSubmit={handleSearch} className="flex flex-1 gap-3">
+              <div className="relative max-w-xl flex-1">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <Input
+                  type="text"
+                  placeholder="Tìm mã đơn, tên khách, SĐT hoặc ghế..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="h-10 border-slate-200 bg-slate-50 pl-10 text-sm"
+                />
+              </div>
+              <Button type="submit" disabled={isLoading} className="h-10 bg-indigo-600 text-white hover:bg-indigo-700">
+                Tìm kiếm
+              </Button>
+            </form>
+
+            <div className="flex gap-3">
+              <select
+                value={selectedEventId}
+                onChange={(event) => {
+                  setSelectedEventId(event.target.value)
                   setCurrentPage(1)
                 }}
-                className="pl-10 bg-slate-50 border-slate-200 text-sm"
-              />
+                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500"
+              >
+                <option value="all">Tất cả sự kiện</option>
+                {eventOptions.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="h-10 gap-2"
+              >
+                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+                Làm mới
+              </Button>
             </div>
           </div>
 
-          {/* Filter Buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 text-slate-700"
-            >
-              <Calendar size={16} />
-              Date Range
-            </Button>
-            {activeTab === 'sales' && (
+          {error && (
+            <div className="mx-5 mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Mã đơn</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Khách hàng</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Sự kiện</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Ghế</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Check-in</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Nhân viên</th>
+                  <th className="px-5 py-3 text-right font-semibold text-slate-700">Giá vé</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
+                      Đang tải lịch sử check-in...
+                    </td>
+                  </tr>
+                )}
+
+                {!isLoading && paginatedHistory.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
+                      Chưa có lịch sử check-in phù hợp.
+                    </td>
+                  </tr>
+                )}
+
+                {!isLoading &&
+                  paginatedHistory.map((item) => (
+                    <tr
+                      key={item.ticketId}
+                      className="border-b border-slate-100 bg-white transition-colors hover:bg-slate-50"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-indigo-700">{item.orderCode || '-'}</div>
+                        <div className="mt-1 text-xs text-slate-500">{item.ticketId}</div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                            {getInitials(item.customerName)}
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-950">
+                              {item.customerName || 'Khách hàng'}
+                            </div>
+                            <div className="text-xs text-slate-500">{item.phone || '-'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-slate-800">{item.eventName || '-'}</td>
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-slate-900">
+                          {item.ticketClassName || 'Hạng vé'}
+                        </div>
+                        <div className="text-xs text-slate-500">{item.seatLabel || '-'}</div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge className="mb-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                          Đã vào cổng
+                        </Badge>
+                        <div className="text-xs text-slate-500">{formatDateTime(item.checkInTime)}</div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <UserCheck size={16} className="text-slate-400" />
+                          {item.checkInByName || '-'}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-right font-medium text-slate-900">
+                        {formatCurrency(item.price)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-600">
+              Hiển thị {filteredHistory.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}-
+              {Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} / {filteredHistory.length} vé
+            </p>
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 text-slate-700"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1 || isLoading}
+                className="h-9 w-9 p-0"
               >
-                <CreditCard size={16} />
-                Payment Method
+                <ChevronLeft size={16} />
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2"
-            >
-              <Filter size={16} className="text-slate-600" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto bg-slate-50 rounded-lg border border-slate-200">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-white">
-                {activeTab === 'sales' ? (
-                  <>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">BOOKING ID</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">CUSTOMER</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">AMOUNT</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">METHOD</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">TIMESTAMP</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">ACTION</th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">ORDER ID</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">CUSTOMER</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">EVENT</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">SEAT LOCATION</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">TIMESTAMP</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">ACTION</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                >
-                  {activeTab === 'sales' ? (
-                    <>
-                      <td className="px-6 py-4 font-medium text-indigo-600">
-                        {item.id}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-full ${item.avatarColor} flex items-center justify-center text-white text-xs font-semibold`}
-                          >
-                            {item.avatar}
-                          </div>
-                          <span className="text-slate-900">{item.customer}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {item.amount}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge className={`${item.methodBadgeColor} text-xs font-medium`}>
-                          {item.method}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 text-xs">
-                        {item.timestamp}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
-                          {item.action}
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-6 py-4 font-medium text-indigo-600">
-                        {item.id}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-full ${item.avatarColor} flex items-center justify-center text-white text-xs font-semibold`}
-                          >
-                            {item.avatar}
-                          </div>
-                          <span className="text-slate-900">{item.customer}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-900">{item.eventName}</td>
-                      <td className="px-6 py-4 text-slate-600">{item.seatLocation}</td>
-                      <td className="px-6 py-4 text-slate-600 text-xs">
-                        {item.timestamp}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
-                          {item.action}
-                        </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between mt-6">
-          <p className="text-xs text-slate-600">
-            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, displayData.length)}-
-            {Math.min(currentPage * itemsPerPage, displayData.length)} of {displayData.length} transactions
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="p-2"
-            >
-              <ChevronLeft size={16} className="text-slate-600" />
-            </Button>
-
-            {Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + 1).map(
-              (page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                  className={
-                    currentPage === page
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                      : 'text-slate-700'
-                  }
-                >
-                  {page}
-                </Button>
-              )
-            )}
-
-            {totalPages > 3 && (
-              <>
-                <span className="text-slate-400">...</span>
-                {totalPages > 3 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(totalPages)}
-                    className="text-slate-700"
-                  >
-                    {totalPages}
-                  </Button>
-                )}
-              </>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2"
-            >
-              <ChevronRight size={16} className="text-slate-600" />
-            </Button>
+              <span className="min-w-20 text-center text-sm text-slate-700">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || isLoading}
+                className="h-9 w-9 p-0"
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
