@@ -10,6 +10,7 @@ import com.concert.booking.modules.order.enums.PaymentMethod;
 import com.concert.booking.modules.order.enums.PaymentStatus;
 import com.concert.booking.modules.order.enums.TicketStatus;
 import com.concert.booking.modules.seat.Seat;
+import com.concert.booking.modules.seat.SeatHoldService;
 import com.concert.booking.modules.seat.SeatRepository;
 import com.concert.booking.modules.seat.enums.SeatStatus;
 import com.concert.booking.modules.ticket.TicketClass;
@@ -48,6 +49,7 @@ public class OrderServiceImpl implements OrderService {
   TicketRepository ticketRepository;
   EventRepository eventRepository;
   SeatRepository seatRepository;
+  SeatHoldService seatHoldService;
   TicketClassRepository ticketClassRepository;
   UserRepository userRepository;
 
@@ -77,7 +79,9 @@ public class OrderServiceImpl implements OrderService {
   @Transactional
   public List<Event> getOnSaleEvents() {
     ensureDemoEventExists();
+    Timestamp now = Timestamp.from(Instant.now());
     return eventRepository.findByStatus(EventStatus.ONSALE).stream()
+        .filter(event -> event.getStartTime() == null || event.getStartTime().after(now))
         .sorted(Comparator.comparing(Event::getStartTime))
         .toList();
   }
@@ -113,20 +117,14 @@ public class OrderServiceImpl implements OrderService {
     validateSupportedPayment(request.getPayment().getPaymentMethod());
 
     Event event = getEventForSale(request.getEventId());
-    List<UUID> distinctSeatIds = request.getSeatIds().stream().distinct().toList();
-    List<Seat> seats = seatRepository.findAllByIdForUpdate(distinctSeatIds);
-    if (seats.size() != distinctSeatIds.size()) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Danh sách ghế không hợp lệ");
+    List<UUID> distinctSeatIds = request.getSeatIds().stream().distinct().sorted().toList();
+    if (distinctSeatIds.isEmpty()) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Phải chọn ít nhất một ghế");
     }
-
-    for (Seat seat : seats) {
-      if (!event.getId().equals(seat.getEventId())) {
-        throw new AppException(HttpStatus.BAD_REQUEST, "Ghế không thuộc sự kiện đang bán");
-      }
-      if (seat.getStatus() != SeatStatus.AVAILABLE) {
-        throw new AppException(HttpStatus.CONFLICT, "Một hoặc nhiều ghế đã được giữ hoặc đã bán");
-      }
+    if (distinctSeatIds.size() > 10) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Một đơn hàng chỉ được chọn tối đa 10 ghế");
     }
+    List<Seat> seats = seatHoldService.lockAvailableSeats(event.getId(), distinctSeatIds);
 
     Map<UUID, TicketClass> ticketClassById =
         ticketClassRepository.findByEventId(event.getId()).stream()
@@ -152,7 +150,8 @@ public class OrderServiceImpl implements OrderService {
         paymentRepository.save(
             Payment.builder()
                 .orderId(order.getId())
-                .amount(request.getPayment().getAmountReceived())
+                .amount(totalAmount)
+                .amountReceived(request.getPayment().getAmountReceived())
                 .paymentMethod(request.getPayment().getPaymentMethod())
                 .status(PaymentStatus.CONFIRMED)
                 .createdBy(staffId)
@@ -163,23 +162,44 @@ public class OrderServiceImpl implements OrderService {
             .map(
                 seat -> {
                   TicketClass ticketClass = ticketClassById.get(seat.getTicketClassId());
-                  seat.setStatus(SeatStatus.SOLD);
-                  seat.setUpdatedBy(staffId);
                   Ticket ticket = Ticket.builder()
                       .orderId(order.getId())
                       .seatId(seat.getId())
                       .ticketClassId(ticketClass.getId())
                       .seatLabel(toSeatLabel(seat))
                       .price(ticketClass.getPrice())
-                      .status(TicketStatus.VALID)
+                      .status(TicketStatus.UNUSED)
                       .createdBy(staffId)
                       .build();
                   return ticket;
                 })
             .toList();
 
-    seatRepository.saveAll(seats);
+    seatHoldService.confirmSold(seats, staffId);
     ticketRepository.saveAll(tickets);
+
+    return toOrderResponse(order, payment, tickets, ticketClassById);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public OrderResponseDTO getPosOrderByCode(String orderCode) {
+    if (orderCode == null || orderCode.isBlank()) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Mã đơn hàng không được để trống");
+    }
+
+    Order order =
+        orderRepository
+            .findByOrderCode(orderCode.trim())
+            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+    Payment payment =
+        paymentRepository
+            .findByOrderId(order.getId())
+            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy thanh toán"));
+    List<Ticket> tickets = ticketRepository.findByOrderId(order.getId());
+    Map<UUID, TicketClass> ticketClassById =
+        ticketClassRepository.findByEventId(order.getEventId()).stream()
+            .collect(Collectors.toMap(TicketClass::getId, Function.identity()));
 
     return toOrderResponse(order, payment, tickets, ticketClassById);
   }
@@ -206,7 +226,10 @@ public class OrderServiceImpl implements OrderService {
     paymentRepository.save(payment);
 
     List<Ticket> tickets = ticketRepository.findByOrderId(order.getId());
-    return toOrderResponse(order, payment, tickets, Map.of());
+    Map<UUID, TicketClass> ticketClassById =
+        ticketClassRepository.findByEventId(order.getEventId()).stream()
+            .collect(Collectors.toMap(TicketClass::getId, Function.identity()));
+    return toOrderResponse(order, payment, tickets, ticketClassById);
   }
 
   private Event getEventForSale(UUID eventId) {
@@ -217,11 +240,15 @@ public class OrderServiceImpl implements OrderService {
     if (event.getStatus() != EventStatus.ONSALE) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Sự kiện chưa mở bán");
     }
+    Timestamp now = Timestamp.from(Instant.now());
+    if (event.getStartTime() != null && !event.getStartTime().after(now)) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Sự kiện đã bắt đầu, không thể bán vé");
+    }
     return event;
   }
 
   private void ensureDemoEventExists() {
-    if (!eventRepository.findByStatus(EventStatus.ONSALE).isEmpty()) {
+    if (!eventRepository.findAll().isEmpty()) {
       return;
     }
 
@@ -376,6 +403,7 @@ public class OrderServiceImpl implements OrderService {
 
   private OrderItemResponseDTO toSeatCatalogItem(Seat seat, TicketClass ticketClass) {
     return OrderItemResponseDTO.builder()
+        .id(seat.getId())
         .seatId(seat.getId())
         .ticketClassId(seat.getTicketClassId())
         .ticketClassName(ticketClass != null ? ticketClass.getName() : "Unknown")
@@ -384,6 +412,9 @@ public class OrderServiceImpl implements OrderService {
         .gridColumn(seat.getGridColumn())
         .seatLabel(toSeatLabel(seat))
         .seatStatus(seat.getStatus())
+        .label(toSeatLabel(seat))
+        .status(seat.getStatus())
+        .ticketClass(toTicketClassInfo(ticketClass))
         .build();
   }
 
@@ -394,7 +425,21 @@ public class OrderServiceImpl implements OrderService {
         .ticketClassId(ticket.getTicketClassId())
         .ticketClassName(ticketClass != null ? ticketClass.getName() : null)
         .seatLabel(ticket.getSeatLabel())
+        .label(ticket.getSeatLabel())
         .price(ticket.getPrice())
+        .ticketClass(toTicketClassInfo(ticketClass))
+        .build();
+  }
+
+  private OrderItemResponseDTO.TicketClassInfoDTO toTicketClassInfo(TicketClass ticketClass) {
+    if (ticketClass == null) {
+      return null;
+    }
+    return OrderItemResponseDTO.TicketClassInfoDTO.builder()
+        .id(ticketClass.getId())
+        .name(ticketClass.getName())
+        .colorCode(ticketClass.getColorCode())
+        .price(ticketClass.getPrice())
         .build();
   }
 
@@ -408,7 +453,7 @@ public class OrderServiceImpl implements OrderService {
         .totalAmount(order.getTotalAmount())
         .paymentMethod(payment.getPaymentMethod())
         .paymentStatus(payment.getStatus())
-        .amountReceived(payment.getAmount())
+        .amountReceived(payment.getAmountReceived() != null ? payment.getAmountReceived() : payment.getAmount())
         .items(
             tickets.stream()
                 .map(ticket -> toTicketResponse(ticket, ticketClassById.get(ticket.getTicketClassId())))

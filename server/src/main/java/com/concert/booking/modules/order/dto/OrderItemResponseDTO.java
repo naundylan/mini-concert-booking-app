@@ -21,4 +21,19 @@ public class OrderItemResponseDTO {
   Integer gridRow;
   Integer gridColumn;
   SeatStatus seatStatus;
+  String label;
+  SeatStatus status;
+  TicketClassInfoDTO ticketClass;
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @FieldDefaults(level = AccessLevel.PRIVATE)
+  public static class TicketClassInfoDTO {
+    UUID id;
+    String name;
+    String colorCode;
+    BigDecimal price;
+  }
 }

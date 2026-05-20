@@ -40,6 +40,6 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     boolean hasMaintenanceSeats(UUID eventId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds")
+    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds ORDER BY s.id")
     List<Seat> findAllByIdForUpdate(List<UUID> seatIds);
 }

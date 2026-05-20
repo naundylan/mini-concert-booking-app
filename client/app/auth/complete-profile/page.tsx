@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { authService } from '@/lib/services/auth.service'
-import { clearAuthSession, normalizeRole, saveAuthSession } from '@/lib/auth-client'
+import { normalizeRole } from '@/lib/auth-client'
 
 export default function CompleteProfile() {
   const searchParams = useSearchParams()
@@ -28,25 +28,13 @@ export default function CompleteProfile() {
         phone: phone.trim(),
       })
 
-      if (!response.accessToken) {
-        setError('Unexpected response from server')
-        return
-      }
-
-      const role = normalizeRole(response.userInfo?.role)
+      const role = normalizeRole(response.role || response.userInfo?.role)
 
       if (role !== 'CUSTOMER') {
-        clearAuthSession()
         setError('Tài khoản Google chỉ được dùng cho khách hàng.')
         return
       }
 
-      saveAuthSession({
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        role,
-        fullName: response.userInfo?.fullName,
-      })
       window.location.href = '/customer/events'
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Lỗi không xác định')

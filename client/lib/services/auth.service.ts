@@ -1,6 +1,11 @@
 import axiosClient from "@/lib/axios";
-import { LoginRequest, LoginResponse, OAuth2LoginResponse } from "../types/auth.type";
-import { clearAuthSession } from "@/lib/auth-client";
+import {
+  AuthSessionResponse,
+  CompletePhoneRequest,
+  LoginRequest,
+  LoginResponse,
+  OAuth2LoginResponse,
+} from "../types/auth.type";
 
 const getBaseUrl = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
@@ -30,8 +35,11 @@ export const authService = {
     return response.data;
   },
 
-  logout: () => {
-    clearAuthSession();
-    window.location.href = "/auth";
+  logout: async () => {
+    try {
+      await axiosClient.post("/auth/sign-out");
+    } finally {
+      window.location.href = "/auth";
+    }
   }
 };

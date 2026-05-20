@@ -14,6 +14,9 @@ import org.hibernate.annotations.UuidGenerator;
 @Entity
 @Table(
     name = "tickets",
+    uniqueConstraints = {
+      @UniqueConstraint(name = "uk_ticket_seat", columnNames = "seat_id")
+    },
     indexes = {
       @Index(name = "idx_ticket_order", columnList = "order_id"),
       @Index(name = "idx_ticket_seat", columnList = "seat_id")

@@ -41,7 +41,8 @@ public class AppSecurityConfig {
       JwtService jwtService,
       CustomAccessDeniedHandler customAccessDeniedHandler,
       CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-      @Lazy AuthService authService) {
+      @Lazy AuthService authService,
+      AuthCookieService authCookieService) {
     this.jwtService = jwtService;
     this.customAccessDeniedHandler = customAccessDeniedHandler;
     this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
@@ -53,11 +54,12 @@ public class AppSecurityConfig {
   static String[] PUBLIC_ENDPOINTS = {"/", "/api/v1/orders/webhooks/**"};
   static String[] AUTH_ENDPOINTS = {
       "/api/v1/auth/sign-in",
+      "/api/v1/auth/sign-out",
       "/api/v1/auth/refresh",
+      "/api/v1/auth/google",
+      "/api/v1/auth/forgot-password",
+      "/oauth2/**",
       "/login/**"
-  };
-
-  @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
@@ -100,12 +102,13 @@ public class AppSecurityConfig {
                                   loginData.getUserInfo().getFullName(), StandardCharsets.UTF_8)
                               + "&googleId="
                               + loginData.getUserInfo().getGoogleId()
+                              + "&role="
+                              + loginData.getUserInfo().getRole()
                               + "&hasPhone="
                               + (loginData.getUserInfo().getPhone() != null);
 
                       if (loginData.getAccessToken() != null) {
-                        targetUrl += "&accessToken=" + loginData.getAccessToken();
-                        targetUrl += "&refreshToken=" + loginData.getRefreshToken();
+                        authCookieService.addAuthCookies(response, toTokenDTO(loginData));
                       }
 
                       response.sendRedirect(targetUrl);
@@ -131,5 +134,15 @@ public class AppSecurityConfig {
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", cors);
     return source;
+  }
+
+  private TokenDTO toTokenDTO(OAuth2LoginDTO loginData) {
+    return TokenDTO.builder()
+        .accessToken(loginData.getAccessToken())
+        .refreshToken(loginData.getRefreshToken())
+        .accessTokenExpiration(loginData.getAccessTokenExpiration())
+        .refreshTokenExpiration(loginData.getRefreshTokenExpiration())
+        .role(loginData.getUserInfo().getRole())
+        .build();
   }
 }

@@ -14,8 +14,16 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     @Query("SELECT e FROM Event e WHERE e.status = :status AND e.openTime <= :now")
     List<Event> findEventsToOpen(EventStatus status, Timestamp now);
 
-    @Query("SELECT e FROM Event e WHERE e.status = :status AND e.endTime <= :now")
-    List<Event> findEventsToEnd(EventStatus status, Timestamp now);
+    @Query("SELECT e FROM Event e WHERE e.status = :status AND e.startTime <= :now")
+    List<Event> findEventsToEndSale(EventStatus status, Timestamp now);
+
+    @Query(
+        """
+        SELECT e FROM Event e
+        WHERE e.endTime >= :now
+          AND e.status IN :statuses
+        """)
+    List<Event> findCheckInCandidates(List<EventStatus> statuses, Timestamp now);
 
     
     /**

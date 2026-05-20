@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { clearAuthSession } from '@/lib/auth-client';
+import { authService } from '@/lib/services/auth.service';
 
 const MENU_ITEMS = [
   { label: 'Dashboard', icon: BarChart3, href: '/admin/dashboard' },
@@ -44,9 +44,8 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
-    clearAuthSession()
-    window.location.href = '/auth'
-  }
+    authService.logout();
+  };
 
   const handleMyProfile = () => {
     console.log('Navigate to profile');
