@@ -1,47 +1,28 @@
-// types/auth.type.ts
-
-/** Tương ứng với class UserInfo trong Java */
 export interface UserInfo {
-  email: string;
-  phone: string | null;
-  fullName: string;
-  googleId: string;
-  role: string;
-  status: string;
+  email: string | null
+  phone: string | null
+  fullName: string | null
+  googleId: string | null
+  role: string
+  status: string
 }
 
-/** Tương ứng với SignInDTO.java */
 export interface LoginRequest {
-  username: string;
-  password: string;
+  username: string
+  password: string
 }
 
-/** Tương ứng với TokenDTO.java */
-export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiration: number;
-  refreshTokenExpiration: number;
-  role: string;
-  userInfo?: {
-    fullName? : string,
-    role?: string,
-  }
+export interface AuthSessionResponse {
+  role: string
+  userInfo?: UserInfo | null
 }
 
-/** Tương ứng với OAuth2LoginDTO.java */
-export interface OAuth2LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiration: number;
-  refreshTokenExpiration: number;
-  userInfo: UserInfo;
-}
+export type LoginResponse = AuthSessionResponse
+export type OAuth2LoginResponse = AuthSessionResponse
 
-/** Request để hoàn tất profile sau OAuth2 */
 export interface CompletePhoneRequest {
-  email: string;
-  fullName: string;
-  googleId: string;
-  phone: string;
+  email: string
+  fullName: string
+  googleId: string
+  phone: string
 }

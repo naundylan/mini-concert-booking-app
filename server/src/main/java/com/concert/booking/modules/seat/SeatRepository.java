@@ -10,7 +10,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
     List<Seat> findByEventId(UUID eventId);
+    List<Seat> findByTicketClassId(UUID ticketClassId);
     boolean existsByEventIdAndStatus(UUID eventId, SeatStatus status);
+    boolean existsByEventIdAndGridRowAndGridColumn(UUID eventId, int gridRow, int gridColumn);
     void deleteByEventId(UUID eventId);
 
     /**

@@ -90,6 +90,7 @@ public class AuthServiceImpl implements AuthService {
           .refreshToken(refreshToken)
           .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
           .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+          .role(user.getRole().name())
           .build();
     } catch (Exception e) {
       throw new AppException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");

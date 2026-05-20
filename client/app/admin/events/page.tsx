@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { MapPin, Calendar, Eye, Plus, Loader2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import EventForm from './components/EventForm'
-import { Event, EventCreateDTO, EventUpdateDTO } from '@/lib/types/event.type'
+import { AdminSeat, Event, EventCreateDTO, EventUpdateDTO, TicketClass } from '@/lib/types/event.type'
 import { eventService } from '@/lib/services/event.service'
 
 // ✅ Fix timezone: giữ nguyên giờ local khi gửi lên API
@@ -39,6 +39,11 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState('All Statuses')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [catalogLoading, setCatalogLoading] = useState(false)
+  const [ticketClasses, setTicketClasses] = useState<TicketClass[]>([])
+  const [adminSeats, setAdminSeats] = useState<AdminSeat[]>([])
+  const [ticketClassForm, setTicketClassForm] = useState({ name: '', colorCode: '#4f46e5', price: '' })
+  const [seatForm, setSeatForm] = useState({ ticketClassId: '', totalRows: '1', totalColumns: '10', rowPrefix: 'A' })
 
   const fetchEvents = async () => {
     try {
@@ -55,14 +60,91 @@ export default function EventsPage() {
 
   useEffect(() => { fetchEvents() }, [])
 
+  const loadCatalog = async (eventId: string) => {
+    try {
+      setCatalogLoading(true)
+      const [classesResponse, seatsResponse] = await Promise.all([
+        eventService.adminGetTicketClasses(eventId),
+        eventService.adminGetSeats(eventId),
+      ])
+      setTicketClasses(classesResponse.data)
+      setAdminSeats(seatsResponse.data)
+      setSeatForm((current) => ({
+        ...current,
+        ticketClassId: current.ticketClassId || classesResponse.data[0]?.id || '',
+      }))
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.response?.data?.message || 'Failed to load ticket classes and seats.',
+        variant: 'destructive',
+      })
+    } finally {
+      setCatalogLoading(false)
+    }
+  }
+
   const handleViewDetails = (event: Event) => {
     setSelectedEvent(event)
     setShowDetailsDialog(true)
+    setTicketClassForm({ name: '', colorCode: '#4f46e5', price: '' })
+    setSeatForm({ ticketClassId: '', totalRows: '1', totalColumns: '10', rowPrefix: 'A' })
+    loadCatalog(event.id)
   }
 
   const handleCloseDialog = () => {
     setShowDetailsDialog(false)
     setSelectedEvent(null)
+    setTicketClasses([])
+    setAdminSeats([])
+  }
+
+  const handleCreateTicketClass = async () => {
+    if (!selectedEvent) return
+    if (!ticketClassForm.name.trim() || !ticketClassForm.price) {
+      toast({ title: 'Error', description: 'Ticket class name and price are required.', variant: 'destructive' })
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      await eventService.adminCreateTicketClass(selectedEvent.id, {
+        name: ticketClassForm.name.trim(),
+        colorCode: ticketClassForm.colorCode || null,
+        price: Number(ticketClassForm.price),
+      })
+      setTicketClassForm({ name: '', colorCode: '#4f46e5', price: '' })
+      await loadCatalog(selectedEvent.id)
+      toast({ title: 'Success', description: 'Ticket class created successfully!' })
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to create ticket class.', variant: 'destructive' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleGenerateSeats = async () => {
+    if (!selectedEvent) return
+    if (!seatForm.ticketClassId) {
+      toast({ title: 'Error', description: 'Please choose a ticket class first.', variant: 'destructive' })
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      const response = await eventService.adminGenerateSeats(selectedEvent.id, {
+        ticketClassId: seatForm.ticketClassId,
+        totalRows: Number(seatForm.totalRows),
+        totalColumns: Number(seatForm.totalColumns),
+        rowPrefix: seatForm.rowPrefix || undefined,
+      })
+      await loadCatalog(selectedEvent.id)
+      toast({ title: 'Success', description: `Created ${response.data.createdCount} seats.` })
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to generate seats.', variant: 'destructive' })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleOpenCreateForm = () => {
@@ -162,6 +244,9 @@ export default function EventsPage() {
       hour: '2-digit', minute: '2-digit', year: 'numeric',
     })
   }
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value)
 
   const filteredEvents =
     statusFilter === 'All Statuses'
@@ -325,6 +410,124 @@ export default function EventsPage() {
                 <p className="text-xs text-slate-600">
                   This event is currently in <span className="font-semibold">read-only</span> mode.
                   To make changes, click Edit.
+                </p>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-slate-900">Ticket Classes</h3>
+                  {catalogLoading && <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />}
+                </div>
+                <div className="space-y-2 mb-4">
+                  {ticketClasses.length === 0 ? (
+                    <p className="text-xs text-slate-500 rounded-lg border border-dashed border-slate-200 p-3">
+                      No ticket classes yet.
+                    </p>
+                  ) : (
+                    ticketClasses.map((ticketClass) => (
+                      <div key={ticketClass.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-3 w-3 rounded"
+                            style={{ backgroundColor: ticketClass.colorCode || '#4f46e5' }}
+                          />
+                          <span className="text-sm font-medium text-slate-900">{ticketClass.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-indigo-600">
+                          {formatMoney(Number(ticketClass.price))}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_110px_130px_auto]">
+                  <input
+                    type="text"
+                    placeholder="VIP"
+                    value={ticketClassForm.name}
+                    onChange={(event) => setTicketClassForm((current) => ({ ...current, name: event.target.value }))}
+                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  />
+                  <input
+                    type="color"
+                    value={ticketClassForm.colorCode}
+                    onChange={(event) => setTicketClassForm((current) => ({ ...current, colorCode: event.target.value }))}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="500000"
+                    value={ticketClassForm.price}
+                    onChange={(event) => setTicketClassForm((current) => ({ ...current, price: event.target.value }))}
+                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  />
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={handleCreateTicketClass}
+                    disabled={submitting || selectedEvent.status !== 'DRAFT'}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">Generate Seats</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_90px_90px_90px_auto]">
+                  <select
+                    value={seatForm.ticketClassId}
+                    onChange={(event) => setSeatForm((current) => ({ ...current, ticketClassId: event.target.value }))}
+                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  >
+                    <option value="">Ticket class</option>
+                    {ticketClasses.map((ticketClass) => (
+                      <option key={ticketClass.id} value={ticketClass.id}>
+                        {ticketClass.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min={1}
+                    value={seatForm.totalRows}
+                    onChange={(event) => setSeatForm((current) => ({ ...current, totalRows: event.target.value }))}
+                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={seatForm.totalColumns}
+                    onChange={(event) => setSeatForm((current) => ({ ...current, totalColumns: event.target.value }))}
+                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  />
+                  <input
+                    type="text"
+                    maxLength={1}
+                    value={seatForm.rowPrefix}
+                    onChange={(event) => setSeatForm((current) => ({ ...current, rowPrefix: event.target.value.toUpperCase() }))}
+                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    disabled={selectedEvent.status !== 'DRAFT'}
+                  />
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={handleGenerateSeats}
+                    disabled={submitting || selectedEvent.status !== 'DRAFT' || ticketClasses.length === 0}
+                  >
+                    Generate
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  Current seats: {adminSeats.length}. Seat setup is locked after the event leaves DRAFT.
                 </p>
               </div>
             </div>
