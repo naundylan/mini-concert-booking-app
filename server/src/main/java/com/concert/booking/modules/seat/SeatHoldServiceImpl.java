@@ -63,6 +63,9 @@ public class SeatHoldServiceImpl implements SeatHoldService {
   }
 
   private String toSeatLabel(Seat seat) {
+    if (seat.getLabel() != null && !seat.getLabel().isBlank()) {
+      return seat.getLabel();
+    }
     return (char) ('A' + seat.getGridRow()) + String.valueOf(seat.getGridColumn() + 1);
   }
 }

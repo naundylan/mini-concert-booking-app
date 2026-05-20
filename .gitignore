@@ -1,16 +1,41 @@
-# Ignore Gradle project-specific cache directory
-.gradle/
-build/
-
-# Ignore Kotlin plugin data
-.kotlin
-
-# Ignore .env file
+# Environment files
 .env
 .env.*
+server/.env
+server/.env.*
+client/.env
+client/.env.*
+!.env.example
+!server/.env.example
+!client/.env.local.example
+
+# Gradle
+.gradle/
+build/
+server/.gradle/
+server/build/
 
 # Java
 **/bin/
 *.class
+
+# Node / Next.js
+client/node_modules/
+client/.next/
+client/out/
+client/.turbo/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS / logs
+.DS_Store
+Thumbs.db
+*.log
+
+# Kotlin plugin data
+.kotlin/
 
 /.github/

@@ -165,6 +165,7 @@ public class EventServiceImpl implements EventService {
                         .ticketClassId(s.getTicketClassId())
                         .gridRow(s.getGridRow())
                         .gridColumn(s.getGridColumn())
+                        .label((char) ('A' + s.getGridRow()) + String.valueOf(s.getGridColumn() + 1))
                         .status(s.getStatus() != null ? s.getStatus() : SeatStatus.AVAILABLE)
                         .createdBy(createdBy)
                         .build())

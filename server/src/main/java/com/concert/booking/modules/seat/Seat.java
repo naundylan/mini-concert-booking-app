@@ -45,6 +45,9 @@ public class Seat extends AbstractAuditEntity {
     @Column(name = "grid_column", nullable = false)
     int gridColumn;
 
+    @Column(length = 30)
+    String label;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

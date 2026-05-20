@@ -57,9 +57,13 @@ public class AppSecurityConfig {
       "/api/v1/auth/sign-out",
       "/api/v1/auth/refresh",
       "/api/v1/auth/google",
+      "/api/v1/auth/customer/complete-phone",
       "/api/v1/auth/forgot-password",
       "/oauth2/**",
       "/login/**"
+  };
+
+  @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
