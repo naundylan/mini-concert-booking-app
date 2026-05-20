@@ -1,16 +1,14 @@
 package com.concert.booking.common.exception;
 
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AppException extends RuntimeException {
-  HttpStatus statusCode;
-  String message;
+  private final HttpStatus statusCode;
+
+  public AppException(HttpStatus statusCode, String message) {
+    super(message);
+    this.statusCode = statusCode;
+  }
 }

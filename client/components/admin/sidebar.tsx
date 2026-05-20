@@ -8,11 +8,9 @@ import {
   Users,
   Map,
   TrendingUp,
-  Plus,
   LogOut,
   User,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { authService } from '@/lib/services/auth.service';
 
 const MENU_ITEMS = [
   { label: 'Dashboard', icon: BarChart3, href: '/admin/dashboard' },
@@ -34,29 +33,26 @@ export default function Sidebar() {
   const [userFullName, setUserFullName] = useState("Guest");
 
   useEffect(() => {
-    // Lấy tên đã lưu từ localStorage sau khi login thành công
-    const savedName = localStorage.getItem("userFullName");
-    if (savedName) {
-      setUserFullName(savedName);
-    }
+    authService
+      .getMe()
+      .then((session) => {
+        if (session.userInfo?.fullName) {
+          setUserFullName(session.userInfo.fullName);
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('userFullName')
-    window.location.href = '/auth'
-  }
+    authService.logout();
+  };
 
   const handleMyProfile = () => {
-    // TODO: Navigate to profile page
     console.log('Navigate to profile');
   };
 
   return (
     <aside className="w-64 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col h-screen border-r border-indigo-900">
-      {/* Logo Section */}
       <div className="p-6 border-b border-indigo-900">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg">
@@ -70,7 +66,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Menu Items */}
       <nav className="flex-1 p-4 space-y-2">
         {MENU_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -85,15 +80,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Create Event Button */}
-      {/* <div className="p-4 border-t border-indigo-900">
-        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg gap-2">
-          <Plus size={18} />
-          Create Event
-        </Button>
-      </div> */}
-
-      {/* User Profile Section */}
       <div className="p-4 border-t border-indigo-900">
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>

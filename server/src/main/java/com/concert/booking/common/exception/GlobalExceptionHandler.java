@@ -7,6 +7,7 @@ import com.concert.booking.common.dto.DataApiResponse;
 import com.concert.booking.common.swagger.InternalServerErrorApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -115,6 +116,18 @@ public class GlobalExceptionHandler {
     log.warn("[LOG] Forbidden access: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
         .body(ApiResponse.forbidden(MessageConstants.FORBIDDEN.getMessage()));
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ApiResponse> handleDataIntegrityViolationException(
+      DataIntegrityViolationException ex) {
+    log.warn("[LOG] Data integrity violation: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiResponse.apiBuilder()
+            .success(false)
+            .statusCode(HttpStatus.CONFLICT.value())
+            .message("Dữ liệu đã bị thay đổi bởi giao dịch khác. Vui lòng tải lại và thử lại.")
+            .build());
   }
 
   /**

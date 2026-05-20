@@ -28,6 +28,7 @@ public class UserV1Controller {
 
   @Operation(summary = "Tạo nhân viên mới", description = "Admin tạo tài khoản Staff.")
   @BadRequestApiResponse
+  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping("/staff")
   public DataApiResponse<User> createStaff(@RequestBody @Valid CreateStaffDTO dto) {
     UUID currentUserId = AuthUtils.getCurrentUserId();
@@ -39,6 +40,7 @@ public class UserV1Controller {
       summary = "Tạo khách hàng POS",
       description = "Staff tạo khách hàng vãng lai tại quầy.")
   @BadRequestApiResponse
+  @PreAuthorize("hasRole('STAFF')")
   @PostMapping("/customer")
   public DataApiResponse<User> createCustomer(@RequestBody @Valid CreateCustomerDTO dto) {
     UUID currentUserId = AuthUtils.getCurrentUserId();

@@ -32,6 +32,10 @@ public class AuthUtils {
     }
 
     Object principal = authentication.getPrincipal();
+    if (principal instanceof CustomUserDetails userDetails) {
+      return userDetails.getId();
+    }
+
     if (principal instanceof String principalValue) {
       try {
         return UUID.fromString(principalValue);

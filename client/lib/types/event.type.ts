@@ -39,3 +39,48 @@ export interface EventUpdateDTO {
 export interface EventStatusUpdateDTO {
   status: 'DRAFT' | 'TEASING' | 'ONSALE' | 'ENDED' | 'CANCELED';
 }
+
+export interface TicketClass {
+  id: string;
+  eventId: string;
+  name: string;
+  colorCode?: string | null;
+  price: number;
+}
+
+export interface AdminTicketClassCreateDTO {
+  name: string;
+  colorCode?: string | null;
+  price: number;
+}
+
+export interface AdminTicketClassUpdateDTO {
+  name?: string;
+  colorCode?: string | null;
+  price?: number;
+}
+
+export interface SeatGenerateDTO {
+  ticketClassId: string;
+  totalRows: number;
+  totalColumns: number;
+  rowPrefix?: string;
+}
+
+export interface SeatGenerateResponseDTO {
+  createdCount: number;
+}
+
+export interface AdminSeat {
+  id: string;
+  gridRow: number;
+  gridColumn: number;
+  label: string;
+  status: 'AVAILABLE' | 'MAINTENANCE' | 'SOLD' | 'LOCKED';
+  ticketClass?: {
+    id: string;
+    name: string;
+    colorCode?: string | null;
+    price: number;
+  } | null;
+}

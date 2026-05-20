@@ -22,4 +22,6 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
      * Lấy danh sách tất cả sự kiện
      */
     List<Event> findAll();
+
+    List<Event> findByStatus(EventStatus status);
 }

@@ -66,6 +66,7 @@ public class UserServiceImpl implements UserService {
             .role(UserRole.CUSTOMER)
             .authProvider(AuthProvider.LOCAL)
             .status(UserStatus.ACTIVE)
+            .onlineVerified(false)
             .createdBy(createdBy)
             .build();
 

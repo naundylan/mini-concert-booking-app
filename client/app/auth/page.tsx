@@ -1,14 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { cn } from "@/lib/utils"
-import { authService } from "@/lib/services/auth.service";
+import { authService } from "@/lib/services/auth.service"
+import { getDefaultRouteByRole, normalizeRole } from "@/lib/auth-client"
 
-// --------------- Zod Schema ---------------
 const staffLoginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
@@ -16,7 +15,6 @@ const staffLoginSchema = z.object({
 
 type StaffLoginForm = z.infer<typeof staffLoginSchema>
 
-// --------------- Google Icon SVG ---------------
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -45,12 +43,9 @@ function GoogleIcon({ className }: { className?: string }) {
   )
 }
 
-// --------------- Tab type ---------------
 type Tab = "staff" | "customer"
 
-// --------------- Main Component ---------------
 export default function AuthPage() {
-  const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("staff")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -63,65 +58,40 @@ export default function AuthPage() {
   })
 
   const onSubmit = async (data: StaffLoginForm) => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      const response = await authService.login(data);
-      
-      // Lưu accessToken thay vì 'token' cho đúng chuẩn DTO
-      localStorage.setItem("accessToken", response.accessToken);
-      localStorage.setItem("refreshToken", response.refreshToken ?? '');
-      // Lưu tạm tên user để hiển thị nhanh
-      // Nếu TokenDTO hoặc SignInResponse có chứa thông tin user
-      localStorage.setItem("userFullName", response.userInfo?.fullName || 'Admin');
-      const role = response.role || response.userInfo?.role || '';
-      localStorage.setItem("userRole", response.role || '');
+      const response = await authService.login(data)
+      const role = response.role || response.userInfo?.role || ''
+      const normalizedRole = normalizeRole(role)
+      const redirectUrl = getDefaultRouteByRole(role)
 
-      if (role === 'ADMIN') {
-        window.location.href = '/admin/dashboard';
+      if (!redirectUrl || normalizedRole === 'CUSTOMER') {
+        alert("Tài khoản này không có quyền truy cập cổng Admin/Staff.")
+        return
       }
-      else if (role === 'STAFF') {
-        window.location.href = '/staff/dashboard';
-      }
-      else {
-        alert("Unknown role, cannot redirect!"); 
-      }
+
+      window.location.href = redirectUrl
     } catch (error: any) {
-      console.error("Login failed:", error);
-      // Bạn có thể check error.response.data để lấy message từ @NotBlank bên BE
-      alert(error.response?.data?.message || "Đăng nhập thất bại!");
+      console.error("Login failed:", error)
+      alert(error.response?.data?.message || "Đăng nhập thất bại!")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
-
-  const handleGoogleLogin = () => {
-    const oauthUrl = authService.getOAuthUrl("google");
-    console.log("Redirecting to Google OAuth:", oauthUrl);
-    window.location.href = oauthUrl;
   }
 
-  const handleBypassLogin = () => {
-    router.push("/admin/dashboard")
+  const handleGoogleLogin = () => {
+    const oauthUrl = authService.getOAuthUrl("google")
+    window.location.href = oauthUrl
   }
 
   return (
     <main className="auth-bg min-h-screen flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Test Bypass Button */}
-      <button
-        onClick={handleBypassLogin}
-        className="absolute top-4 right-4 px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition z-20"
-        title="Test bypass for development"
-      >
-        Skip to Dashboard
-      </button>
-      {/* Decorative concert card – background right */}
       <div
         className="hidden md:block absolute right-[calc(50%-320px)] top-1/2 -translate-y-1/2 translate-x-[260px] rotate-6 rounded-2xl overflow-hidden shadow-2xl w-36 h-48 opacity-80 pointer-events-none"
         aria-hidden="true"
       >
         <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex flex-col justify-end p-3">
           <div className="w-full h-24 mb-2 flex items-center justify-center">
-            {/* Stage light lines */}
             <svg viewBox="0 0 80 60" className="w-full h-full opacity-60" aria-hidden="true">
               {[...Array(7)].map((_, i) => (
                 <line
@@ -142,7 +112,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Header */}
       <div className="text-center mb-6 z-10">
         <h1 className="text-3xl font-bold text-indigo-700 tracking-tight">Mini Concert Booking</h1>
         <p className="text-xs font-semibold text-indigo-400 tracking-[0.2em] uppercase mt-1">
@@ -150,9 +119,7 @@ export default function AuthPage() {
         </p>
       </div>
 
-      {/* Card */}
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm z-10 overflow-hidden">
-        {/* Tabs */}
         <div className="flex border-b border-gray-100">
           <button
             onClick={() => setActiveTab("staff")}
@@ -182,7 +149,6 @@ export default function AuthPage() {
           </button>
         </div>
 
-        {/* Tab Panels */}
         <div className="p-6">
           {activeTab === "staff" && (
             <div role="tabpanel">
@@ -192,7 +158,6 @@ export default function AuthPage() {
               </p>
 
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-                {/* Username */}
                 <div className="flex flex-col gap-1">
                   <label htmlFor="username" className="text-xs font-medium text-gray-600">
                     Username
@@ -213,7 +178,6 @@ export default function AuthPage() {
                   )}
                 </div>
 
-                {/* Password */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
                     <label htmlFor="password" className="text-xs font-medium text-gray-600">
@@ -242,7 +206,6 @@ export default function AuthPage() {
                   )}
                 </div>
 
-                {/* Login Button */}
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -271,7 +234,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="mt-5 text-center z-10">
         <p className="text-xs text-gray-400">
           {"Don't have an account? "}

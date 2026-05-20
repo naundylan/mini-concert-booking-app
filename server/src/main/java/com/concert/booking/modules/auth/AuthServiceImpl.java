@@ -90,6 +90,7 @@ public class AuthServiceImpl implements AuthService {
           .refreshToken(refreshToken)
           .accessTokenExpiration(jwtProperties.getAccessTokenExpiration())
           .refreshTokenExpiration(jwtProperties.getRefreshTokenExpiration())
+          .role(user.getRole().name())
           .build();
     } catch (Exception e) {
       throw new AppException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
@@ -269,6 +270,7 @@ public class AuthServiceImpl implements AuthService {
             .map(existingUser -> {
               existingUser.setGoogleId(googleId);
               existingUser.setAuthProvider(AuthProvider.GOOGLE);
+              existingUser.setOnlineVerified(true);
               existingUser.setFullName(fullName);
               return userRepository.save(existingUser);
             })
@@ -375,6 +377,7 @@ public class AuthServiceImpl implements AuthService {
       user.setFullName(fullName);
       user.setPhone(phone);
       user.setAuthProvider(AuthProvider.GOOGLE);
+      user.setOnlineVerified(true);
       user.setTokensValidFrom(Instant.now()); // Invalidate old tokens
       userRepository.save(user);
     } else {
@@ -394,6 +397,7 @@ public class AuthServiceImpl implements AuthService {
           .authProvider(AuthProvider.GOOGLE)
           .role(UserRole.CUSTOMER)
           .status(UserStatus.ACTIVE)
+          .onlineVerified(true)
           .tokensValidFrom(Instant.now())
           .build();
       userRepository.save(user);
