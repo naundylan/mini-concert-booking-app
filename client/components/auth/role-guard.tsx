@@ -2,8 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getDefaultRouteByRole, normalizeRole, UserRole } from '@/lib/auth-client'
-import { authService } from '@/lib/services/auth.service'
+import { getAuthSession, getDefaultRouteByRole, UserRole } from '@/lib/auth-client'
 
 type RoleGuardProps = {
   allowedRole: UserRole
@@ -15,33 +14,19 @@ export default function RoleGuard({ allowedRole, children }: RoleGuardProps) {
   const [isAllowed, setIsAllowed] = useState(false)
 
   useEffect(() => {
-    let isMounted = true
+    const session = getAuthSession()
 
-    authService
-      .getMe()
-      .then((session) => {
-        if (!isMounted) {
-          return
-        }
-
-        const role = normalizeRole(session.role || session.userInfo?.role)
-
-        if (role !== allowedRole) {
-          router.replace(getDefaultRouteByRole(role) ?? '/auth')
-          return
-        }
-
-        setIsAllowed(true)
-      })
-      .catch(() => {
-        if (isMounted) {
-          router.replace('/auth')
-        }
-      })
-
-    return () => {
-      isMounted = false
+    if (!session.accessToken) {
+      router.replace('/auth')
+      return
     }
+
+    if (session.role !== allowedRole) {
+      router.replace(getDefaultRouteByRole(session.role) ?? '/auth')
+      return
+    }
+
+    setIsAllowed(true)
   }, [allowedRole, router])
 
   if (!isAllowed) {

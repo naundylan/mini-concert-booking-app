@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, TicketIcon, Heart, LogOut } from 'lucide-react'
-import { authService } from '@/lib/services/auth.service'
+import { clearAuthSession } from '@/lib/auth-client'
 
 export default function CustomerSidebar() {
   const pathname = usePathname()
@@ -16,7 +16,8 @@ export default function CustomerSidebar() {
   ]
 
   const handleLogout = () => {
-    authService.logout()
+    clearAuthSession()
+    window.location.href = '/auth'
   }
 
   return (

@@ -1,4 +1,4 @@
-export type PaymentMethod = 'CASH' | 'BANK_TRANSFER'
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'VNPAY'
 export type SeatStatus = 'AVAILABLE' | 'MAINTENANCE' | 'SOLD' | 'LOCKED'
 
 export interface CustomerLookupDTO {
@@ -29,14 +29,6 @@ export interface OrderItemResponseDTO {
   gridRow?: number
   gridColumn?: number
   seatStatus?: SeatStatus
-  label?: string
-  status?: SeatStatus
-  ticketClass?: {
-    id: string
-    name: string
-    colorCode?: string | null
-    price: number
-  } | null
 }
 
 export interface SeatCatalogDTO {

@@ -2,31 +2,38 @@
 
 import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { authService } from "@/lib/services/auth.service"
+import { saveAuthSession } from "@/lib/auth-client"
 
 export default function AuthCallback() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
   useEffect(() => {
+    const accessToken = searchParams.get("accessToken")
+    const refreshToken = searchParams.get("refreshToken")
     const email = searchParams.get("email")
     const fullName = searchParams.get("fullName")
     const googleId = searchParams.get("googleId")
+    const role = searchParams.get("role") || "CUSTOMER"
 
-    authService
-      .getMe()
-      .then(() => {
-        router.replace("/customer/events")
+    if (accessToken) {
+      saveAuthSession({
+        accessToken,
+        refreshToken,
+        role,
+        fullName,
       })
-      .catch(() => {
-        const completeProfileParams = new URLSearchParams({
-          email: email ?? "",
-          fullName: fullName ?? "",
-          googleId: googleId ?? "",
-        })
+      router.replace("/customer/events")
+      return
+    }
 
-        router.replace(`/auth/complete-profile?${completeProfileParams.toString()}`)
-      })
+    const completeProfileParams = new URLSearchParams({
+      email: email ?? "",
+      fullName: fullName ?? "",
+      googleId: googleId ?? "",
+    })
+
+    router.replace(`/auth/complete-profile?${completeProfileParams.toString()}`)
   }, [router, searchParams])
 
   return <div className="flex justify-center p-10">Đang hoàn tất đăng nhập...</div>

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { authService } from "@/lib/services/auth.service"
-import { getDefaultRouteByRole, normalizeRole } from "@/lib/auth-client"
+import { clearAuthSession, getDefaultRouteByRole, normalizeRole, saveAuthSession } from "@/lib/auth-client"
 
 const staffLoginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -66,9 +66,17 @@ export default function AuthPage() {
       const redirectUrl = getDefaultRouteByRole(role)
 
       if (!redirectUrl || normalizedRole === 'CUSTOMER') {
+        clearAuthSession()
         alert("Tài khoản này không có quyền truy cập cổng Admin/Staff.")
         return
       }
+
+      saveAuthSession({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        role,
+        fullName: response.userInfo?.fullName || role,
+      })
 
       window.location.href = redirectUrl
     } catch (error: any) {

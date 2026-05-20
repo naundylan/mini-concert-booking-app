@@ -14,7 +14,5 @@ public interface OrderService {
 
   OrderResponseDTO createOrder(OrderCreateDTO request, UUID staffId);
 
-  OrderResponseDTO getPosOrderByCode(String orderCode);
-
   OrderResponseDTO handlePaymentWebhook(PaymentWebhookDTO request);
 }

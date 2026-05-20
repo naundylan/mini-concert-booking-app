@@ -32,11 +32,4 @@ export const posService = {
     const response = await axiosClient.post<{ data: OrderResponseDTO }>('/orders/pos', data)
     return response.data
   },
-
-  getOrderByCode: async (orderCode: string): Promise<OrderResponseDTO> => {
-    const response = await axiosClient.get<{ data: OrderResponseDTO }>(
-      `/orders/pos/${orderCode}`
-    )
-    return response.data
-  },
 }
