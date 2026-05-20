@@ -119,6 +119,7 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
                 .ticketClassId(ticketClass.getId())
                 .gridRow(gridRow)
                 .gridColumn(col)
+                .label(toSeatLabel(gridRow, col))
                 .status(SeatStatus.AVAILABLE)
                 .createdBy(createdBy)
                 .build());
@@ -226,7 +227,7 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
         .id(seat.getId())
         .gridRow(seat.getGridRow())
         .gridColumn(seat.getGridColumn())
-        .label(toSeatLabel(seat.getGridRow(), seat.getGridColumn()))
+        .label(seat.getLabel() != null ? seat.getLabel() : toSeatLabel(seat.getGridRow(), seat.getGridColumn()))
         .status(seat.getStatus())
         .ticketClass(toTicketClassDTO(ticketClass))
         .build();

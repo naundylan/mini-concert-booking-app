@@ -13,6 +13,7 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     List<Seat> findByTicketClassId(UUID ticketClassId);
     boolean existsByEventIdAndStatus(UUID eventId, SeatStatus status);
     boolean existsByEventIdAndGridRowAndGridColumn(UUID eventId, int gridRow, int gridColumn);
+    long countByEventId(UUID eventId);
     void deleteByEventId(UUID eventId);
 
     /**

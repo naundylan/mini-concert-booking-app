@@ -23,7 +23,7 @@ import { authService } from '@/lib/services/auth.service';
 const MENU_ITEMS = [
   { label: 'Dashboard', icon: BarChart3, href: '/admin/dashboard' },
   { label: 'Events', icon: Calendar, href: '/admin/events' },
-  { label: 'Seat Maps', icon: Map, href: '/admin/seat-maps' },
+  { label: 'Layouts', icon: Map, href: '/admin/layouts' },
   { label: 'Staff', icon: Users, href: '/admin/staff' },
   { label: 'Reports', icon: TrendingUp, href: '/admin/reports' },
 ];
