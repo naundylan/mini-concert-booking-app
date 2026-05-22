@@ -96,13 +96,13 @@ export default function StaffManagementPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Staff Management</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Staff Management</h1>
           <p className="text-slate-600 text-sm mt-1">Manage access and roles for your team</p>
         </div>
         <Button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+          className="w-full gap-2 bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
           onClick={() => console.log('Open Add Staff dialog')}
         >
           <span>+</span>
@@ -114,7 +114,7 @@ export default function StaffManagementPage() {
       <div className="h-px bg-indigo-200"></div>
 
       {/* Staff Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {staffList.map((staff, index) => (
           <div
             key={staff.id}
@@ -165,7 +165,7 @@ export default function StaffManagementPage() {
 
       {/* Edit Staff Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Staff Member</DialogTitle>
           </DialogHeader>

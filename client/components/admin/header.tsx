@@ -2,16 +2,27 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Search, Bell, Settings, Download } from 'lucide-react';
+import { Search, Bell, Settings, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
+type HeaderProps = {
+  onOpenSidebar: () => void;
+};
 
-export default function Header() {
+export default function Header({ onOpenSidebar }: HeaderProps) {
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
-      {/* Search Bar */}
-      <div className="flex-1 max-w-md">
+    <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 sm:px-4 lg:h-14 lg:px-6">
+      <button
+        type="button"
+        onClick={onOpenSidebar}
+        className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 lg:hidden"
+        aria-label="Open admin menu"
+      >
+        <Menu size={21} />
+      </button>
+
+      <div className="hidden max-w-sm flex-1 sm:block">
         <div className="relative">
           <Search
             size={16}
@@ -20,30 +31,26 @@ export default function Header() {
           <Input
             type="text"
             placeholder="Search events, users, or metrics..."
-            className="pl-10 bg-slate-50 border-slate-200 text-sm"
+            className="h-9 border-slate-200 bg-slate-50 pl-10 text-sm"
           />
         </div>
       </div>
 
-      {/* Right Actions */}
-      <div className="flex items-center gap-4 ml-auto">
-        {/* Notification Bell */}
-        <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors relative">
-          <Bell size={20} className="text-slate-600" />
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <button className="relative rounded-lg p-2 transition-colors hover:bg-slate-100">
+          <Bell size={18} className="text-slate-600" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
 
-        {/* Settings Icon - Direct Link */}
         <Link
           href="/admin/settings/security"
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           title="Go to Settings"
         >
-          <Settings size={20} className="text-slate-600" />
+          <Settings size={18} className="text-slate-600" />
         </Link>
 
-        {/* User Avatar */}
-        <Avatar className="w-10 h-10 border border-slate-200 cursor-pointer">
+        <Avatar className="h-8 w-8 cursor-pointer border border-slate-200 sm:h-9 sm:w-9">
           <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" />
           <AvatarFallback className="bg-indigo-600 text-white">AM</AvatarFallback>
         </Avatar>
