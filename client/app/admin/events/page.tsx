@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { MapPin, Calendar, Eye, Plus, Loader2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import EventForm from './components/EventForm'
-import { AdminSeat, Event, EventCreateDTO, EventUpdateDTO, TicketClass } from '@/lib/types/event.type'
+import { Event, EventCreateDTO, EventUpdateDTO, TicketClass } from '@/lib/types/event.type'
 import { eventService } from '@/lib/services/event.service'
 
 // ✅ Fix timezone: giữ nguyên giờ local khi gửi lên API
@@ -41,9 +41,7 @@ export default function EventsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [ticketClasses, setTicketClasses] = useState<TicketClass[]>([])
-  const [adminSeats, setAdminSeats] = useState<AdminSeat[]>([])
   const [ticketClassForm, setTicketClassForm] = useState({ name: '', colorCode: '#4f46e5', price: '' })
-  const [seatForm, setSeatForm] = useState({ ticketClassId: '', totalRows: '1', totalColumns: '10', rowPrefix: 'A' })
 
   const fetchEvents = async () => {
     try {
@@ -63,16 +61,8 @@ export default function EventsPage() {
   const loadCatalog = async (eventId: string) => {
     try {
       setCatalogLoading(true)
-      const [classesResponse, seatsResponse] = await Promise.all([
-        eventService.adminGetTicketClasses(eventId),
-        eventService.adminGetSeats(eventId),
-      ])
+      const classesResponse = await eventService.adminGetTicketClasses(eventId)
       setTicketClasses(classesResponse.data)
-      setAdminSeats(seatsResponse.data)
-      setSeatForm((current) => ({
-        ...current,
-        ticketClassId: current.ticketClassId || classesResponse.data[0]?.id || '',
-      }))
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -88,7 +78,6 @@ export default function EventsPage() {
     setSelectedEvent(event)
     setShowDetailsDialog(true)
     setTicketClassForm({ name: '', colorCode: '#4f46e5', price: '' })
-    setSeatForm({ ticketClassId: '', totalRows: '1', totalColumns: '10', rowPrefix: 'A' })
     loadCatalog(event.id)
   }
 
@@ -96,7 +85,6 @@ export default function EventsPage() {
     setShowDetailsDialog(false)
     setSelectedEvent(null)
     setTicketClasses([])
-    setAdminSeats([])
   }
 
   const handleCreateTicketClass = async () => {
@@ -118,30 +106,6 @@ export default function EventsPage() {
       toast({ title: 'Success', description: 'Ticket class created successfully!' })
     } catch (error: any) {
       toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to create ticket class.', variant: 'destructive' })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleGenerateSeats = async () => {
-    if (!selectedEvent) return
-    if (!seatForm.ticketClassId) {
-      toast({ title: 'Error', description: 'Please choose a ticket class first.', variant: 'destructive' })
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      const response = await eventService.adminGenerateSeats(selectedEvent.id, {
-        ticketClassId: seatForm.ticketClassId,
-        totalRows: Number(seatForm.totalRows),
-        totalColumns: Number(seatForm.totalColumns),
-        rowPrefix: seatForm.rowPrefix || undefined,
-      })
-      await loadCatalog(selectedEvent.id)
-      toast({ title: 'Success', description: `Created ${response.data.createdCount} seats.` })
-    } catch (error: any) {
-      toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to generate seats.', variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
@@ -478,56 +442,10 @@ export default function EventsPage() {
               </div>
 
               <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Generate Seats</h3>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_90px_90px_90px_auto]">
-                  <select
-                    value={seatForm.ticketClassId}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, ticketClassId: event.target.value }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  >
-                    <option value="">Ticket class</option>
-                    {ticketClasses.map((ticketClass) => (
-                      <option key={ticketClass.id} value={ticketClass.id}>
-                        {ticketClass.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min={1}
-                    value={seatForm.totalRows}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, totalRows: event.target.value }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    value={seatForm.totalColumns}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, totalColumns: event.target.value }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  />
-                  <input
-                    type="text"
-                    maxLength={1}
-                    value={seatForm.rowPrefix}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, rowPrefix: event.target.value.toUpperCase() }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  />
-                  <Button
-                    size="sm"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                    onClick={handleGenerateSeats}
-                    disabled={submitting || selectedEvent.status !== 'DRAFT' || ticketClasses.length === 0}
-                  >
-                    Generate
-                  </Button>
-                </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Current seats: {adminSeats.length}. Seat setup is locked after the event leaves DRAFT.
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Seats</h3>
+                <p className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-800">
+                  Seats are generated by applying a published layout from the Layouts screen. Ticket classes can be
+                  created here, or directly while mapping a layout to this event.
                 </p>
               </div>
             </div>

@@ -102,6 +102,12 @@ type TemplateClass = {
   color: string
 }
 
+type MissingTicketClassForm = {
+  name: string
+  colorCode: string
+  price: string
+}
+
 type GeneratedTemplate = {
   workspaceRows: number
   workspaceCols: number
@@ -197,6 +203,13 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value)
+
+const formatTicketClassName = (key: string) =>
+  key
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => (part.length <= 4 ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()))
+    .join(' ')
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -459,6 +472,8 @@ export default function LayoutsPage() {
   const [selectedEventId, setSelectedEventId] = useState('')
   const [eventTicketClasses, setEventTicketClasses] = useState<TicketClass[]>([])
   const [mappings, setMappings] = useState<Record<string, string>>({})
+  const [missingClassForms, setMissingClassForms] = useState<Record<string, MissingTicketClassForm>>({})
+  const [creatingTicketClassKey, setCreatingTicketClassKey] = useState<string | null>(null)
   const [dragStartCell, setDragStartCell] = useState<CellCoord | null>(null)
   const [dragEndCell, setDragEndCell] = useState<CellCoord | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<SeatLayout | null>(null)
@@ -1160,6 +1175,7 @@ export default function LayoutsPage() {
     setSelectedEventId('')
     setEventTicketClasses([])
     setMappings({})
+    setMissingClassForms({})
     try {
       const response = await eventService.getAll()
       setEvents(response.data.filter((event) => event.status === 'DRAFT'))
@@ -1171,12 +1187,68 @@ export default function LayoutsPage() {
   const loadEventClasses = async (eventId: string) => {
     setSelectedEventId(eventId)
     setMappings({})
-    if (!eventId) return
+    setMissingClassForms({})
+    if (!eventId) {
+      setEventTicketClasses([])
+      return
+    }
     try {
       const response = await eventService.adminGetTicketClasses(eventId)
-      setEventTicketClasses(response.data)
+      const existingClasses = response.data
+      const classesByName = new Map(existingClasses.map((ticketClass) => [ticketClass.name.trim().toLowerCase(), ticketClass]))
+      const nextMappings: Record<string, string> = {}
+      const nextMissingForms: Record<string, MissingTicketClassForm> = {}
+
+      usedTicketKeys.forEach((key) => {
+        const formattedName = formatTicketClassName(key)
+        const existingClass = classesByName.get(formattedName.toLowerCase())
+        if (existingClass) {
+          nextMappings[key] = existingClass.id
+          return
+        }
+        const templateClass = ticketClassByKey.get(key)
+        nextMissingForms[key] = {
+          name: formattedName,
+          colorCode: templateClass?.color || '#4f46e5',
+          price: '',
+        }
+      })
+
+      setEventTicketClasses(existingClasses)
+      setMappings(nextMappings)
+      setMissingClassForms(nextMissingForms)
     } catch (error) {
       toast({ title: 'Error', description: 'Không tải được ticket classes', variant: 'destructive' })
+    }
+  }
+
+  const createAndMapTicketClass = async (key: string) => {
+    if (!selectedEventId) return
+    const form = missingClassForms[key]
+    if (!form?.name.trim() || !form.price || Number(form.price) < 0) {
+      toast({ title: 'Missing data', description: 'Enter ticket class name and valid price.', variant: 'destructive' })
+      return
+    }
+
+    try {
+      setCreatingTicketClassKey(key)
+      const created = await eventService.adminCreateTicketClass(selectedEventId, {
+        name: form.name.trim(),
+        colorCode: form.colorCode || null,
+        price: Number(form.price),
+      })
+      setEventTicketClasses((current) => [...current, created.data])
+      setMappings((current) => ({ ...current, [key]: created.data.id }))
+      setMissingClassForms((current) => {
+        const next = { ...current }
+        delete next[key]
+        return next
+      })
+      toast({ title: 'Created', description: `${created.data.name} created and mapped.` })
+    } catch (error) {
+      toast({ title: 'Error', description: getErrorMessage(error, 'KhÃ´ng táº¡o Ä‘Æ°á»£c ticket class'), variant: 'destructive' })
+    } finally {
+      setCreatingTicketClassKey(null)
     }
   }
 
@@ -1883,23 +1955,76 @@ export default function LayoutsPage() {
               </div>
             )}
             {usedTicketKeys.map((key) => (
-              <div key={key} className="grid grid-cols-1 items-center gap-3 rounded-md border border-slate-200 p-3 sm:grid-cols-[140px_1fr]">
-                <div>
-                  <p className="font-medium text-slate-800">{key}</p>
-                  <p className="text-xs text-slate-500">layout key</p>
+              <div key={key} className="rounded-md border border-slate-200 p-3">
+                <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[140px_1fr]">
+                  <div>
+                    <p className="font-medium text-slate-800">{key}</p>
+                    <p className="text-xs text-slate-500">layout key</p>
+                  </div>
+                  <select
+                    value={mappings[key] || ''}
+                    onChange={(event) => setMappings((current) => ({ ...current, [key]: event.target.value }))}
+                    className="h-10 rounded-md border border-slate-200 px-3 text-sm"
+                  >
+                    <option value="">Ticket class</option>
+                    {eventTicketClasses.map((ticketClass) => (
+                      <option key={ticketClass.id} value={ticketClass.id}>
+                        {ticketClass.name} - {formatMoney(Number(ticketClass.price))}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  value={mappings[key] || ''}
-                  onChange={(event) => setMappings((current) => ({ ...current, [key]: event.target.value }))}
-                  className="h-10 rounded-md border border-slate-200 px-3 text-sm"
-                >
-                  <option value="">Ticket class</option>
-                  {eventTicketClasses.map((ticketClass) => (
-                    <option key={ticketClass.id} value={ticketClass.id}>
-                      {ticketClass.name} - {formatMoney(Number(ticketClass.price))}
-                    </option>
-                  ))}
-                </select>
+                {!mappings[key] && missingClassForms[key] && (
+                  <div className="mt-3 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/60 p-3">
+                    <p className="mb-2 text-xs font-medium text-indigo-800">
+                      Chưa có ticket class phù hợp. Tạo mới và map cho key này.
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_72px_120px_auto]">
+                      <Input
+                        value={missingClassForms[key].name}
+                        onChange={(event) =>
+                          setMissingClassForms((current) => ({
+                            ...current,
+                            [key]: { ...current[key], name: event.target.value },
+                          }))
+                        }
+                        placeholder="Ticket class name"
+                      />
+                      <Input
+                        type="color"
+                        value={missingClassForms[key].colorCode}
+                        onChange={(event) =>
+                          setMissingClassForms((current) => ({
+                            ...current,
+                            [key]: { ...current[key], colorCode: event.target.value },
+                          }))
+                        }
+                        className="h-10 p-1"
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        value={missingClassForms[key].price}
+                        onChange={(event) =>
+                          setMissingClassForms((current) => ({
+                            ...current,
+                            [key]: { ...current[key], price: event.target.value },
+                          }))
+                        }
+                        placeholder="Price"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => createAndMapTicketClass(key)}
+                        disabled={creatingTicketClassKey === key}
+                        className="bg-indigo-600 text-white hover:bg-indigo-700"
+                      >
+                        {creatingTicketClassKey === key && <Loader2 size={14} className="mr-2 animate-spin" />}
+                        Create & Map
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             {missingMappings.length > 0 && (
@@ -1907,7 +2032,7 @@ export default function LayoutsPage() {
             )}
             <Button
               onClick={submitApply}
-              disabled={!selectedEventId || eventTicketClasses.length === 0 || missingMappings.length > 0}
+              disabled={!selectedEventId || missingMappings.length > 0}
               className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
             >
               Apply layout
