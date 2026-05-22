@@ -10,7 +10,6 @@ export interface LayoutCell {
 
 export type LayoutTemplateType =
   | 'HALL_RECTANGLE'
-  | 'THEATER_SEMICIRCLE'
   | 'STADIUM_ELLIPSE'
   | 'COUNTDOWN_CROSS'
 

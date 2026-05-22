@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, type FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Layer, Rect, Shape, Stage, Text } from 'react-konva'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,15 @@ import { Input } from '@/components/ui/input'
 import { toast } from '@/hooks/use-toast'
 import { eventService } from '@/lib/services/event.service'
 import { layoutService } from '@/lib/services/layout.service'
-import { Event, TicketClass } from '@/lib/types/event.type'
-import { LayoutCell, LayoutData, LayoutStatus, SeatLayout } from '@/lib/types/layout.type'
+import { type Event, type TicketClass } from '@/lib/types/event.type'
+import {
+  type LayoutCell,
+  type LayoutData,
+  type LayoutDecoration,
+  type LayoutStatus,
+  type LayoutTemplateType,
+  type SeatLayout,
+} from '@/lib/types/layout.type'
 import {
   Archive,
   Brush,
@@ -30,6 +37,7 @@ import {
   Send,
   SlidersHorizontal,
   Square,
+  Wand2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -38,7 +46,30 @@ const CELL_SIZE = 30
 const WORKSPACE_BLOCK_SIZE = 50
 const DEFAULT_WORKSPACE = WORKSPACE_BLOCK_SIZE
 const MAX_HISTORY = 50
+const STANDARD_CLASS = { key: 'standard', name: 'Standard', color: '#2563eb' }
+const SEAT_COUNT_PRESETS = [
+  100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
+  1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000,
+]
 const CLASS_COLORS = ['#4f46e5', '#16a34a', '#eab308', '#dc2626', '#0891b2', '#9333ea', '#ea580c']
+
+const TEMPLATE_OPTIONS: Array<{ value: LayoutTemplateType; label: string; description: string }> = [
+  {
+    value: 'HALL_RECTANGLE',
+    label: 'Hall rectangle',
+    description: 'One rectangular seating area with simple aisles and a stage at the top.',
+  },
+  {
+    value: 'STADIUM_ELLIPSE',
+    label: 'Stadium ellipse',
+    description: 'Large elliptical bowl layout, available for 500 seats and above.',
+  },
+  {
+    value: 'COUNTDOWN_CROSS',
+    label: 'Countdown cross',
+    description: 'Four audience zones around a central stage.',
+  },
+]
 
 type Tool = 'paint' | 'erase' | 'pan'
 type DrawMode = 'line' | 'rectangle'
@@ -52,9 +83,11 @@ type DraftState = {
   name: string
   description: string
   venueName: string
+  templateType?: LayoutTemplateType | null
   workspaceRows: number
   workspaceCols: number
   cells: LayoutCell[]
+  decorations: LayoutDecoration[]
 }
 
 type StageState = {
@@ -69,21 +102,30 @@ type TemplateClass = {
   color: string
 }
 
+type GeneratedTemplate = {
+  workspaceRows: number
+  workspaceCols: number
+  cells: LayoutCell[]
+  decorations: LayoutDecoration[]
+}
+
 const defaultDraft = (): DraftState => ({
   name: 'New layout',
   description: '',
   venueName: '',
+  templateType: null,
   workspaceRows: DEFAULT_WORKSPACE,
   workspaceCols: DEFAULT_WORKSPACE,
   cells: [],
+  decorations: [],
 })
 
 const classesFromCells = (cells: LayoutCell[]) => {
   const keys = Array.from(new Set(cells.map((cell) => cell.ticketClassKey))).sort()
   return keys.map((key, index) => ({
     key,
-    name: key.replace(/[-_]/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
-    color: CLASS_COLORS[index % CLASS_COLORS.length],
+    name: key === STANDARD_CLASS.key ? STANDARD_CLASS.name : key.replace(/[-_]/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+    color: key === STANDARD_CLASS.key ? STANDARD_CLASS.color : CLASS_COLORS[index % CLASS_COLORS.length],
   }))
 }
 
@@ -138,8 +180,10 @@ const toLayoutData = (draft: DraftState): LayoutData => {
   return {
     workspaceRows: draft.workspaceRows,
     workspaceCols: draft.workspaceCols,
+    templateType: draft.templateType ?? null,
     usedBounds: calculateBounds(cells),
     cells,
+    decorations: draft.decorations || [],
   }
 }
 
@@ -155,6 +199,228 @@ const formatMoney = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value)
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+const createStandardCell = (row: number, col: number): LayoutCell => ({
+  row,
+  col,
+  ticketClassKey: STANDARD_CLASS.key,
+  customPreviewLabel: false,
+})
+
+const makeStageDecoration = (
+  templateType: LayoutTemplateType,
+  row: number,
+  col: number,
+  rowSpan: number,
+  colSpan: number,
+  shape: LayoutDecoration['shape'] = 'rect'
+): LayoutDecoration => ({
+  id: `${templateType.toLowerCase()}-stage`,
+  type: 'stage',
+  label: templateType === 'COUNTDOWN_CROSS' ? 'Center stage' : 'Stage / Screen',
+  row,
+  col,
+  rowSpan,
+  colSpan,
+  shape,
+})
+
+const takeUniqueCells = (candidates: CellCoord[], seatCount: number) => {
+  const seen = new Set<string>()
+  const cells: LayoutCell[] = []
+  for (const candidate of candidates) {
+    const key = makeKey(candidate.row, candidate.col)
+    if (seen.has(key)) continue
+    seen.add(key)
+    cells.push(createStandardCell(candidate.row, candidate.col))
+    if (cells.length === seatCount) break
+  }
+  return cells
+}
+
+const generateHallRectangle = (seatCount: number): GeneratedTemplate => {
+  const sectionCount = seatCount >= 800 ? 3 : seatCount >= 300 ? 2 : 1
+  const aisleWidth = 2
+  const paddingTop = 8
+  const paddingLeft = 6
+  const seatsPerRowTarget = Math.ceil(Math.sqrt(seatCount * 1.6))
+  const sectionWidth = Math.max(8, Math.ceil(seatsPerRowTarget / sectionCount))
+  const seatsPerRow = sectionCount * sectionWidth
+  const visualCols = seatsPerRow + (sectionCount - 1) * aisleWidth
+  const rows = Math.ceil(seatCount / seatsPerRow)
+  const stageWidth = Math.min(Math.max(12, Math.floor(visualCols * 0.45)), visualCols)
+  const stageCol = paddingLeft + Math.floor((visualCols - stageWidth) / 2)
+  const candidates: CellCoord[] = []
+
+  for (let row = 0; row < rows && candidates.length < seatCount; row += 1) {
+    for (let section = 0; section < sectionCount && candidates.length < seatCount; section += 1) {
+      const sectionStartCol = paddingLeft + section * (sectionWidth + aisleWidth)
+      for (let seatInSection = 0; seatInSection < sectionWidth && candidates.length < seatCount; seatInSection += 1) {
+        candidates.push({ row: paddingTop + row, col: sectionStartCol + seatInSection })
+      }
+    }
+  }
+
+  const workspaceRows = roundUpToBlock(paddingTop + rows + 6)
+  const workspaceCols = roundUpToBlock(paddingLeft * 2 + visualCols)
+  return {
+    workspaceRows,
+    workspaceCols,
+    cells: candidates.map((cell) => createStandardCell(cell.row, cell.col)),
+    decorations: [makeStageDecoration('HALL_RECTANGLE', 2, stageCol, 3, stageWidth)],
+  }
+}
+
+const generateStadiumEllipse = (seatCount: number): GeneratedTemplate => {
+  let radiusRow = Math.max(22, Math.ceil(Math.sqrt(seatCount) * 0.9))
+  let radiusCol = Math.max(34, Math.ceil(Math.sqrt(seatCount) * 1.45))
+  const padding = 8
+  let candidates: Array<CellCoord & { score: number; angleScore: number }> = []
+
+  while (candidates.length < seatCount) {
+    candidates = []
+    const centerRow = padding + radiusRow
+    const centerCol = padding + radiusCol
+    const stageRowSpan = Math.max(6, Math.floor(radiusRow * 0.34))
+    const stageColSpan = Math.max(12, Math.floor(radiusCol * 0.42))
+    const stageRow = centerRow - Math.floor(stageRowSpan / 2)
+    const stageCol = centerCol - Math.floor(stageColSpan / 2)
+    const innerRadiusRow = Math.max(stageRowSpan / 2 + 2, radiusRow * 0.34)
+    const innerRadiusCol = Math.max(stageColSpan / 2 + 2, radiusCol * 0.34)
+
+    for (let row = centerRow - radiusRow; row <= centerRow + radiusRow; row += 1) {
+      for (let col = centerCol - radiusCol; col <= centerCol + radiusCol; col += 1) {
+        const normalizedRow = (row - centerRow) / radiusRow
+        const normalizedCol = (col - centerCol) / radiusCol
+        const inEllipse = normalizedRow * normalizedRow + normalizedCol * normalizedCol <= 1
+        const innerNormalizedRow = (row - centerRow) / innerRadiusRow
+        const innerNormalizedCol = (col - centerCol) / innerRadiusCol
+        const inInnerVoid = innerNormalizedRow * innerNormalizedRow + innerNormalizedCol * innerNormalizedCol <= 1
+        const inStage =
+          row >= stageRow &&
+          row < stageRow + stageRowSpan &&
+          col >= stageCol &&
+          col < stageCol + stageColSpan
+        if (inEllipse && !inInnerVoid && !inStage) {
+          candidates.push({
+            row,
+            col,
+            score: normalizedRow * normalizedRow + normalizedCol * normalizedCol,
+            angleScore: Math.atan2(normalizedRow, normalizedCol),
+          })
+        }
+      }
+    }
+
+    if (candidates.length < seatCount) {
+      radiusRow += 3
+      radiusCol += 5
+    }
+  }
+
+  const centerRow = padding + radiusRow
+  const centerCol = padding + radiusCol
+  const stageRowSpan = Math.max(6, Math.floor(radiusRow * 0.34))
+  const stageColSpan = Math.max(12, Math.floor(radiusCol * 0.42))
+  const stageRow = centerRow - Math.floor(stageRowSpan / 2)
+  const stageCol = centerCol - Math.floor(stageColSpan / 2)
+  const workspaceRows = roundUpToBlock(centerRow + radiusRow + padding)
+  const workspaceCols = roundUpToBlock(centerCol + radiusCol + padding)
+  candidates.sort((left, right) => left.score - right.score || left.angleScore - right.angleScore)
+
+  return {
+    workspaceRows,
+    workspaceCols,
+    cells: takeUniqueCells(candidates, seatCount),
+    decorations: [
+      makeStageDecoration('STADIUM_ELLIPSE', stageRow, stageCol, stageRowSpan, stageColSpan, 'ellipse'),
+    ],
+  }
+}
+
+const generateCountdownCross = (seatCount: number): GeneratedTemplate => {
+  const perArm = Math.floor(seatCount / 4)
+  const remainder = seatCount % 4
+  const armCounts = {
+    top: perArm + (remainder > 0 ? 1 : 0),
+    right: perArm + (remainder > 1 ? 1 : 0),
+    bottom: perArm + (remainder > 2 ? 1 : 0),
+    left: perArm,
+  }
+  const maxArmCount = Math.max(armCounts.top, armCounts.right, armCounts.bottom, armCounts.left)
+  const armWidth = Math.max(8, Math.ceil(Math.sqrt(seatCount) * 0.35))
+  const maxArmLength = Math.ceil(maxArmCount / armWidth)
+  const stageSpan = Math.max(6, Math.ceil(Math.sqrt(seatCount) * 0.16))
+  const padding = 8
+  const centerRow = padding + maxArmLength + Math.floor(stageSpan / 2)
+  const centerCol = padding + maxArmLength + Math.floor(stageSpan / 2)
+  const stageRow = centerRow - Math.floor(stageSpan / 2)
+  const stageCol = centerCol - Math.floor(stageSpan / 2)
+  const offsetStart = -Math.floor((armWidth - 1) / 2)
+  const candidates: CellCoord[] = []
+  const usedCells = new Set<string>()
+
+  const generateArm = (count: number, direction: 'top' | 'right' | 'bottom' | 'left') => {
+    let generated = 0
+    for (let distance = 1; generated < count; distance += 1) {
+      for (let offsetIndex = 0; offsetIndex < armWidth && generated < count; offsetIndex += 1) {
+        const offset = offsetStart + offsetIndex
+        let cell: CellCoord
+        if (direction === 'top') {
+          cell = { row: stageRow - distance, col: centerCol + offset }
+        } else if (direction === 'right') {
+          cell = { row: centerRow + offset, col: stageCol + stageSpan - 1 + distance }
+        } else if (direction === 'bottom') {
+          cell = { row: stageRow + stageSpan - 1 + distance, col: centerCol + offset }
+        } else {
+          cell = { row: centerRow + offset, col: stageCol - distance }
+        }
+        const key = makeKey(cell.row, cell.col)
+        if (!usedCells.has(key)) {
+          usedCells.add(key)
+          candidates.push(cell)
+          generated += 1
+        }
+      }
+    }
+  }
+
+  generateArm(armCounts.top, 'top')
+  generateArm(armCounts.right, 'right')
+  generateArm(armCounts.bottom, 'bottom')
+  generateArm(armCounts.left, 'left')
+
+  const workspaceRows = roundUpToBlock(centerRow + maxArmLength + padding)
+  const workspaceCols = roundUpToBlock(centerCol + maxArmLength + padding)
+  return {
+    workspaceRows,
+    workspaceCols,
+    cells: takeUniqueCells(candidates, seatCount),
+    decorations: [
+      makeStageDecoration(
+        'COUNTDOWN_CROSS',
+        stageRow,
+        stageCol,
+        stageSpan,
+        stageSpan,
+        'ellipse'
+      ),
+    ],
+  }
+}
+
+const generateTemplateLayout = (templateType: LayoutTemplateType, seatCount: number): GeneratedTemplate => {
+  if (seatCount < 100 || seatCount > 5000) {
+    throw new Error('Template seat count must be between 100 and 5000')
+  }
+  const safeSeatCount = seatCount
+  if (templateType === 'STADIUM_ELLIPSE' && safeSeatCount < 500) {
+    throw new Error('Sân vận động ellipse không phù hợp quy mô nhỏ')
+  }
+  if (templateType === 'HALL_RECTANGLE') return generateHallRectangle(safeSeatCount)
+  if (templateType === 'STADIUM_ELLIPSE') return generateStadiumEllipse(safeSeatCount)
+  return generateCountdownCross(safeSeatCount)
+}
 
 const statusClass: Record<LayoutStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-700',
@@ -177,6 +443,11 @@ export default function LayoutsPage() {
   const [selectedKey, setSelectedKey] = useState('')
   const [classDialogOpen, setClassDialogOpen] = useState(false)
   const [classForm, setClassForm] = useState<TemplateClass>({ key: '', name: '', color: '#2563eb' })
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+  const [templateForm, setTemplateForm] = useState<{ templateType: LayoutTemplateType; seatCount: number }>({
+    templateType: 'HALL_RECTANGLE',
+    seatCount: 500,
+  })
   const [history, setHistory] = useState<DraftState[]>([defaultDraft()])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [isPainting, setIsPainting] = useState(false)
@@ -469,13 +740,17 @@ export default function LayoutsPage() {
       name: layout.name,
       description: layout.description || '',
       venueName: layout.venueName || '',
+      templateType: layout.layoutData?.templateType || null,
       workspaceRows: layout.workspaceRows || DEFAULT_WORKSPACE,
       workspaceCols: layout.workspaceCols || DEFAULT_WORKSPACE,
       cells: layout.layoutData?.cells || [],
+      decorations: layout.layoutData?.decorations || [],
     }
     const localDraft = localStorage.getItem(`layout-draft:${layout.id}`)
     if (layout.status === 'DRAFT' && localDraft && window.confirm('Có bản nháp local. Khôi phục bản nháp này?')) {
-      const parsed = JSON.parse(localDraft) as DraftState
+      const parsed = { ...defaultDraft(), ...(JSON.parse(localDraft) as DraftState) }
+      parsed.decorations = parsed.decorations || []
+      parsed.templateType = parsed.templateType || null
       setDraft(parsed)
       setHistory([parsed])
       const restoredClasses = classesFromCells(parsed.cells)
@@ -497,8 +772,10 @@ export default function LayoutsPage() {
   const newLayout = () => {
     const localDraft = localStorage.getItem('layout-draft:new')
     const nextDraft = localDraft && window.confirm('Có bản nháp local chưa lưu. Khôi phục?')
-      ? JSON.parse(localDraft)
+      ? { ...defaultDraft(), ...(JSON.parse(localDraft) as DraftState) }
       : defaultDraft()
+    nextDraft.decorations = nextDraft.decorations || []
+    nextDraft.templateType = nextDraft.templateType || null
     setSelectedLayout(null)
     setDraft(nextDraft)
     setHistory([nextDraft])
@@ -507,6 +784,33 @@ export default function LayoutsPage() {
     setTicketClasses(restoredClasses)
     setSelectedKey(restoredClasses[0]?.key || '')
     setHasUnsavedChanges(false)
+  }
+
+  const applyTemplateGeneration = () => {
+    if (readOnly) return
+    try {
+      const generated = generateTemplateLayout(templateForm.templateType, templateForm.seatCount)
+      const nextDraft: DraftState = {
+        ...draft,
+        templateType: templateForm.templateType,
+        workspaceRows: generated.workspaceRows,
+        workspaceCols: generated.workspaceCols,
+        cells: generated.cells,
+        decorations: generated.decorations,
+      }
+      setDraftWithHistory(nextDraft)
+      setTicketClasses((current) => {
+        if (current.some((ticketClass) => ticketClass.key === STANDARD_CLASS.key)) return current
+        return [STANDARD_CLASS, ...current]
+      })
+      setSelectedKey(STANDARD_CLASS.key)
+      setTool('paint')
+      setTemplateDialogOpen(false)
+      setStageState({ x: 24, y: 24, scale: 1 })
+      toast({ title: 'Generated', description: `Generated ${generated.cells.length} standard seats.` })
+    } catch (error) {
+      toast({ title: 'Invalid template', description: error instanceof Error ? error.message : 'Cannot generate template', variant: 'destructive' })
+    }
   }
 
   const applyCells = (cells: CellCoord[]) => {
@@ -924,7 +1228,7 @@ export default function LayoutsPage() {
   return (
     <div
       className="grid min-h-[calc(100vh-5.5rem)] grid-cols-1 gap-4 bg-slate-100 p-1 xl:h-[calc(100vh-6rem)] xl:grid-cols-[minmax(260px,var(--layout-list-width))_8px_minmax(0,1fr)] xl:gap-0"
-      style={{ '--layout-list-width': `${layoutListWidth}px` } as React.CSSProperties}
+      style={{ '--layout-list-width': `${layoutListWidth}px` } as CSSProperties}
     >
       <aside className="flex max-h-[420px] min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm xl:max-h-none">
         <div className="border-b border-slate-200 p-4">
@@ -1141,6 +1445,15 @@ export default function LayoutsPage() {
                           <MousePointer2 size={15} className="mr-2" />
                           Pan
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTemplateDialogOpen(true)}
+                          disabled={readOnly}
+                        >
+                          <Wand2 size={15} className="mr-2" />
+                          Generate template
+                        </Button>
                       </div>
                     </section>
                     <section>
@@ -1298,6 +1611,39 @@ export default function LayoutsPage() {
                   }}
                   listening={false}
                 />
+                {(draft.decorations || []).map((decoration) => {
+                  const x = decoration.col * CELL_SIZE
+                  const y = decoration.row * CELL_SIZE
+                  const width = decoration.colSpan * CELL_SIZE
+                  const height = decoration.rowSpan * CELL_SIZE
+                  return (
+                    <Fragment key={decoration.id}>
+                      <Rect
+                        x={x}
+                        y={y}
+                        width={width}
+                        height={height}
+                        fill="#111827"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        cornerRadius={decoration.shape === 'ellipse' ? Math.min(width, height) / 2 : 8}
+                        opacity={0.88}
+                        listening={false}
+                      />
+                      <Text
+                        x={x}
+                        y={y + Math.max(4, height / 2 - 8)}
+                        width={width}
+                        align="center"
+                        text={decoration.label}
+                        fontSize={12}
+                        fontStyle="bold"
+                        fill="#f8fafc"
+                        listening={false}
+                      />
+                    </Fragment>
+                  )
+                })}
                 {visibleCells.map((cell) => {
                   const ticketClass = ticketClassByKey.get(cell.ticketClassKey)
                   return (
@@ -1376,6 +1722,82 @@ export default function LayoutsPage() {
                 Archive
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Generate from template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {draft.cells.length > 0 && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Generate will replace current seats and existing stage/screen decorations. Use undo if you need to go
+                back after generating.
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Template type</label>
+              <select
+                value={templateForm.templateType}
+                onChange={(event) => {
+                  const templateType = event.target.value as LayoutTemplateType
+                  setTemplateForm((current) => ({
+                    templateType,
+                    seatCount: templateType === 'STADIUM_ELLIPSE' && current.seatCount < 500 ? 500 : current.seatCount,
+                  }))
+                }}
+                className="h-10 w-full rounded-md border border-slate-200 px-3 text-sm"
+              >
+                {TEMPLATE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                {TEMPLATE_OPTIONS.find((option) => option.value === templateForm.templateType)?.description}
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Seat count preset</label>
+              <select
+                value={templateForm.seatCount}
+                onChange={(event) => setTemplateForm((current) => ({ ...current, seatCount: Number(event.target.value) }))}
+                className="h-10 w-full rounded-md border border-slate-200 px-3 text-sm"
+              >
+                {SEAT_COUNT_PRESETS.map((preset) => (
+                  <option
+                    key={preset}
+                    value={preset}
+                    disabled={templateForm.templateType === 'STADIUM_ELLIPSE' && preset < 500}
+                  >
+                    {preset.toLocaleString('vi-VN')} seats
+                    {templateForm.templateType === 'STADIUM_ELLIPSE' && preset < 500 ? ' - unavailable for ellipse' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Need an exact odd number? Choose the nearest preset, then paint or erase seats manually.
+              </p>
+              {templateForm.templateType === 'STADIUM_ELLIPSE' && templateForm.seatCount < 500 && (
+                <p className="mt-1 text-xs text-red-600">Sân vận động ellipse không phù hợp quy mô nhỏ.</p>
+              )}
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              Generated seats use the <span className="font-semibold text-slate-900">standard</span> template class.
+              You can rename or repaint classes after generation.
+            </div>
+            <Button
+              onClick={applyTemplateGeneration}
+              disabled={templateForm.templateType === 'STADIUM_ELLIPSE' && templateForm.seatCount < 500}
+              className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              <Wand2 size={15} className="mr-2" />
+              Generate layout
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
