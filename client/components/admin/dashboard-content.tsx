@@ -121,16 +121,16 @@ export default function DashboardContent() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold text-indigo-600 tracking-widest uppercase mb-2">
             Overview
           </p>
-          <h1 className="text-3xl font-bold text-slate-900">Analytics Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Analytics Dashboard</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-40 bg-white border-slate-200">
+            <SelectTrigger className="w-full bg-white border-slate-200 sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -147,7 +147,7 @@ export default function DashboardContent() {
       </div>
 
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
         <StatCard
           title="Total Revenue"
           value="2.800.570.000 VND"
@@ -181,7 +181,7 @@ export default function DashboardContent() {
 
       {/* Chart Section */}
       <Card className="border-slate-200 rounded-xl overflow-hidden">
-        <CardHeader className="border-b border-slate-200 flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-lg">Ticket Sales over Time</CardTitle>
             <p className="text-sm text-slate-600 mt-1">

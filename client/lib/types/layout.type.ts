@@ -8,6 +8,22 @@ export interface LayoutCell {
   customPreviewLabel?: boolean
 }
 
+export type LayoutTemplateType =
+  | 'HALL_RECTANGLE'
+  | 'STADIUM_ELLIPSE'
+  | 'COUNTDOWN_CROSS'
+
+export interface LayoutDecoration {
+  id: string
+  type: 'stage' | 'screen'
+  label: string
+  row: number
+  col: number
+  rowSpan: number
+  colSpan: number
+  shape: 'rect' | 'ellipse'
+}
+
 export interface UsedBounds {
   minRow: number
   maxRow: number
@@ -20,8 +36,10 @@ export interface UsedBounds {
 export interface LayoutData {
   workspaceRows: number
   workspaceCols: number
+  templateType?: LayoutTemplateType | null
   usedBounds?: UsedBounds | null
   cells: LayoutCell[]
+  decorations?: LayoutDecoration[]
 }
 
 export interface SeatLayout {

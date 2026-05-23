@@ -125,7 +125,7 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
             Editable Information
           </h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label className="text-xs font-medium text-slate-700 mb-2 block">Event Name</Label>
                 <Input {...register('name')} className="text-sm" placeholder="Event name" />
@@ -139,7 +139,7 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
             </div>
             <div>
               <Label className="text-xs font-medium text-slate-700 mb-2 block">Banner URL</Label>
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Input
                   {...register('bannerUrl')}
                   onBlur={(e) => setBannerPreview(e.target.value)}
@@ -161,7 +161,7 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
       {(!isEditMode || isDraft) && (
         <div>
           <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Scheduling</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {(['teasingTime', 'openTime', 'startTime', 'endTime'] as const).map((field) => (
               <div key={field}>
                 <Label className="text-xs font-medium text-slate-700 mb-2 block capitalize">

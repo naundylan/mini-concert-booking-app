@@ -245,6 +245,7 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
     LayoutDataDTO safeData = data != null ? data : LayoutDataDTO.builder().build();
     int workspaceRows = Math.max(safeData.getWorkspaceRows(), DEFAULT_WORKSPACE_SIZE);
     int workspaceCols = Math.max(safeData.getWorkspaceCols(), DEFAULT_WORKSPACE_SIZE);
+    String templateType = trimToNull(safeData.getTemplateType());
     List<LayoutCellDTO> cells =
         Optional.ofNullable(safeData.getCells()).orElseGet(ArrayList::new).stream()
             .filter(cell -> cell.getTicketClassKey() != null && !cell.getTicketClassKey().isBlank())
@@ -265,12 +266,32 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
             .stream()
             .sorted(Comparator.comparingInt(LayoutCellDTO::getRow).thenComparingInt(LayoutCellDTO::getCol))
             .toList();
+    // Decorations describe non-seat editor landmarks such as a stage/screen.
+    // They are preserved in layout JSONB but are never counted or applied as Seat inventory.
+    List<LayoutDataDTO.LayoutDecorationDTO> decorations =
+        Optional.ofNullable(safeData.getDecorations()).orElseGet(ArrayList::new).stream()
+            .filter(decoration -> trimToNull(decoration.getType()) != null)
+            .map(
+                decoration ->
+                    LayoutDataDTO.LayoutDecorationDTO.builder()
+                        .id(trimToNull(decoration.getId()))
+                        .type(trimToNull(decoration.getType()))
+                        .label(trimToNull(decoration.getLabel()))
+                        .row(Math.max(0, decoration.getRow()))
+                        .col(Math.max(0, decoration.getCol()))
+                        .rowSpan(Math.max(1, decoration.getRowSpan()))
+                        .colSpan(Math.max(1, decoration.getColSpan()))
+                        .shape(trimToNull(decoration.getShape()))
+                        .build())
+            .toList();
     LayoutMetrics metrics = calculateMetrics(cells);
     return LayoutDataDTO.builder()
         .workspaceRows(workspaceRows)
         .workspaceCols(workspaceCols)
+        .templateType(templateType)
         .usedBounds(toUsedBounds(metrics))
         .cells(cells)
+        .decorations(decorations)
         .build();
   }
 

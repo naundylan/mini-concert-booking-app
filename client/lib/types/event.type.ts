@@ -60,27 +60,3 @@ export interface AdminTicketClassUpdateDTO {
   price?: number;
 }
 
-export interface SeatGenerateDTO {
-  ticketClassId: string;
-  totalRows: number;
-  totalColumns: number;
-  rowPrefix?: string;
-}
-
-export interface SeatGenerateResponseDTO {
-  createdCount: number;
-}
-
-export interface AdminSeat {
-  id: string;
-  gridRow: number;
-  gridColumn: number;
-  label: string;
-  status: 'AVAILABLE' | 'MAINTENANCE' | 'SOLD' | 'LOCKED';
-  ticketClass?: {
-    id: string;
-    name: string;
-    colorCode?: string | null;
-    price: number;
-  } | null;
-}

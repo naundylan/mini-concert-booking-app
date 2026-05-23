@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { MapPin, Calendar, Eye, Plus, Loader2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import EventForm from './components/EventForm'
-import { AdminSeat, Event, EventCreateDTO, EventUpdateDTO, TicketClass } from '@/lib/types/event.type'
+import { Event, EventCreateDTO, EventUpdateDTO, TicketClass } from '@/lib/types/event.type'
 import { eventService } from '@/lib/services/event.service'
 
 // ✅ Fix timezone: giữ nguyên giờ local khi gửi lên API
@@ -41,9 +41,7 @@ export default function EventsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [ticketClasses, setTicketClasses] = useState<TicketClass[]>([])
-  const [adminSeats, setAdminSeats] = useState<AdminSeat[]>([])
   const [ticketClassForm, setTicketClassForm] = useState({ name: '', colorCode: '#4f46e5', price: '' })
-  const [seatForm, setSeatForm] = useState({ ticketClassId: '', totalRows: '1', totalColumns: '10', rowPrefix: 'A' })
 
   const fetchEvents = async () => {
     try {
@@ -63,16 +61,8 @@ export default function EventsPage() {
   const loadCatalog = async (eventId: string) => {
     try {
       setCatalogLoading(true)
-      const [classesResponse, seatsResponse] = await Promise.all([
-        eventService.adminGetTicketClasses(eventId),
-        eventService.adminGetSeats(eventId),
-      ])
+      const classesResponse = await eventService.adminGetTicketClasses(eventId)
       setTicketClasses(classesResponse.data)
-      setAdminSeats(seatsResponse.data)
-      setSeatForm((current) => ({
-        ...current,
-        ticketClassId: current.ticketClassId || classesResponse.data[0]?.id || '',
-      }))
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -88,7 +78,6 @@ export default function EventsPage() {
     setSelectedEvent(event)
     setShowDetailsDialog(true)
     setTicketClassForm({ name: '', colorCode: '#4f46e5', price: '' })
-    setSeatForm({ ticketClassId: '', totalRows: '1', totalColumns: '10', rowPrefix: 'A' })
     loadCatalog(event.id)
   }
 
@@ -96,7 +85,6 @@ export default function EventsPage() {
     setShowDetailsDialog(false)
     setSelectedEvent(null)
     setTicketClasses([])
-    setAdminSeats([])
   }
 
   const handleCreateTicketClass = async () => {
@@ -118,30 +106,6 @@ export default function EventsPage() {
       toast({ title: 'Success', description: 'Ticket class created successfully!' })
     } catch (error: any) {
       toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to create ticket class.', variant: 'destructive' })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleGenerateSeats = async () => {
-    if (!selectedEvent) return
-    if (!seatForm.ticketClassId) {
-      toast({ title: 'Error', description: 'Please choose a ticket class first.', variant: 'destructive' })
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      const response = await eventService.adminGenerateSeats(selectedEvent.id, {
-        ticketClassId: seatForm.ticketClassId,
-        totalRows: Number(seatForm.totalRows),
-        totalColumns: Number(seatForm.totalColumns),
-        rowPrefix: seatForm.rowPrefix || undefined,
-      })
-      await loadCatalog(selectedEvent.id)
-      toast({ title: 'Success', description: `Created ${response.data.createdCount} seats.` })
-    } catch (error: any) {
-      toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to generate seats.', variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
@@ -258,15 +222,15 @@ export default function EventsPage() {
       {/* Page Header */}
       <div>
         <p className="text-xs font-semibold text-indigo-600 tracking-wide uppercase mb-2">Management</p>
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-slate-900">Events</h1>
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Events</h1>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="flex items-center gap-3">
               <label className="text-xs font-medium text-slate-600">Filter:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-auto"
               >
                 <option value="All Statuses">All Statuses</option>
                 <option value="DRAFT">DRAFT</option>
@@ -276,7 +240,7 @@ export default function EventsPage() {
                 <option value="CANCELED">CANCELED</option>
               </select>
             </div>
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleOpenCreateForm}>
+            <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto" onClick={handleOpenCreateForm}>
               <Plus size={16} className="mr-2" />
               Create Event
             </Button>
@@ -302,9 +266,9 @@ export default function EventsPage() {
               onClick={() => handleViewDetails(event)}
               className="w-full bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow text-left group"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden border-2 border-slate-300">
+                  <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-slate-300 bg-slate-200">
                     {event.bannerUrl ? (
                       <img
                         src={event.bannerUrl}
@@ -323,7 +287,7 @@ export default function EventsPage() {
                   <h3 className="font-semibold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors">
                     {event.name}
                   </h3>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
+                  <div className="mt-2 flex flex-col gap-2 text-xs text-slate-600 sm:flex-row sm:items-center sm:gap-4">
                     <div className="flex items-center gap-1">
                       <MapPin size={14} />
                       {event.location}
@@ -350,7 +314,7 @@ export default function EventsPage() {
 
       {/* Event Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl">
           <DialogHeader className="pb-4 border-b border-slate-200">
             <div className="flex items-center gap-3">
               <Eye size={20} className="text-indigo-600" />
@@ -378,7 +342,7 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
                   { label: 'Event Name', value: selectedEvent.name },
                   { label: 'Status',     value: selectedEvent.status },
@@ -478,56 +442,10 @@ export default function EventsPage() {
               </div>
 
               <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Generate Seats</h3>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_90px_90px_90px_auto]">
-                  <select
-                    value={seatForm.ticketClassId}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, ticketClassId: event.target.value }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  >
-                    <option value="">Ticket class</option>
-                    {ticketClasses.map((ticketClass) => (
-                      <option key={ticketClass.id} value={ticketClass.id}>
-                        {ticketClass.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min={1}
-                    value={seatForm.totalRows}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, totalRows: event.target.value }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    value={seatForm.totalColumns}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, totalColumns: event.target.value }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  />
-                  <input
-                    type="text"
-                    maxLength={1}
-                    value={seatForm.rowPrefix}
-                    onChange={(event) => setSeatForm((current) => ({ ...current, rowPrefix: event.target.value.toUpperCase() }))}
-                    className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    disabled={selectedEvent.status !== 'DRAFT'}
-                  />
-                  <Button
-                    size="sm"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                    onClick={handleGenerateSeats}
-                    disabled={submitting || selectedEvent.status !== 'DRAFT' || ticketClasses.length === 0}
-                  >
-                    Generate
-                  </Button>
-                </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Current seats: {adminSeats.length}. Seat setup is locked after the event leaves DRAFT.
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Seats</h3>
+                <p className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-800">
+                  Seats are generated by applying a published layout from the Layouts screen. Ticket classes can be
+                  created here, or directly while mapping a layout to this event.
                 </p>
               </div>
             </div>
@@ -545,7 +463,7 @@ export default function EventsPage() {
       {/* Event Form Dialog */}
       {showFormDialog && (
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
-          <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
+          <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>{formMode === 'create' ? 'Create New Event' : 'Edit Event'}</DialogTitle>
             </DialogHeader>
