@@ -2,6 +2,7 @@ package com.concert.booking.modules.order;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface TicketRepository extends JpaRepository<Ticket, UUID> {
   List<Ticket> findByOrderId(UUID orderId);
+
+  @Query(
+      """
+      SELECT t
+      FROM Ticket t
+      JOIN Order o ON o.id = t.orderId
+      WHERE o.customerId = :customerId
+      ORDER BY t.createdAt DESC
+      """)
+  Page<Ticket> findCustomerTickets(@Param("customerId") UUID customerId, Pageable pageable);
 
   @Query(
       """

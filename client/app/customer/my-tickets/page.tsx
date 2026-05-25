@@ -1,237 +1,176 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { useEffect, useMemo, useState } from 'react'
+import { Calendar, Loader2, MapPin, QrCode, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Search, Download, Share2, ChevronRight } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { customerBookingService } from '@/lib/services/customer-booking.service'
+import { CustomerTicketDTO, PageResponse } from '@/lib/types/customer-booking.type'
 
-// Mock ticket data
-const TICKETS_DATA = [
-  {
-    id: 'TK-001',
-    eventName: 'Neon Velvet Nights',
-    eventDate: 'Oct 24, 2024',
-    eventTime: '9:00 PM - 3:00 AM',
-    venue: 'The Onyx Atrium, NYC',
-    seatLocation: 'Sec A, Row 14, Col B2',
-    ticketType: 'VIP Access',
-    price: '$180.00',
-    qrCode: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TK-001',
-    status: 'UPCOMING',
-    bookingDate: 'Oct 20, 2024',
-  },
-  {
-    id: 'TK-002',
-    eventName: 'Jazz in the Park',
-    eventDate: 'Sep 15, 2024',
-    eventTime: '6:00 PM',
-    venue: 'Central Park, Denver',
-    seatLocation: 'General Admission',
-    ticketType: 'Standard Entry',
-    price: '$45.00',
-    qrCode: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TK-002',
-    status: 'COMPLETED',
-    bookingDate: 'Sep 10, 2024',
-  },
-  {
-    id: 'TK-003',
-    eventName: 'Tech Summit 2024',
-    eventDate: 'Nov 5, 2024',
-    eventTime: '8:00 AM',
-    venue: 'Convention Center, SF',
-    seatLocation: 'VIP Section',
-    ticketType: 'Premium Pass',
-    price: '$299.00',
-    qrCode: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TK-003',
-    status: 'UPCOMING',
-    bookingDate: 'Oct 18, 2024',
-  },
-  {
-    id: 'TK-004',
-    eventName: 'Indie Music Festival',
-    eventDate: 'Aug 20, 2024',
-    eventTime: '4:00 PM',
-    venue: 'Riverside Amphitheater, Austin',
-    seatLocation: 'GA Pit',
-    ticketType: 'General Admission',
-    price: '$75.00',
-    qrCode: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TK-004',
-    status: 'COMPLETED',
-    bookingDate: 'Aug 15, 2024',
-  },
-]
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value)
 
-type Ticket = typeof TICKETS_DATA[0]
+const formatDateTime = (value?: string | null) => {
+  if (!value) return 'Chưa có lịch'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const getApiErrorMessage = (err: any) =>
+  err?.response?.data?.message || 'Không tải được danh sách vé.'
 
 export default function MyTicketsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
-  const [sortBy, setSortBy] = useState('date-desc')
+  const [ticketsPage, setTicketsPage] = useState<PageResponse<CustomerTicketDTO> | null>(null)
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const filteredAndSortedTickets = useMemo(() => {
-    let filtered = TICKETS_DATA.filter((ticket) => {
-      const matchesSearch =
-        ticket.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ticket.id.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter
-      return matchesSearch && matchesStatus
-    })
-
-    // Sort tickets
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'date-desc':
-          return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
-        case 'date-asc':
-          return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
-        case 'price-high':
-          return parseFloat(b.price.replace('$', '')) - parseFloat(a.price.replace('$', ''))
-        case 'price-low':
-          return parseFloat(a.price.replace('$', '')) - parseFloat(b.price.replace('$', ''))
-        default:
-          return 0
+  useEffect(() => {
+    const loadTickets = async () => {
+      try {
+        setLoading(true)
+        setError('')
+        setTicketsPage(await customerBookingService.getTickets({ page, size: 10 }))
+      } catch (err: any) {
+        setError(getApiErrorMessage(err))
+      } finally {
+        setLoading(false)
       }
-    })
+    }
 
-    return filtered
-  }, [searchQuery, statusFilter, sortBy])
+    loadTickets()
+  }, [page])
+
+  const tickets = ticketsPage?.content || []
+  const filteredTickets = useMemo(() => {
+    const normalized = keyword.trim().toLowerCase()
+    if (!normalized) return tickets
+    return tickets.filter((ticket) => {
+      const ticketId = ticket.ticketId || ticket.id
+      return (
+        ticketId.toLowerCase().includes(normalized) ||
+        ticket.orderCode?.toLowerCase().includes(normalized) ||
+        ticket.eventName?.toLowerCase().includes(normalized)
+      )
+    })
+  }, [keyword, tickets])
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">My Tickets</h1>
-        <p className="text-slate-600 text-sm">View and manage your event tickets</p>
-      </div>
+    <div className="space-y-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-950">Vé của tôi</h1>
+          <p className="mt-1 text-sm text-slate-600">Xem vé điện tử và thông tin check-in của bạn.</p>
+        </div>
 
-      {/* Search & Filters */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search event name or ticket ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
-              />
-            </div>
-          </div>
-
-          {/* Filter & Sort Controls */}
-          <div className="flex gap-3">
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="ALL">All Tickets</option>
-              <option value="UPCOMING">Upcoming</option>
-              <option value="COMPLETED">Past</option>
-            </select>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="date-desc">Newest First</option>
-              <option value="date-asc">Oldest First</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="price-low">Price: Low to High</option>
-            </select>
-          </div>
+        <div className="relative min-w-[280px]">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="Tìm theo mã vé, đơn hàng, sự kiện..."
+            className="pl-10"
+          />
         </div>
       </div>
 
-      {/* Tickets Grid */}
-      {filteredAndSortedTickets.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredAndSortedTickets.map((ticket) => (
-            <Card key={ticket.id} className="p-4 hover:shadow-md transition-shadow">
-              <div className="flex gap-4">
-                {/* QR Code */}
-                <div className="flex-shrink-0">
-                  <img
-                    src={ticket.qrCode}
-                    alt="Ticket QR Code"
-                    className="w-24 h-24 rounded-lg bg-slate-100"
-                  />
-                </div>
-
-                {/* Ticket Info */}
-                <div className="flex-1 space-y-3">
-                  {/* Header with Status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-semibold text-slate-900 mb-1">{ticket.eventName}</h3>
-                      <p className="text-xs text-slate-500">Booking ID: {ticket.id}</p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        ticket.status === 'UPCOMING'
-                          ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-slate-50 text-slate-600 border-slate-200'
-                      }
-                    >
-                      {ticket.status === 'UPCOMING' ? 'Upcoming' : 'Completed'}
-                    </Badge>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="text-xs space-y-1 text-slate-600">
-                    <p className="font-medium text-slate-700">{ticket.ticketType}</p>
-                    <p>{ticket.eventDate} • {ticket.eventTime}</p>
-                    <p className="text-slate-500">{ticket.venue}</p>
-                    <p className="font-medium text-indigo-600">{ticket.price}</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-indigo-600 hover:bg-indigo-50"
-                    >
-                      <Download size={14} className="mr-1" />
-                      Download
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-slate-600 hover:bg-slate-100"
-                    >
-                      <Share2 size={14} className="mr-1" />
-                      Share
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
-      ) : (
-        <Card className="p-12 text-center">
-          <p className="text-slate-600 mb-4">No tickets found matching your search.</p>
-          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            Browse Events
-          </Button>
-        </Card>
       )}
 
-      {/* Pagination Info */}
-      {filteredAndSortedTickets.length > 0 && (
-        <p className="text-xs text-slate-500 text-center">
-          Showing {filteredAndSortedTickets.length} of {TICKETS_DATA.length} tickets
-        </p>
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-sm text-slate-600">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin text-indigo-600" />
+          Đang tải vé...
+        </div>
+      ) : filteredTickets.length === 0 ? (
+        <Card className="border border-dashed border-slate-300 p-12 text-center">
+          <p className="text-sm text-slate-600">Bạn chưa có vé phù hợp.</p>
+        </Card>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {filteredTickets.map((ticket) => {
+            const ticketId = ticket.ticketId || ticket.id
+            const qrPayload = ticket.qrPayload || ticketId
+            return (
+              <Card key={ticketId} className="border border-slate-200 bg-white p-4">
+                <div className="flex gap-4">
+                  <div className="flex h-28 w-28 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                    <QrCode size={44} className="text-slate-700" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="line-clamp-2 font-bold text-slate-950">{ticket.eventName || 'Sự kiện'}</h2>
+                        <p className="mt-1 text-xs text-slate-500">Mã vé: {ticketId}</p>
+                      </div>
+                      <Badge className="bg-indigo-50 text-indigo-700">{ticket.status || 'UNUSED'}</Badge>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-sm text-slate-600">
+                      <p className="font-semibold text-slate-900">
+                        Ghế {ticket.label || ticket.seatLabel} - {ticket.ticketClassName || ticket.ticketClass?.name}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Calendar size={15} className="text-indigo-600" />
+                        {formatDateTime(ticket.eventStartTime)}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <MapPin size={15} className="text-indigo-600" />
+                        {ticket.eventLocation || '--'}
+                      </p>
+                      <p className="font-semibold text-indigo-600">{formatMoney(ticket.price)}</p>
+                    </div>
+
+                    <p className="mt-3 break-all rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                      QR payload: {qrPayload}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {ticketsPage && ticketsPage.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-slate-500">
+            Hiển thị {filteredTickets.length} / {ticketsPage.totalElements} vé
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={page <= 0} onClick={() => setPage((current) => current - 1)}>
+              Trước
+            </Button>
+            <span className="text-sm text-slate-600">
+              {page + 1}/{ticketsPage.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              disabled={page >= ticketsPage.totalPages - 1}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Sau
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   )

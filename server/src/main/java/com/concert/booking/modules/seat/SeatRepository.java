@@ -10,10 +10,12 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
     List<Seat> findByEventId(UUID eventId);
+    List<Seat> findByEventIdAndIdIn(UUID eventId, List<UUID> ids);
     List<Seat> findByTicketClassId(UUID ticketClassId);
     boolean existsByEventIdAndStatus(UUID eventId, SeatStatus status);
     boolean existsByEventIdAndGridRowAndGridColumn(UUID eventId, int gridRow, int gridColumn);
     long countByEventId(UUID eventId);
+    long countByEventIdAndStatus(UUID eventId, SeatStatus status);
     void deleteByEventId(UUID eventId);
 
     /**
