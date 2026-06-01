@@ -51,7 +51,12 @@ public class AppSecurityConfig {
   }
 
   static String[] SWAGGER_WHITELIST = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
-  static String[] PUBLIC_ENDPOINTS = {"/", "/api/v1/orders/webhooks/**"};
+  static String[] PUBLIC_ENDPOINTS = {
+      "/",
+      "/api/v1/orders/webhooks/**",
+      "/api/v1/customer/payments/vnpay/ipn",
+      "/api/v1/customer/payments/vietqr/webhook"
+  };
   static String[] AUTH_ENDPOINTS = {
       "/api/v1/auth/sign-in",
       "/api/v1/auth/sign-out",

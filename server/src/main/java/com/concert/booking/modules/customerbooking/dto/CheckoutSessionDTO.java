@@ -14,6 +14,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CheckoutSessionDTO {
   UUID paymentSessionId;
+  UUID customerId;
   UUID eventId;
   Instant expiresAt;
   BigDecimal totalAmount;
