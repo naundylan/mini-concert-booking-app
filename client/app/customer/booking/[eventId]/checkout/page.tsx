@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle, CheckCircle, ChevronLeft, Clock, Copy, Loader2, Landmark } from 'lucide-react'
+import { AlertCircle, CheckCircle, ChevronLeft, Clock, Copy, CreditCard, Loader2, Landmark, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { authService } from '@/lib/services/auth.service'
 import { customerBookingService } from '@/lib/services/customer-booking.service'
-import { CheckoutSessionDTO } from '@/lib/types/customer-booking.type'
+import { CheckoutSessionDTO, VietQrPaymentDTO } from '@/lib/types/customer-booking.type'
 import { UserInfo } from '@/lib/types/auth.type'
 import { useCountdown } from '@/lib/hooks/useCountdown'
 
@@ -42,9 +42,10 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [vietQrPayment, setVietQrPayment] = useState<VietQrPaymentDTO | null>(null)
+  const [waitingVietQr, setWaitingVietQr] = useState(false)
 
   const countdown = useCountdown(session?.expiresAt)
-  const devPaymentEnabled = process.env.NEXT_PUBLIC_ENABLE_DEV_PAYMENT === 'true'
 
   const redirectToSeats = useCallback(
     (message?: string) => {
@@ -75,20 +76,10 @@ export default function CheckoutPage() {
         setLoading(true)
         setError('')
 
-        const storedSessionId =
-          querySessionId || window.sessionStorage.getItem(checkoutSessionStorageKey(eventId))
-
-        if (storedSessionId) {
-          const restored = await customerBookingService.getCheckoutSession(storedSessionId)
+        if (querySessionId) {
+          const restored = await customerBookingService.getCheckoutSession(querySessionId)
           setSession(restored)
           window.sessionStorage.setItem(checkoutSessionStorageKey(eventId), restored.paymentSessionId)
-          if (!querySessionId) {
-            router.replace(
-              `/customer/booking/${eventId}/checkout?paymentSessionId=${encodeURIComponent(
-                restored.paymentSessionId
-              )}`
-            )
-          }
           return
         }
 
@@ -140,20 +131,42 @@ export default function CheckoutPage() {
     redirectToSeats('Phiên thanh toán đã hết hạn. Vui lòng chọn ghế lại.')
   }, [countdown.isExpired, eventId, redirectToSeats, session])
 
+  useEffect(() => {
+    if (!session || !waitingVietQr || countdown.isExpired) return
+
+    const timer = window.setInterval(async () => {
+      try {
+        const status = await customerBookingService.getCheckoutPaymentStatus(session.paymentSessionId)
+        if (status.status === 'PAID' && status.orderId) {
+          window.clearInterval(timer)
+          window.sessionStorage.removeItem(checkoutSessionStorageKey(eventId))
+          window.sessionStorage.removeItem(selectedSeatStorageKey(eventId))
+          router.replace(`/customer/booking/${eventId}/success?orderId=${encodeURIComponent(status.orderId)}`)
+        }
+        if (status.status === 'EXPIRED' || status.status === 'FAILED') {
+          window.clearInterval(timer)
+          setWaitingVietQr(false)
+          setError(
+            status.status === 'EXPIRED'
+              ? 'Phiên thanh toán đã hết hạn. Vui lòng chọn ghế lại.'
+              : 'Thanh toán VietQR chưa hoàn tất. Vui lòng kiểm tra lại giao dịch.'
+          )
+        }
+      } catch {
+        // Keep polling; temporary network errors should not break the waiting state.
+      }
+    }, 3000)
+
+    return () => window.clearInterval(timer)
+  }, [countdown.isExpired, eventId, router, session, waitingVietQr])
+
+  const backToSeats = () => {
+    router.replace(`/customer/booking/${eventId}/seats`)
+  }
+
   const cancelCheckout = async () => {
-    if (!session) {
-      redirectToSeats()
-      return
-    }
-    try {
-      setSubmitting(true)
-      await customerBookingService.releaseCheckout(session.paymentSessionId)
-    } catch {
-      // Release is best-effort; Redis TTL is the source of cleanup safety.
-    } finally {
-      window.sessionStorage.removeItem(checkoutSessionStorageKey(eventId))
-      router.replace(`/customer/booking/${eventId}/seats`)
-    }
+    window.sessionStorage.removeItem(checkoutSessionStorageKey(eventId))
+    router.replace(`/customer/booking/${eventId}/seats`)
   }
 
   const confirmDev = async () => {
@@ -165,6 +178,34 @@ export default function CheckoutPage() {
       window.sessionStorage.removeItem(checkoutSessionStorageKey(eventId))
       window.sessionStorage.removeItem(selectedSeatStorageKey(eventId))
       router.replace(`/customer/booking/${eventId}/success?orderId=${encodeURIComponent(order.orderId)}`)
+    } catch (err: any) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const payWithVnPay = async () => {
+    if (!session) return
+    try {
+      setSubmitting(true)
+      setError('')
+      const result = await customerBookingService.createVnPayPayment(session.paymentSessionId)
+      window.location.href = result.paymentUrl
+    } catch (err: any) {
+      setError(getApiErrorMessage(err))
+      setSubmitting(false)
+    }
+  }
+
+  const payWithVietQr = async () => {
+    if (!session) return
+    try {
+      setSubmitting(true)
+      setError('')
+      const result = await customerBookingService.createVietQrPayment(session.paymentSessionId)
+      setVietQrPayment(result)
+      setWaitingVietQr(true)
     } catch (err: any) {
       setError(getApiErrorMessage(err))
     } finally {
@@ -205,7 +246,7 @@ export default function CheckoutPage() {
     <div className="space-y-6 p-6 lg:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <button onClick={cancelCheckout} className="mb-3 inline-flex items-center gap-2 text-sm text-indigo-600">
+          <button onClick={backToSeats} className="mb-3 inline-flex items-center gap-2 text-sm text-indigo-600">
             <ChevronLeft size={16} />
             Quay lại chọn ghế
           </button>
@@ -282,6 +323,68 @@ export default function CheckoutPage() {
               V1 đang dùng chuyển khoản/dev confirm. Khi tích hợp VNPay thật, webhook sẽ thay bước xác nhận demo.
             </div>
           </Card>
+
+          {vietQrPayment && (
+            <Card className="border border-slate-200 bg-white p-6">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                <QrCode size={20} className="text-indigo-600" />
+                Thanh toán VietQR
+              </h2>
+
+              <div className="mt-5 grid gap-5 lg:grid-cols-[220px_1fr]">
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <img
+                    src={vietQrPayment.qrUrl}
+                    alt="Mã QR thanh toán VietQR"
+                    className="aspect-square w-full rounded-lg object-contain"
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['Ngân hàng', vietQrPayment.bankId],
+                    ['Số tài khoản', vietQrPayment.accountNo],
+                    ['Tên tài khoản', vietQrPayment.accountName],
+                    ['Số tiền', formatMoney(vietQrPayment.amount)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-lg border border-slate-200 p-4">
+                      <p className="text-xs text-slate-500">{label}</p>
+                      <div className="mt-1 flex items-center justify-between gap-3">
+                        <p className="break-all font-semibold text-slate-950">{value}</p>
+                        <button type="button" className="text-indigo-600" onClick={() => copyText(value)}>
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 sm:col-span-2">
+                    <p className="text-xs font-semibold uppercase text-amber-700">Nội dung bắt buộc</p>
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <p className="break-all text-xl font-bold text-amber-900">{vietQrPayment.content}</p>
+                      <button
+                        type="button"
+                        className="text-indigo-600"
+                        onClick={() => copyText(vietQrPayment.content)}
+                      >
+                        <Copy size={18} />
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-amber-800">
+                      Chuyển khoản sai nội dung có thể khiến hệ thống không tự xác nhận vé.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-2 rounded-lg bg-indigo-50 p-4 text-sm text-indigo-800">
+                <Clock size={18} className="mt-0.5 flex-shrink-0" />
+                {waitingVietQr
+                  ? 'Đang chờ SePay xác nhận tiền vào. Trang sẽ tự chuyển khi thanh toán thành công.'
+                  : 'Quét mã QR hoặc chuyển khoản đúng số tiền và nội dung để hệ thống tự xác nhận.'}
+              </div>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -307,8 +410,43 @@ export default function CheckoutPage() {
             </div>
           </Card>
 
-          {devPaymentEnabled && (
-            <Button
+          <Button
+              className="w-full bg-slate-950 text-white hover:bg-slate-800"
+              onClick={payWithVietQr}
+              disabled={submitting || countdown.isExpired || waitingVietQr}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Đang tạo mã VietQR...
+                </>
+              ) : (
+                <>
+                  <QrCode className="mr-2 h-5 w-5" />
+                  Thanh toán qua VietQR
+                </>
+              )}
+          </Button>
+
+          <Button
+              className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+              onClick={payWithVnPay}
+              disabled={submitting || countdown.isExpired}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Đang chuyển sang VNPay...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  Thanh toán qua VNPay
+                </>
+              )}
+          </Button>
+
+          <Button
               className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={confirmDev}
               disabled={submitting || countdown.isExpired}
@@ -321,14 +459,13 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-5 w-5" />
-                  Giả lập đã thanh toán
+                  Tôi đã chuyển khoản
                 </>
               )}
-            </Button>
-          )}
+          </Button>
 
           <Button variant="outline" className="w-full" onClick={cancelCheckout} disabled={submitting}>
-            Hủy phiên thanh toán
+            Rời phiên, giữ ghế đến hết giờ
           </Button>
         </div>
       </div>

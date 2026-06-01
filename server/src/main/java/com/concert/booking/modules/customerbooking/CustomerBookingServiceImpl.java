@@ -1,16 +1,32 @@
 package com.concert.booking.modules.customerbooking;
 
+import com.concert.booking.common.constants.BankTransferProperties;
+import com.concert.booking.common.constants.SePayProperties;
+import com.concert.booking.common.constants.VietQrProperties;
 import com.concert.booking.common.exception.AppException;
+import com.concert.booking.modules.customerbooking.dto.CheckoutPaymentStatusDTO;
 import com.concert.booking.modules.customerbooking.dto.CheckoutRequestDTO;
 import com.concert.booking.modules.customerbooking.dto.CheckoutSessionDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerEventDetailDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerEventSummaryDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerSeatCatalogDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerSeatDTO;
+import com.concert.booking.modules.customerbooking.dto.CustomerSelectedSeatDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerTicketClassDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerTicketDTO;
+import com.concert.booking.modules.customerbooking.dto.SePayWebhookDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSnapshotDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSummaryDTO;
+import com.concert.booking.modules.customerbooking.dto.VietQrPaymentDTO;
+import com.concert.booking.modules.customerbooking.dto.VnPayIpnResponseDTO;
+import com.concert.booking.modules.customerbooking.dto.VnPayPaymentUrlDTO;
+import com.concert.booking.modules.customerbooking.dto.VnPayReturnResultDTO;
+import com.concert.booking.modules.customerbooking.redis.CheckoutSessionRedisService;
+import com.concert.booking.modules.customerbooking.redis.SeatHoldRedisService;
+import com.concert.booking.modules.customerbooking.sepay.SePayWebhookVerifier;
+import com.concert.booking.modules.customerbooking.socket.SeatSocketService;
+import com.concert.booking.modules.customerbooking.vietqr.VietQrService;
+import com.concert.booking.modules.customerbooking.vnpay.VnPayService;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.event.enums.EventStatus;
@@ -22,23 +38,33 @@ import com.concert.booking.modules.order.Ticket;
 import com.concert.booking.modules.order.TicketRepository;
 import com.concert.booking.modules.order.dto.OrderItemResponseDTO;
 import com.concert.booking.modules.order.dto.OrderResponseDTO;
+import com.concert.booking.modules.order.enums.OrderStatus;
+import com.concert.booking.modules.order.enums.PaymentMethod;
+import com.concert.booking.modules.order.enums.PaymentStatus;
+import com.concert.booking.modules.order.enums.TicketStatus;
 import com.concert.booking.modules.seat.Seat;
+import com.concert.booking.modules.seat.SeatHoldService;
 import com.concert.booking.modules.seat.SeatRepository;
 import com.concert.booking.modules.seat.enums.SeatStatus;
 import com.concert.booking.modules.ticket.TicketClass;
 import com.concert.booking.modules.ticket.TicketClassRepository;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -46,9 +72,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CustomerBookingServiceImpl implements CustomerBookingService {
+  private static final Duration CHECKOUT_TTL = Duration.ofMinutes(10);
+  private static final int MAX_ACTIVE_CHECKOUT_SESSIONS = 3;
+  private static final String ORDER_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  private static final Pattern VIETQR_REFERENCE_PATTERN = Pattern.compile("MCB-[A-Z0-9]+");
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   EventRepository eventRepository;
   SeatRepository seatRepository;
@@ -56,6 +88,16 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   OrderRepository orderRepository;
   PaymentRepository paymentRepository;
   TicketRepository ticketRepository;
+  SeatHoldService seatHoldService;
+  CheckoutSessionRedisService checkoutSessionRedisService;
+  SeatHoldRedisService seatHoldRedisService;
+  SeatSocketService seatSocketService;
+  BankTransferProperties bankTransferProperties;
+  VietQrProperties vietQrProperties;
+  SePayProperties sePayProperties;
+  VnPayService vnPayService;
+  VietQrService vietQrService;
+  SePayWebhookVerifier sePayWebhookVerifier;
 
   @Override
   @Transactional(readOnly = true)
@@ -95,11 +137,20 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     List<TicketClass> ticketClasses = ticketClassRepository.findByEventId(eventId);
     Map<UUID, TicketClass> ticketClassById =
         ticketClasses.stream().collect(Collectors.toMap(TicketClass::getId, Function.identity()));
+    List<UUID> heldSeatIds = seatHoldRedisService.getHeldSeatIds(eventId);
 
     List<CustomerSeatDTO> seats =
         seatRepository.findByEventId(eventId).stream()
             .sorted(Comparator.comparingInt(Seat::getGridRow).thenComparingInt(Seat::getGridColumn))
-            .map(seat -> toCustomerSeatDTO(seat, ticketClassById.get(seat.getTicketClassId())))
+            .map(
+                seat -> {
+                  CustomerSeatDTO dto =
+                      toCustomerSeatDTO(seat, ticketClassById.get(seat.getTicketClassId()));
+                  if (seat.getStatus() == SeatStatus.AVAILABLE && heldSeatIds.contains(seat.getId())) {
+                    dto.setStatus("HELD");
+                  }
+                  return dto;
+                })
             .toList();
 
     return CustomerSeatCatalogDTO.builder()
@@ -111,23 +162,307 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   }
 
   @Override
+  @Transactional
   public CheckoutSessionDTO checkout(CheckoutRequestDTO checkoutRequest, UUID customerId) {
-    throw new UnsupportedOperationException("Phase 2: Redis checkout session chua implement");
+    if (checkoutRequest.getPaymentMethod() != PaymentMethod.BANK_TRANSFER
+        && checkoutRequest.getPaymentMethod() != PaymentMethod.VNPAY
+        && checkoutRequest.getPaymentMethod() != PaymentMethod.VIETQR) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Phuong thuc thanh toan chua duoc ho tro");
+    }
+
+    Event event = getOnSaleEventForBooking(checkoutRequest.getEventId());
+    List<UUID> seatIds = checkoutRequest.getSeatIds().stream().distinct().sorted().toList();
+    if (seatIds.isEmpty()) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Phai chon it nhat mot ghe");
+    }
+    List<CheckoutSessionDTO> activeSessions =
+        checkoutSessionRedisService.findActiveSessions(event.getId(), customerId);
+    for (CheckoutSessionDTO activeSession : activeSessions) {
+      List<UUID> activeSeatIds =
+          activeSession.getSelectedSeats().stream()
+              .map(CustomerSelectedSeatDTO::getId)
+              .sorted()
+              .toList();
+      if (activeSeatIds.equals(seatIds)) {
+        return activeSession;
+      }
+    }
+    if (activeSessions.size() >= MAX_ACTIVE_CHECKOUT_SESSIONS) {
+      throw new AppException(
+          HttpStatus.CONFLICT, "Ban chi co toi da 3 phien thanh toan dang giu ghe cho su kien nay");
+    }
+    if (seatHoldRedisService.hasAnyHeldSeat(event.getId(), seatIds)) {
+      throw new AppException(HttpStatus.CONFLICT, "Mot so ghe vua duoc nguoi khac giu");
+    }
+
+    List<Seat> seats = seatHoldService.lockAvailableSeats(event.getId(), seatIds);
+    Map<UUID, TicketClass> ticketClassById =
+        ticketClassRepository.findByEventId(event.getId()).stream()
+            .collect(Collectors.toMap(TicketClass::getId, Function.identity()));
+    BigDecimal totalAmount = calculateTotalAmount(seats, ticketClassById);
+
+    UUID paymentSessionId = UUID.randomUUID();
+    Instant expiresAt = Instant.now().plus(CHECKOUT_TTL);
+    CheckoutSessionDTO session =
+        CheckoutSessionDTO.builder()
+            .paymentSessionId(paymentSessionId)
+            .customerId(customerId)
+            .eventId(event.getId())
+            .expiresAt(expiresAt)
+            .totalAmount(totalAmount)
+            .bankTransferInfo(
+                com.concert.booking.modules.customerbooking.dto.BankTransferInfoDTO.builder()
+                    .accountNumber(bankTransferProperties.getAccountNumber())
+                    .accountName(bankTransferProperties.getAccountName())
+                    .amount(totalAmount)
+                    .content("MCB " + paymentSessionId.toString().substring(0, 8).toUpperCase())
+                    .build())
+            .selectedSeats(
+                seats.stream()
+                    .map(
+                        seat ->
+                            toSelectedSeatDTO(
+                                seat, ticketClassById.get(seat.getTicketClassId())))
+                    .toList())
+            .build();
+
+    boolean seatsHeld = false;
+    try {
+      seatHoldRedisService.holdSeats(event.getId(), paymentSessionId, seatIds, CHECKOUT_TTL);
+      seatsHeld = true;
+      checkoutSessionRedisService.save(session, CHECKOUT_TTL);
+      checkoutSessionRedisService.addActiveSession(event.getId(), customerId, paymentSessionId);
+    } catch (RuntimeException ex) {
+      if (seatsHeld) {
+        seatHoldRedisService.releaseSeats(event.getId(), seatIds);
+      }
+      throw ex;
+    }
+
+    seatSocketService.emitSeatHeld(event.getId(), seatIds, expiresAt);
+    return session;
   }
 
   @Override
   public CheckoutSessionDTO getCheckoutSession(UUID paymentSessionId, UUID customerId) {
-    throw new UnsupportedOperationException("Phase 2: Redis checkout session chua implement");
+    CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
+    List<UUID> seatIds =
+        session.getSelectedSeats().stream().map(CustomerSelectedSeatDTO::getId).toList();
+    if (!seatHoldRedisService.ownsAllHeldSeats(session.getEventId(), paymentSessionId, seatIds)) {
+      checkoutSessionRedisService.delete(paymentSessionId);
+      throw new AppException(HttpStatus.GONE, "Phien thanh toan da het han");
+    }
+    return session;
   }
 
   @Override
   public void releaseCheckout(UUID paymentSessionId, UUID customerId) {
-    throw new UnsupportedOperationException("Phase 2: Redis checkout session chua implement");
+    CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
+    List<UUID> seatIds =
+        session.getSelectedSeats().stream().map(CustomerSelectedSeatDTO::getId).toList();
+    seatHoldRedisService.releaseSeats(session.getEventId(), seatIds);
+    checkoutSessionRedisService.delete(paymentSessionId);
+    checkoutSessionRedisService.deleteActiveSession(session.getEventId(), customerId, paymentSessionId);
+    seatSocketService.emitSeatReleased(session.getEventId(), seatIds);
   }
 
   @Override
+  @Transactional
   public OrderResponseDTO confirmPaymentSessionDev(UUID paymentSessionId, UUID customerId) {
-    throw new UnsupportedOperationException("Phase 4: confirm payment dev chua implement");
+    return completePaidCheckoutSession(
+        paymentSessionId, customerId, PaymentMethod.BANK_TRANSFER, null);
+  }
+
+  @Override
+  public VnPayPaymentUrlDTO createVnPayPaymentUrl(
+      UUID paymentSessionId, UUID customerId, String ipAddress) {
+    CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
+    ensureSessionStillOwnsSeats(session);
+    return VnPayPaymentUrlDTO.builder()
+        .paymentUrl(vnPayService.createPaymentUrl(session, ipAddress))
+        .build();
+  }
+
+  @Override
+  @Transactional
+  public VnPayIpnResponseDTO handleVnPayIpn(Map<String, String> params) {
+    if (!vnPayService.isValidSignature(params)) {
+      return vnPayIpnResponse("97", "Invalid checksum");
+    }
+
+    UUID paymentSessionId;
+    try {
+      paymentSessionId = vnPayService.getPaymentSessionId(params);
+    } catch (AppException ex) {
+      return vnPayIpnResponse("01", "Order not found");
+    }
+    String transactionRef = paymentSessionId.toString();
+    if (paymentRepository.findByTransactionRef(transactionRef).isPresent()) {
+      return vnPayIpnResponse("00", "Order already confirmed");
+    }
+
+    if (!vnPayService.isPaymentSuccess(params)) {
+      return vnPayIpnResponse("00", "Payment not successful");
+    }
+
+    CheckoutSessionDTO session =
+        checkoutSessionRedisService.findById(paymentSessionId).orElse(null);
+    if (session == null || session.getExpiresAt() == null || !session.getExpiresAt().isAfter(Instant.now())) {
+      return vnPayIpnResponse("01", "Order not found or expired");
+    }
+
+    BigDecimal paidAmount;
+    try {
+      paidAmount = vnPayService.getAmount(params);
+    } catch (AppException ex) {
+      return vnPayIpnResponse("04", "Invalid amount");
+    }
+    if (session.getTotalAmount().compareTo(paidAmount) != 0) {
+      return vnPayIpnResponse("04", "Invalid amount");
+    }
+
+    try {
+      completePaidCheckoutSession(
+          paymentSessionId, session.getCustomerId(), PaymentMethod.VNPAY, transactionRef);
+      return vnPayIpnResponse("00", "Confirm success");
+    } catch (AppException ex) {
+      return vnPayIpnResponse("01", "Order not found or expired");
+    }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public VnPayReturnResultDTO getVnPayReturnResult(Map<String, String> params, UUID customerId) {
+    if (!vnPayService.isValidSignature(params)) {
+      return vnPayReturnResult("FAILED", null, null, null, "Chu ky VNPay khong hop le");
+    }
+
+    UUID paymentSessionId = vnPayService.getPaymentSessionId(params);
+    Payment confirmedPayment = paymentRepository.findByTransactionRef(paymentSessionId.toString()).orElse(null);
+    if (confirmedPayment != null) {
+      Order order = getOwnedOrder(confirmedPayment.getOrderId(), customerId);
+      return vnPayReturnResult(
+          "PAID", order.getEventId(), order.getId(), paymentSessionId, "Thanh toan thanh cong");
+    }
+
+    CheckoutSessionDTO session = checkoutSessionRedisService.findById(paymentSessionId).orElse(null);
+    if (!vnPayService.isPaymentSuccess(params)) {
+      return vnPayReturnResult(
+          "FAILED",
+          session != null ? session.getEventId() : null,
+          null,
+          paymentSessionId,
+          "Thanh toan VNPay khong thanh cong");
+    }
+    if (session == null
+        || session.getExpiresAt() == null
+        || !session.getExpiresAt().isAfter(Instant.now())) {
+      return vnPayReturnResult("EXPIRED", null, null, paymentSessionId, "Phien thanh toan da het han");
+    }
+    if (!customerId.equals(session.getCustomerId())) {
+      throw new AppException(HttpStatus.FORBIDDEN, "Ban khong co quyen truy cap phien thanh toan nay");
+    }
+    return vnPayReturnResult(
+        "PENDING", session.getEventId(), null, paymentSessionId, "Dang cho VNPay xac nhan");
+  }
+
+  @Override
+  public VietQrPaymentDTO createVietQrPayment(UUID paymentSessionId, UUID customerId) {
+    CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
+    ensureSessionStillOwnsSeats(session);
+
+    String reference = vietQrService.createPaymentReference(paymentSessionId);
+    vietQrService.savePaymentReference(reference, paymentSessionId, CHECKOUT_TTL);
+
+    return VietQrPaymentDTO.builder()
+        .qrUrl(vietQrService.buildQrUrl(session.getTotalAmount(), reference))
+        .bankId(vietQrProperties.getBankId())
+        .accountNo(vietQrProperties.getAccountNo())
+        .accountName(vietQrProperties.getAccountName())
+        .amount(session.getTotalAmount())
+        .content(reference)
+        .expiredAt(session.getExpiresAt())
+        .build();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public CheckoutPaymentStatusDTO getCheckoutPaymentStatus(UUID paymentSessionId, UUID customerId) {
+    String reference = vietQrService.createPaymentReference(paymentSessionId);
+    Payment payment = paymentRepository.findByTransactionRef(reference).orElse(null);
+    if (payment != null) {
+      Order order = getOwnedOrder(payment.getOrderId(), customerId);
+      return checkoutPaymentStatus("PAID", payment.getPaymentMethod(), order.getId());
+    }
+
+    CheckoutSessionDTO session = checkoutSessionRedisService.findById(paymentSessionId).orElse(null);
+    if (session == null || session.getExpiresAt() == null || !session.getExpiresAt().isAfter(Instant.now())) {
+      return checkoutPaymentStatus("EXPIRED", PaymentMethod.VIETQR, null);
+    }
+    if (!customerId.equals(session.getCustomerId())) {
+      throw new AppException(HttpStatus.FORBIDDEN, "Ban khong co quyen truy cap phien thanh toan nay");
+    }
+    return checkoutPaymentStatus("PENDING", PaymentMethod.VIETQR, null);
+  }
+
+  @Override
+  @Transactional
+  public Map<String, Boolean> handleSePayWebhook(
+      String authorizationHeader, SePayWebhookDTO payload) {
+    if (!sePayWebhookVerifier.verify(authorizationHeader)) {
+      throw new AppException(HttpStatus.UNAUTHORIZED, "SePay webhook khong hop le");
+    }
+    if (payload == null) {
+      return Map.of("success", true);
+    }
+    if (!"in".equalsIgnoreCase(payload.getTransferType())) {
+      return Map.of("success", true);
+    }
+    if (sePayProperties.getMerchantAccount() != null
+        && !sePayProperties.getMerchantAccount().isBlank()
+        && !sePayProperties.getMerchantAccount().equals(payload.getAccountNumber())) {
+      return Map.of("success", true);
+    }
+
+    String reference = parseVietQrReference(payload);
+    if (reference == null) {
+      return Map.of("success", true);
+    }
+    if (!vietQrService.markSePayWebhookProcessed(payload.getId())) {
+      return Map.of("success", true);
+    }
+    if (paymentRepository.findByTransactionRef(reference).isPresent()) {
+      return Map.of("success", true);
+    }
+
+    UUID paymentSessionId = vietQrService.findPaymentSessionId(reference).orElse(null);
+    if (paymentSessionId == null) {
+      return Map.of("success", true);
+    }
+
+    CheckoutSessionDTO session = checkoutSessionRedisService.findById(paymentSessionId).orElse(null);
+    if (session == null || session.getExpiresAt() == null || !session.getExpiresAt().isAfter(Instant.now())) {
+      log.warn(
+          "SePay money received for expired checkout. reference={}, sePayId={}, amount={}",
+          reference,
+          payload.getId(),
+          payload.getTransferAmount());
+      return Map.of("success", true);
+    }
+    if (payload.getTransferAmount() == null
+        || session.getTotalAmount().compareTo(payload.getTransferAmount()) != 0) {
+      log.warn(
+          "SePay amount mismatch. reference={}, expected={}, actual={}, sePayId={}",
+          reference,
+          session.getTotalAmount(),
+          payload.getTransferAmount(),
+          payload.getId());
+      return Map.of("success", true);
+    }
+
+    completePaidCheckoutSession(
+        paymentSessionId, session.getCustomerId(), PaymentMethod.VIETQR, reference);
+    return Map.of("success", true);
   }
 
   @Override
@@ -169,7 +504,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         seatRepository.findSoldSeatsByEventId(eventId).stream().map(Seat::getId).toList();
     return SeatSnapshotDTO.builder()
         .eventId(eventId)
-        .heldSeatIds(List.of())
+        .heldSeatIds(seatHoldRedisService.getHeldSeatIds(eventId))
         .soldSeatIds(soldSeatIds)
         .generatedAt(Instant.now())
         .build();
@@ -223,7 +558,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
   private String normalizeKeyword(String keyword) {
     if (keyword == null || keyword.isBlank()) {
-      return null;
+      return "";
     }
     return keyword.trim();
   }
@@ -294,6 +629,190 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         .status(ticket.getStatus())
         .qrPayload(ticket.getId().toString())
         .build();
+  }
+
+  private CheckoutSessionDTO getOwnedCheckoutSession(UUID paymentSessionId, UUID customerId) {
+    CheckoutSessionDTO session =
+        checkoutSessionRedisService
+            .findById(paymentSessionId)
+            .orElseThrow(() -> new AppException(HttpStatus.GONE, "Phien thanh toan da het han"));
+    if (!customerId.equals(session.getCustomerId())) {
+      throw new AppException(HttpStatus.FORBIDDEN, "Ban khong co quyen truy cap phien thanh toan nay");
+    }
+    if (session.getExpiresAt() == null || !session.getExpiresAt().isAfter(Instant.now())) {
+      checkoutSessionRedisService.delete(paymentSessionId);
+      throw new AppException(HttpStatus.GONE, "Phien thanh toan da het han");
+    }
+    return session;
+  }
+
+  private void ensureSessionStillOwnsSeats(CheckoutSessionDTO session) {
+    List<UUID> seatIds =
+        session.getSelectedSeats().stream().map(CustomerSelectedSeatDTO::getId).toList();
+    if (!seatHoldRedisService.ownsAllHeldSeats(
+        session.getEventId(), session.getPaymentSessionId(), seatIds)) {
+      checkoutSessionRedisService.delete(session.getPaymentSessionId());
+      throw new AppException(HttpStatus.GONE, "Phien thanh toan da het han");
+    }
+  }
+
+  private OrderResponseDTO completePaidCheckoutSession(
+      UUID paymentSessionId, UUID customerId, PaymentMethod paymentMethod, String transactionRef) {
+    if (transactionRef != null && !transactionRef.isBlank()) {
+      Payment existingPayment = paymentRepository.findByTransactionRef(transactionRef).orElse(null);
+      if (existingPayment != null) {
+        Order existingOrder = getOwnedOrder(existingPayment.getOrderId(), customerId);
+        List<Ticket> existingTickets = ticketRepository.findByOrderId(existingOrder.getId());
+        Map<UUID, TicketClass> existingTicketClassById =
+            ticketClassRepository.findByEventId(existingOrder.getEventId()).stream()
+                .collect(Collectors.toMap(TicketClass::getId, Function.identity()));
+        return toOrderResponse(existingOrder, existingPayment, existingTickets, existingTicketClassById);
+      }
+    }
+
+    CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
+    ensureSessionStillOwnsSeats(session);
+
+    List<UUID> seatIds =
+        session.getSelectedSeats().stream().map(CustomerSelectedSeatDTO::getId).toList();
+    Event event = getOnSaleEventForBooking(session.getEventId());
+    List<Seat> seats = seatHoldService.lockAvailableSeats(event.getId(), seatIds);
+    Map<UUID, TicketClass> ticketClassById =
+        ticketClassRepository.findByEventId(event.getId()).stream()
+            .collect(Collectors.toMap(TicketClass::getId, Function.identity()));
+    BigDecimal totalAmount = calculateTotalAmount(seats, ticketClassById);
+
+    Order order =
+        orderRepository.save(
+            Order.builder()
+                .orderCode(generateOrderCode())
+                .eventId(event.getId())
+                .customerId(customerId)
+                .staffId(customerId)
+                .totalAmount(totalAmount)
+                .status(OrderStatus.PAID)
+                .createdBy(customerId)
+                .build());
+
+    Payment payment =
+        paymentRepository.save(
+            Payment.builder()
+                .orderId(order.getId())
+                .transactionRef(transactionRef)
+                .amount(totalAmount)
+                .amountReceived(totalAmount)
+                .paymentMethod(paymentMethod)
+                .status(PaymentStatus.CONFIRMED)
+                .createdBy(customerId)
+                .build());
+
+    List<Ticket> tickets =
+        seats.stream()
+            .<Ticket>map(
+                seat -> {
+                  TicketClass ticketClass = ticketClassById.get(seat.getTicketClassId());
+                  return Ticket.builder()
+                      .orderId(order.getId())
+                      .seatId(seat.getId())
+                      .ticketClassId(ticketClass.getId())
+                      .seatLabel(toSeatLabel(seat))
+                      .price(ticketClass.getPrice())
+                      .status(TicketStatus.UNUSED)
+                      .createdBy(customerId)
+                      .build();
+                })
+            .toList();
+
+    seatHoldService.confirmSold(seats, customerId);
+    ticketRepository.saveAll(tickets);
+    seatHoldRedisService.releaseSeats(event.getId(), seatIds);
+    checkoutSessionRedisService.delete(paymentSessionId);
+    checkoutSessionRedisService.deleteActiveSession(event.getId(), customerId, paymentSessionId);
+    seatSocketService.emitSeatSold(event.getId(), seatIds);
+
+    return toOrderResponse(order, payment, tickets, ticketClassById);
+  }
+
+  private VnPayIpnResponseDTO vnPayIpnResponse(String code, String message) {
+    return VnPayIpnResponseDTO.builder().rspCode(code).message(message).build();
+  }
+
+  private VnPayReturnResultDTO vnPayReturnResult(
+      String status, UUID eventId, UUID orderId, UUID paymentSessionId, String message) {
+    return VnPayReturnResultDTO.builder()
+        .status(status)
+        .eventId(eventId)
+        .orderId(orderId)
+        .paymentSessionId(paymentSessionId)
+        .message(message)
+        .build();
+  }
+
+  private CheckoutPaymentStatusDTO checkoutPaymentStatus(
+      String status, PaymentMethod paymentMethod, UUID orderId) {
+    return CheckoutPaymentStatusDTO.builder()
+        .status(status)
+        .paymentMethod(paymentMethod)
+        .orderId(orderId)
+        .build();
+  }
+
+  private String parseVietQrReference(SePayWebhookDTO payload) {
+    String reference = findVietQrReference(payload.getCode());
+    if (reference != null) {
+      return reference;
+    }
+    reference = findVietQrReference(payload.getContent());
+    if (reference != null) {
+      return reference;
+    }
+    return findVietQrReference(payload.getDescription());
+  }
+
+  private String findVietQrReference(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    Matcher matcher = VIETQR_REFERENCE_PATTERN.matcher(value.toUpperCase());
+    return matcher.find() ? matcher.group() : null;
+  }
+
+  private BigDecimal calculateTotalAmount(List<Seat> seats, Map<UUID, TicketClass> ticketClassById) {
+    return seats.stream()
+        .map(
+            seat -> {
+              TicketClass ticketClass = ticketClassById.get(seat.getTicketClassId());
+              if (ticketClass == null) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Hang ve cua ghe khong hop le");
+              }
+              return ticketClass.getPrice();
+            })
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  private CustomerSelectedSeatDTO toSelectedSeatDTO(Seat seat, TicketClass ticketClass) {
+    if (ticketClass == null) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Hang ve cua ghe khong hop le");
+    }
+    return CustomerSelectedSeatDTO.builder()
+        .id(seat.getId())
+        .label(toSeatLabel(seat))
+        .ticketClassId(ticketClass.getId())
+        .ticketClassName(ticketClass.getName())
+        .price(ticketClass.getPrice())
+        .build();
+  }
+
+  private String generateOrderCode() {
+    String code;
+    do {
+      StringBuilder builder = new StringBuilder("O");
+      for (int i = 0; i < 7; i++) {
+        builder.append(ORDER_CODE_CHARS.charAt(RANDOM.nextInt(ORDER_CODE_CHARS.length())));
+      }
+      code = builder.toString();
+    } while (orderRepository.existsByOrderCode(code));
+    return code;
   }
 
   private Order getOwnedOrder(UUID orderId, UUID customerId) {

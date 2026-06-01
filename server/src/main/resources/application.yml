@@ -9,6 +9,28 @@ application:
       secretKey: ${JWT_SECRET}
       accessTokenExpiration: ${JWT_ACCESS_EXPIRATION}
       refreshTokenExpiration: ${JWT_REFRESH_EXPIRATION}
+  socket:
+    hostname: ${SOCKET_HOST:0.0.0.0}
+    port: ${SOCKET_PORT:9092}
+    origin: ${SOCKET_ORIGIN:http://localhost:3000}
+  payment:
+    bank:
+      accountNumber: ${BANK_ACCOUNT_NUMBER:0000000000}
+      accountName: ${BANK_ACCOUNT_NAME:MINI CONCERT BOOKING}
+    vnpay:
+      tmnCode: ${VNPAY_TMN_CODE:}
+      hashSecret: ${VNPAY_HASH_SECRET:}
+      payUrl: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      returnUrl: ${VNPAY_RETURN_URL:http://localhost:3000/customer/booking/vnpay-return}
+      ipnUrl: ${VNPAY_IPN_URL:http://localhost:8080/api/v1/customer/payments/vnpay/ipn}
+    vietqr:
+      bankId: ${VIETQR_BANK_ID:ICB}
+      accountNo: ${VIETQR_ACCOUNT_NO:}
+      accountName: ${VIETQR_ACCOUNT_NAME:}
+      template: ${VIETQR_TEMPLATE:compact2}
+    sepay:
+      apiKey: ${SEPAY_API_KEY:}
+      merchantAccount: ${VIETQR_ACCOUNT_NO:}
 
 cloudinary:
   cloudName: ${CLOUDINARY_CLOUD_NAME}
@@ -58,11 +80,12 @@ spring:
               scope:
                 - profile
                 - email
-  # data:
-  #   redis:
-  #     host: ${SPRING_REDIS_HOST}
-  #     port: ${SPRING_REDIS_PORT}
-  #     password: ${SPRING_REDIS_PASSWORD}
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
+      timeout: ${SPRING_REDIS_TIMEOUT:2s}
 
   servlet:
     multipart:

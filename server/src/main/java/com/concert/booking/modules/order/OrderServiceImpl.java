@@ -309,8 +309,8 @@ public class OrderServiceImpl implements OrderService {
   }
 
   private void validateSupportedPayment(PaymentMethod method) {
-    if (method == PaymentMethod.VNPAY) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "VNPay đang ở mức demo, chưa hỗ trợ tạo đơn POS");
+    if (method == PaymentMethod.VNPAY || method == PaymentMethod.VIETQR) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Phương thức thanh toán này chưa hỗ trợ tạo đơn POS");
     }
   }
 

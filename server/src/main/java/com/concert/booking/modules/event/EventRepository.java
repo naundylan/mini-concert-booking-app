@@ -42,7 +42,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
         FROM Event e
         WHERE e.status IN :statuses
           AND (
-            :keyword IS NULL
+            :keyword = ''
             OR LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
             OR LOWER(e.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
           )

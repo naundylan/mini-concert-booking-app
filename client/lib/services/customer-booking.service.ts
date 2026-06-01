@@ -1,6 +1,7 @@
 import axiosClient from '@/lib/axios'
 import {
   CheckoutRequestDTO,
+  CheckoutPaymentStatusDTO,
   CheckoutSessionDTO,
   CustomerEventDetailDTO,
   CustomerEventStatus,
@@ -9,6 +10,9 @@ import {
   CustomerSeatCatalogDTO,
   CustomerTicketDTO,
   PageResponse,
+  VietQrPaymentDTO,
+  VnPayPaymentUrlDTO,
+  VnPayReturnResultDTO,
 } from '@/lib/types/customer-booking.type'
 
 export const customerBookingService = {
@@ -63,6 +67,39 @@ export const customerBookingService = {
   confirmDevPayment: async (paymentSessionId: string): Promise<CustomerOrderDTO> => {
     const response = await axiosClient.post<{ data: CustomerOrderDTO }>(
       `/customer/checkout/${paymentSessionId}/confirm-dev`
+    )
+    return response.data
+  },
+
+  createVnPayPayment: async (paymentSessionId: string): Promise<VnPayPaymentUrlDTO> => {
+    const response = await axiosClient.post<{ data: VnPayPaymentUrlDTO }>(
+      `/customer/checkout/${paymentSessionId}/vnpay`
+    )
+    return response.data
+  },
+
+  createVietQrPayment: async (paymentSessionId: string): Promise<VietQrPaymentDTO> => {
+    const response = await axiosClient.post<{ data: VietQrPaymentDTO }>(
+      `/customer/checkout/${paymentSessionId}/vietqr`
+    )
+    return response.data
+  },
+
+  getCheckoutPaymentStatus: async (
+    paymentSessionId: string
+  ): Promise<CheckoutPaymentStatusDTO> => {
+    const response = await axiosClient.get<{ data: CheckoutPaymentStatusDTO }>(
+      `/customer/checkout/${paymentSessionId}/payment-status`
+    )
+    return response.data
+  },
+
+  getVnPayReturnResult: async (
+    params: Record<string, string>
+  ): Promise<VnPayReturnResultDTO> => {
+    const response = await axiosClient.get<{ data: VnPayReturnResultDTO }>(
+      '/customer/payments/vnpay/return',
+      { params }
     )
     return response.data
   },

@@ -38,7 +38,7 @@ public class Order extends AbstractAuditEntity {
   @Column(name = "event_id", nullable = false)
   UUID eventId;
 
-  @Column(name = "staff_id", nullable = false)
+  @Column(name = "staff_id")
   UUID staffId;
 
   @Column(name = "order_code", nullable = false, unique = true, length = 10)

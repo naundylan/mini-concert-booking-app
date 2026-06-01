@@ -66,11 +66,30 @@ export default function SeatSelectionPage() {
     setSelectedSeatIds((current) => current.filter((seatId) => !seatIds.includes(seatId)))
   }, [])
 
+  const applySeatSnapshot = useCallback((heldSeatIds: string[], soldSeatIds: string[]) => {
+    setCatalog((current) => {
+      if (!current) return current
+      const heldSeatIdSet = new Set(heldSeatIds)
+      const soldSeatIdSet = new Set(soldSeatIds)
+      return {
+        ...current,
+        seats: current.seats.map((seat) => {
+          if (soldSeatIdSet.has(seat.id)) return { ...seat, status: 'SOLD' }
+          if (heldSeatIdSet.has(seat.id)) return { ...seat, status: 'HELD' }
+          if (seat.status === 'HELD') return { ...seat, status: 'AVAILABLE' }
+          return seat
+        }),
+      }
+    })
+    setSelectedSeatIds((current) =>
+      current.filter((seatId) => !heldSeatIds.includes(seatId) && !soldSeatIds.includes(seatId))
+    )
+  }, [])
+
   useSeatsSocket({
     eventId,
     onSnapshot: (snapshot) => {
-      patchSeatStatus(snapshot.heldSeatIds, 'HELD')
-      patchSeatStatus(snapshot.soldSeatIds, 'SOLD')
+      applySeatSnapshot(snapshot.heldSeatIds, snapshot.soldSeatIds)
     },
     onSeatHeld: (event) => {
       patchSeatStatus(event.seatIds, 'HELD')

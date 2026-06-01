@@ -145,9 +145,12 @@ export default function BookingSuccessPage() {
           </div>
         </Card>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <Link href="/customer/my-tickets">
             <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700">Xem vé của tôi</Button>
+          </Link>
+          <Link href={`/customer/booking/${order.eventId}/seats`}>
+            <Button variant="outline" className="w-full">Xem sơ đồ ghế</Button>
           </Link>
           <Link href="/customer/events">
             <Button variant="outline" className="w-full">Xem sự kiện khác</Button>

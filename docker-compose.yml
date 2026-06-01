@@ -29,6 +29,7 @@ services:
     restart: on-failure
     ports:
       - "${BACKEND_PORT:-8080}:8080"
+      - "${SOCKET_PORT:-9092}:9092"
     depends_on:
       - postgres
       - redis
@@ -42,6 +43,7 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ${SPRING_REDIS_PASSWORD:-}
+      SPRING_REDIS_TIMEOUT: ${SPRING_REDIS_TIMEOUT:-2s}
       SUPER_USER_USERNAME: ${SUPER_USER_USERNAME:-admin}
       SUPER_USER_PASSWORD: ${SUPER_USER_PASSWORD:-change-me}
       SUPER_USER_EMAIL: ${SUPER_USER_EMAIL:-admin@example.com}
@@ -55,6 +57,21 @@ services:
       TOMCAT_MAX_THREADS: ${TOMCAT_MAX_THREADS:-50}
       TOMCAT_MIN_SPARE_THREADS: ${TOMCAT_MIN_SPARE_THREADS:-10}
       TOMCAT_MAX_QUEUE_CAPACITY: ${TOMCAT_MAX_QUEUE_CAPACITY:-100}
+      SOCKET_HOST: 0.0.0.0
+      SOCKET_PORT: 9092
+      SOCKET_ORIGIN: ${SOCKET_ORIGIN:-http://localhost:3000}
+      BANK_ACCOUNT_NUMBER: ${BANK_ACCOUNT_NUMBER:-0000000000}
+      BANK_ACCOUNT_NAME: ${BANK_ACCOUNT_NAME:-MINI CONCERT BOOKING}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_PAY_URL: ${VNPAY_PAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:3000/customer/booking/vnpay-return}
+      VNPAY_IPN_URL: ${VNPAY_IPN_URL:-http://localhost:8080/api/v1/customer/payments/vnpay/ipn}
+      VIETQR_BANK_ID: ${VIETQR_BANK_ID:-ICB}
+      VIETQR_ACCOUNT_NO: ${VIETQR_ACCOUNT_NO:-}
+      VIETQR_ACCOUNT_NAME: ${VIETQR_ACCOUNT_NAME:-}
+      VIETQR_TEMPLATE: ${VIETQR_TEMPLATE:-compact2}
+      SEPAY_API_KEY: ${SEPAY_API_KEY:-}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
@@ -70,6 +87,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:9092}
     container_name: ticket_client
     restart: on-failure
     ports:
@@ -78,6 +96,8 @@ services:
       - app
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:9092}
+      NEXT_PUBLIC_ENABLE_DEV_PAYMENT: ${NEXT_PUBLIC_ENABLE_DEV_PAYMENT:-true}
 
   pgadmin:
     image: dpage/pgadmin4:latest

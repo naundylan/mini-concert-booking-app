@@ -4,7 +4,9 @@ import com.concert.booking.common.dto.DataApiResponse;
 import com.concert.booking.modules.auth.security.AuthUtils;
 import com.concert.booking.modules.customerbooking.dto.*;
 import com.concert.booking.modules.order.dto.OrderResponseDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +79,69 @@ public class CustomerBookingV1Controller {
     return DataApiResponse.success(null, "Đã hủy phiên thanh toán");
   }
 
+  @PostMapping("/checkout/{paymentSessionId}/confirm-dev")
+  @PreAuthorize("hasRole('CUSTOMER')")
+  public DataApiResponse<OrderResponseDTO> confirmPaymentSessionDev(
+      @PathVariable UUID paymentSessionId) {
+    UUID customerId = AuthUtils.getCurrentUserId();
+    return DataApiResponse.success(
+        customerBookingService.confirmPaymentSessionDev(paymentSessionId, customerId),
+        "XÃ¡c nháº­n thanh toÃ¡n dev thÃ nh cÃ´ng");
+  }
+
+  @PostMapping("/checkout/{paymentSessionId}/vnpay")
+  @PreAuthorize("hasRole('CUSTOMER')")
+  public DataApiResponse<VnPayPaymentUrlDTO> createVnPayPaymentUrl(
+      @PathVariable UUID paymentSessionId, HttpServletRequest request) {
+    UUID customerId = AuthUtils.getCurrentUserId();
+    return DataApiResponse.success(
+        customerBookingService.createVnPayPaymentUrl(
+            paymentSessionId, customerId, getClientIpAddress(request)),
+        "Tao duong dan thanh toan VNPay thanh cong");
+  }
+
+  @PostMapping("/checkout/{paymentSessionId}/vietqr")
+  @PreAuthorize("hasRole('CUSTOMER')")
+  public DataApiResponse<VietQrPaymentDTO> createVietQrPayment(
+      @PathVariable UUID paymentSessionId) {
+    UUID customerId = AuthUtils.getCurrentUserId();
+    return DataApiResponse.success(
+        customerBookingService.createVietQrPayment(paymentSessionId, customerId),
+        "Tao thong tin thanh toan VietQR thanh cong");
+  }
+
+  @GetMapping("/checkout/{paymentSessionId}/payment-status")
+  @PreAuthorize("hasRole('CUSTOMER')")
+  public DataApiResponse<CheckoutPaymentStatusDTO> getCheckoutPaymentStatus(
+      @PathVariable UUID paymentSessionId) {
+    UUID customerId = AuthUtils.getCurrentUserId();
+    return DataApiResponse.success(
+        customerBookingService.getCheckoutPaymentStatus(paymentSessionId, customerId),
+        "Lay trang thai thanh toan thanh cong");
+  }
+
+  @GetMapping("/payments/vnpay/ipn")
+  public VnPayIpnResponseDTO handleVnPayIpn(@RequestParam Map<String, String> params) {
+    return customerBookingService.handleVnPayIpn(params);
+  }
+
+  @PostMapping("/payments/vietqr/webhook")
+  public Map<String, Boolean> handleSePayWebhook(
+      @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+      @RequestBody SePayWebhookDTO payload) {
+    return customerBookingService.handleSePayWebhook(authorizationHeader, payload);
+  }
+
+  @GetMapping("/payments/vnpay/return")
+  @PreAuthorize("hasRole('CUSTOMER')")
+  public DataApiResponse<VnPayReturnResultDTO> getVnPayReturnResult(
+      @RequestParam Map<String, String> params) {
+    UUID customerId = AuthUtils.getCurrentUserId();
+    return DataApiResponse.success(
+        customerBookingService.getVnPayReturnResult(params, customerId),
+        "Lay ket qua thanh toan VNPay thanh cong");
+  }
+
   @GetMapping("/orders/{orderId}")
   @PreAuthorize("hasRole('CUSTOMER')")
   public DataApiResponse<OrderResponseDTO> getOrder(@PathVariable UUID orderId) {
@@ -84,6 +149,14 @@ public class CustomerBookingV1Controller {
     return DataApiResponse.success(
         customerBookingService.getCustomerOrder(orderId, customerId),
         "Lấy đơn hàng thành công");
+  }
+
+  private String getClientIpAddress(HttpServletRequest request) {
+    String forwardedFor = request.getHeader("X-Forwarded-For");
+    if (forwardedFor != null && !forwardedFor.isBlank()) {
+      return forwardedFor.split(",")[0].trim();
+    }
+    return request.getRemoteAddr();
   }
 
   @GetMapping("/tickets")
