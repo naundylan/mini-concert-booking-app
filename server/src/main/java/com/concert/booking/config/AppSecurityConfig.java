@@ -54,8 +54,8 @@ public class AppSecurityConfig {
   static String[] PUBLIC_ENDPOINTS = {
       "/",
       "/api/v1/orders/webhooks/**",
-      "/api/v1/customer/payments/vnpay/ipn",
-      "/api/v1/customer/payments/vietqr/webhook"
+      "/api/v1/customer/payments/vietqr/webhook",
+      "/api/v1/payments/webhook"
   };
   static String[] AUTH_ENDPOINTS = {
       "/api/v1/auth/sign-in",

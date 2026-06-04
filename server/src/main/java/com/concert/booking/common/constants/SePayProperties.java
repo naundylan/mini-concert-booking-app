@@ -13,4 +13,5 @@ import org.springframework.context.annotation.Configuration;
 public class SePayProperties {
   String apiKey;
   String merchantAccount;
+  String paymentPrefix = "SEVQR";
 }

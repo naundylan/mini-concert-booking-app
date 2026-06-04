@@ -12,7 +12,10 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
-@Table(name = "payments", indexes = @Index(name = "idx_payment_order", columnList = "order_id"))
+@Table(
+    name = "payments",
+    indexes = @Index(name = "idx_payment_order", columnList = "order_id"),
+    uniqueConstraints = @UniqueConstraint(name = "uk_payment_transaction_ref", columnNames = "transaction_ref"))
 @Getter
 @Setter
 @NoArgsConstructor
