@@ -60,7 +60,7 @@ export const useSeatsSocket = ({
         const io = mod.io || mod.default
         const socketUrl =
           process.env.NEXT_PUBLIC_SOCKET_URL ||
-          (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1').replace(
+          (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api/v1').replace(
             /\/api\/v?\d*\/?$/,
             ''
           )

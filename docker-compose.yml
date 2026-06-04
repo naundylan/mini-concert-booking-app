@@ -28,7 +28,7 @@ services:
     container_name: ticket_backend
     restart: on-failure
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-8081}:8081"
       - "${SOCKET_PORT:-9092}:9092"
     depends_on:
       - postgres
@@ -36,7 +36,7 @@ services:
     environment:
       APPLICATION_NAME: ${APPLICATION_NAME:-mini-concert-booking-app}
       APPLICATION_VERSION: ${APPLICATION_VERSION:-0.0.1}
-      PORT: 8080
+      SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ticket_booking_db}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-admin}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-password123}
@@ -62,16 +62,12 @@ services:
       SOCKET_ORIGIN: ${SOCKET_ORIGIN:-http://localhost:3000}
       BANK_ACCOUNT_NUMBER: ${BANK_ACCOUNT_NUMBER:-0000000000}
       BANK_ACCOUNT_NAME: ${BANK_ACCOUNT_NAME:-MINI CONCERT BOOKING}
-      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
-      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
-      VNPAY_PAY_URL: ${VNPAY_PAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
-      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:3000/customer/booking/vnpay-return}
-      VNPAY_IPN_URL: ${VNPAY_IPN_URL:-http://localhost:8080/api/v1/customer/payments/vnpay/ipn}
       VIETQR_BANK_ID: ${VIETQR_BANK_ID:-ICB}
       VIETQR_ACCOUNT_NO: ${VIETQR_ACCOUNT_NO:-}
       VIETQR_ACCOUNT_NAME: ${VIETQR_ACCOUNT_NAME:-}
       VIETQR_TEMPLATE: ${VIETQR_TEMPLATE:-compact2}
       SEPAY_API_KEY: ${SEPAY_API_KEY:-}
+      SEPAY_PAYMENT_PREFIX: ${SEPAY_PAYMENT_PREFIX:-SEVQR}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
@@ -86,7 +82,7 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8081/api/v1}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:9092}
     container_name: ticket_client
     restart: on-failure
@@ -95,7 +91,7 @@ services:
     depends_on:
       - app
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8081/api/v1}
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:9092}
       NEXT_PUBLIC_ENABLE_DEV_PAYMENT: ${NEXT_PUBLIC_ENABLE_DEV_PAYMENT:-true}
 

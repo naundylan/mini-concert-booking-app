@@ -64,7 +64,7 @@ docker compose up --build
 
 Services:
 
-- Backend: `http://localhost:8080`
+- Backend: `http://localhost:8081`
 - Frontend: `http://localhost:3000`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
