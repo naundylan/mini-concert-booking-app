@@ -17,12 +17,6 @@ application:
     bank:
       accountNumber: ${BANK_ACCOUNT_NUMBER:0000000000}
       accountName: ${BANK_ACCOUNT_NAME:MINI CONCERT BOOKING}
-    vnpay:
-      tmnCode: ${VNPAY_TMN_CODE:}
-      hashSecret: ${VNPAY_HASH_SECRET:}
-      payUrl: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
-      returnUrl: ${VNPAY_RETURN_URL:http://localhost:3000/customer/booking/vnpay-return}
-      ipnUrl: ${VNPAY_IPN_URL:http://localhost:8080/api/v1/customer/payments/vnpay/ipn}
     vietqr:
       bankId: ${VIETQR_BANK_ID:ICB}
       accountNo: ${VIETQR_ACCOUNT_NO:}
@@ -31,6 +25,7 @@ application:
     sepay:
       apiKey: ${SEPAY_API_KEY:}
       merchantAccount: ${VIETQR_ACCOUNT_NO:}
+      paymentPrefix: ${SEPAY_PAYMENT_PREFIX:SEVQR}
 
 cloudinary:
   cloudName: ${CLOUDINARY_CLOUD_NAME}
@@ -130,7 +125,7 @@ springdoc:
     tags-sorter: alpha
 
 server:
-  port: ${PORT}
+  port: ${SERVER_PORT:8081}
   tomcat:
     threads:
       max: ${TOMCAT_MAX_THREADS}

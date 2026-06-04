@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle, CheckCircle, ChevronLeft, Clock, Copy, CreditCard, Loader2, Landmark, QrCode } from 'lucide-react'
+import { AlertCircle, CheckCircle, ChevronLeft, Clock, Copy, Loader2, Landmark, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { authService } from '@/lib/services/auth.service'
@@ -185,19 +185,6 @@ export default function CheckoutPage() {
     }
   }
 
-  const payWithVnPay = async () => {
-    if (!session) return
-    try {
-      setSubmitting(true)
-      setError('')
-      const result = await customerBookingService.createVnPayPayment(session.paymentSessionId)
-      window.location.href = result.paymentUrl
-    } catch (err: any) {
-      setError(getApiErrorMessage(err))
-      setSubmitting(false)
-    }
-  }
-
   const payWithVietQr = async () => {
     if (!session) return
     try {
@@ -293,7 +280,7 @@ export default function CheckoutPage() {
             </div>
           </Card>
 
-          <Card className="border border-slate-200 bg-white p-6">
+          {/* <Card className="border border-slate-200 bg-white p-6">
             <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
               <Landmark size={20} className="text-indigo-600" />
               Thông tin chuyển khoản
@@ -320,9 +307,9 @@ export default function CheckoutPage() {
 
             <div className="mt-5 flex gap-2 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
               <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
-              V1 đang dùng chuyển khoản/dev confirm. Khi tích hợp VNPay thật, webhook sẽ thay bước xác nhận demo.
+              V1 dang giu nut xac nhan dev cho local. Luong that se dung VietQR + SePay webhook de tu xac nhan.
             </div>
-          </Card>
+          </Card> */}
 
           {vietQrPayment && (
             <Card className="border border-slate-200 bg-white p-6">
@@ -428,23 +415,6 @@ export default function CheckoutPage() {
               )}
           </Button>
 
-          <Button
-              className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
-              onClick={payWithVnPay}
-              disabled={submitting || countdown.isExpired}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Đang chuyển sang VNPay...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-5 w-5" />
-                  Thanh toán qua VNPay
-                </>
-              )}
-          </Button>
 
           <Button
               className="w-full bg-emerald-600 text-white hover:bg-emerald-700"

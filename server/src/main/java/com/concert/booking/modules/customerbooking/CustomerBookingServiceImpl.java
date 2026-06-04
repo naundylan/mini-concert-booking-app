@@ -18,15 +18,11 @@ import com.concert.booking.modules.customerbooking.dto.SePayWebhookDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSnapshotDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSummaryDTO;
 import com.concert.booking.modules.customerbooking.dto.VietQrPaymentDTO;
-import com.concert.booking.modules.customerbooking.dto.VnPayIpnResponseDTO;
-import com.concert.booking.modules.customerbooking.dto.VnPayPaymentUrlDTO;
-import com.concert.booking.modules.customerbooking.dto.VnPayReturnResultDTO;
 import com.concert.booking.modules.customerbooking.redis.CheckoutSessionRedisService;
 import com.concert.booking.modules.customerbooking.redis.SeatHoldRedisService;
 import com.concert.booking.modules.customerbooking.sepay.SePayWebhookVerifier;
 import com.concert.booking.modules.customerbooking.socket.SeatSocketService;
 import com.concert.booking.modules.customerbooking.vietqr.VietQrService;
-import com.concert.booking.modules.customerbooking.vnpay.VnPayService;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.event.enums.EventStatus;
@@ -79,7 +75,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   private static final Duration CHECKOUT_TTL = Duration.ofMinutes(10);
   private static final int MAX_ACTIVE_CHECKOUT_SESSIONS = 3;
   private static final String ORDER_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  private static final Pattern VIETQR_REFERENCE_PATTERN = Pattern.compile("MCB-[A-Z0-9]+");
+  private static final Pattern VIETQR_REFERENCE_PATTERN = Pattern.compile("MCB-?[A-Z0-9]{8}");
   private static final SecureRandom RANDOM = new SecureRandom();
 
   EventRepository eventRepository;
@@ -95,7 +91,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   BankTransferProperties bankTransferProperties;
   VietQrProperties vietQrProperties;
   SePayProperties sePayProperties;
-  VnPayService vnPayService;
   VietQrService vietQrService;
   SePayWebhookVerifier sePayWebhookVerifier;
 
@@ -165,7 +160,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   @Transactional
   public CheckoutSessionDTO checkout(CheckoutRequestDTO checkoutRequest, UUID customerId) {
     if (checkoutRequest.getPaymentMethod() != PaymentMethod.BANK_TRANSFER
-        && checkoutRequest.getPaymentMethod() != PaymentMethod.VNPAY
         && checkoutRequest.getPaymentMethod() != PaymentMethod.VIETQR) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Phuong thuc thanh toan chua duoc ho tro");
     }
@@ -274,113 +268,21 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   }
 
   @Override
-  public VnPayPaymentUrlDTO createVnPayPaymentUrl(
-      UUID paymentSessionId, UUID customerId, String ipAddress) {
-    CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
-    ensureSessionStillOwnsSeats(session);
-    return VnPayPaymentUrlDTO.builder()
-        .paymentUrl(vnPayService.createPaymentUrl(session, ipAddress))
-        .build();
-  }
-
-  @Override
-  @Transactional
-  public VnPayIpnResponseDTO handleVnPayIpn(Map<String, String> params) {
-    if (!vnPayService.isValidSignature(params)) {
-      return vnPayIpnResponse("97", "Invalid checksum");
-    }
-
-    UUID paymentSessionId;
-    try {
-      paymentSessionId = vnPayService.getPaymentSessionId(params);
-    } catch (AppException ex) {
-      return vnPayIpnResponse("01", "Order not found");
-    }
-    String transactionRef = paymentSessionId.toString();
-    if (paymentRepository.findByTransactionRef(transactionRef).isPresent()) {
-      return vnPayIpnResponse("00", "Order already confirmed");
-    }
-
-    if (!vnPayService.isPaymentSuccess(params)) {
-      return vnPayIpnResponse("00", "Payment not successful");
-    }
-
-    CheckoutSessionDTO session =
-        checkoutSessionRedisService.findById(paymentSessionId).orElse(null);
-    if (session == null || session.getExpiresAt() == null || !session.getExpiresAt().isAfter(Instant.now())) {
-      return vnPayIpnResponse("01", "Order not found or expired");
-    }
-
-    BigDecimal paidAmount;
-    try {
-      paidAmount = vnPayService.getAmount(params);
-    } catch (AppException ex) {
-      return vnPayIpnResponse("04", "Invalid amount");
-    }
-    if (session.getTotalAmount().compareTo(paidAmount) != 0) {
-      return vnPayIpnResponse("04", "Invalid amount");
-    }
-
-    try {
-      completePaidCheckoutSession(
-          paymentSessionId, session.getCustomerId(), PaymentMethod.VNPAY, transactionRef);
-      return vnPayIpnResponse("00", "Confirm success");
-    } catch (AppException ex) {
-      return vnPayIpnResponse("01", "Order not found or expired");
-    }
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public VnPayReturnResultDTO getVnPayReturnResult(Map<String, String> params, UUID customerId) {
-    if (!vnPayService.isValidSignature(params)) {
-      return vnPayReturnResult("FAILED", null, null, null, "Chu ky VNPay khong hop le");
-    }
-
-    UUID paymentSessionId = vnPayService.getPaymentSessionId(params);
-    Payment confirmedPayment = paymentRepository.findByTransactionRef(paymentSessionId.toString()).orElse(null);
-    if (confirmedPayment != null) {
-      Order order = getOwnedOrder(confirmedPayment.getOrderId(), customerId);
-      return vnPayReturnResult(
-          "PAID", order.getEventId(), order.getId(), paymentSessionId, "Thanh toan thanh cong");
-    }
-
-    CheckoutSessionDTO session = checkoutSessionRedisService.findById(paymentSessionId).orElse(null);
-    if (!vnPayService.isPaymentSuccess(params)) {
-      return vnPayReturnResult(
-          "FAILED",
-          session != null ? session.getEventId() : null,
-          null,
-          paymentSessionId,
-          "Thanh toan VNPay khong thanh cong");
-    }
-    if (session == null
-        || session.getExpiresAt() == null
-        || !session.getExpiresAt().isAfter(Instant.now())) {
-      return vnPayReturnResult("EXPIRED", null, null, paymentSessionId, "Phien thanh toan da het han");
-    }
-    if (!customerId.equals(session.getCustomerId())) {
-      throw new AppException(HttpStatus.FORBIDDEN, "Ban khong co quyen truy cap phien thanh toan nay");
-    }
-    return vnPayReturnResult(
-        "PENDING", session.getEventId(), null, paymentSessionId, "Dang cho VNPay xac nhan");
-  }
-
-  @Override
   public VietQrPaymentDTO createVietQrPayment(UUID paymentSessionId, UUID customerId) {
     CheckoutSessionDTO session = getOwnedCheckoutSession(paymentSessionId, customerId);
     ensureSessionStillOwnsSeats(session);
 
     String reference = vietQrService.createPaymentReference(paymentSessionId);
     vietQrService.savePaymentReference(reference, paymentSessionId, CHECKOUT_TTL);
+    String paymentContent = buildSePayPaymentContent(reference);
 
     return VietQrPaymentDTO.builder()
-        .qrUrl(vietQrService.buildQrUrl(session.getTotalAmount(), reference))
+        .qrUrl(vietQrService.buildQrUrl(session.getTotalAmount(), paymentContent))
         .bankId(vietQrProperties.getBankId())
         .accountNo(vietQrProperties.getAccountNo())
         .accountName(vietQrProperties.getAccountName())
         .amount(session.getTotalAmount())
-        .content(reference)
+        .content(paymentContent)
         .expiredAt(session.getExpiresAt())
         .build();
   }
@@ -428,10 +330,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     if (reference == null) {
       return Map.of("success", true);
     }
-    if (!vietQrService.markSePayWebhookProcessed(payload.getId())) {
-      return Map.of("success", true);
-    }
     if (paymentRepository.findByTransactionRef(reference).isPresent()) {
+      vietQrService.markSePayWebhookProcessed(payload.getId());
       return Map.of("success", true);
     }
 
@@ -462,6 +362,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
     completePaidCheckoutSession(
         paymentSessionId, session.getCustomerId(), PaymentMethod.VIETQR, reference);
+    vietQrService.markSePayWebhookProcessed(payload.getId());
     return Map.of("success", true);
   }
 
@@ -733,21 +634,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     return toOrderResponse(order, payment, tickets, ticketClassById);
   }
 
-  private VnPayIpnResponseDTO vnPayIpnResponse(String code, String message) {
-    return VnPayIpnResponseDTO.builder().rspCode(code).message(message).build();
-  }
-
-  private VnPayReturnResultDTO vnPayReturnResult(
-      String status, UUID eventId, UUID orderId, UUID paymentSessionId, String message) {
-    return VnPayReturnResultDTO.builder()
-        .status(status)
-        .eventId(eventId)
-        .orderId(orderId)
-        .paymentSessionId(paymentSessionId)
-        .message(message)
-        .build();
-  }
-
   private CheckoutPaymentStatusDTO checkoutPaymentStatus(
       String status, PaymentMethod paymentMethod, UUID orderId) {
     return CheckoutPaymentStatusDTO.builder()
@@ -769,12 +655,26 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     return findVietQrReference(payload.getDescription());
   }
 
+  private String buildSePayPaymentContent(String reference) {
+    String prefix = sePayProperties.getPaymentPrefix();
+    if (prefix == null || prefix.isBlank()) {
+      return reference;
+    }
+    return prefix.trim() + " " + reference;
+  }
+
   private String findVietQrReference(String value) {
     if (value == null || value.isBlank()) {
       return null;
     }
     Matcher matcher = VIETQR_REFERENCE_PATTERN.matcher(value.toUpperCase());
-    return matcher.find() ? matcher.group() : null;
+    if (!matcher.find()) {
+      return null;
+    }
+    String rawReference = matcher.group();
+    return rawReference.startsWith("MCB-")
+        ? rawReference
+        : "MCB-" + rawReference.substring("MCB".length());
   }
 
   private BigDecimal calculateTotalAmount(List<Seat> seats, Map<UUID, TicketClass> ticketClassById) {

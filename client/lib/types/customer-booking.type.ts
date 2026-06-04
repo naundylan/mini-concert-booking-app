@@ -1,7 +1,6 @@
 export type CustomerEventStatus = 'TEASING' | 'ONSALE'
 export type CustomerSeatStatus = 'AVAILABLE' | 'SOLD' | 'LOCKED' | 'MAINTENANCE' | 'HELD'
-export type CustomerPaymentMethod = 'BANK_TRANSFER' | 'VNPAY' | 'VIETQR'
-export type VnPayReturnStatus = 'PAID' | 'FAILED' | 'PENDING' | 'EXPIRED'
+export type CustomerPaymentMethod = 'BANK_TRANSFER' | 'VIETQR'
 export type CheckoutPaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'FAILED'
 export type CustomerOrderStatus = 'PAID' | 'CANCELED'
 export type CustomerPaymentStatus = 'CONFIRMED' | 'WAITING_GATEWAY' | 'FAILED'
@@ -85,18 +84,6 @@ export interface CheckoutSessionDTO {
   totalAmount: number
   bankTransferInfo: BankTransferInfoDTO
   selectedSeats: CustomerSeatDTO[]
-}
-
-export interface VnPayPaymentUrlDTO {
-  paymentUrl: string
-}
-
-export interface VnPayReturnResultDTO {
-  status: VnPayReturnStatus
-  eventId?: string | null
-  orderId?: string | null
-  paymentSessionId?: string | null
-  message?: string | null
 }
 
 export interface VietQrPaymentDTO {

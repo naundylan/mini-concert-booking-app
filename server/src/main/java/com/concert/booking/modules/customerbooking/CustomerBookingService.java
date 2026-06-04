@@ -10,9 +10,6 @@ import com.concert.booking.modules.customerbooking.dto.CheckoutPaymentStatusDTO;
 import com.concert.booking.modules.customerbooking.dto.SePayWebhookDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSnapshotDTO;
 import com.concert.booking.modules.customerbooking.dto.VietQrPaymentDTO;
-import com.concert.booking.modules.customerbooking.dto.VnPayIpnResponseDTO;
-import com.concert.booking.modules.customerbooking.dto.VnPayPaymentUrlDTO;
-import com.concert.booking.modules.customerbooking.dto.VnPayReturnResultDTO;
 import com.concert.booking.modules.order.dto.OrderResponseDTO;
 import java.util.Map;
 import java.util.UUID;
@@ -33,12 +30,6 @@ public interface CustomerBookingService {
   void releaseCheckout(UUID paymentSessionId, UUID customerId);
 
   OrderResponseDTO confirmPaymentSessionDev(UUID paymentSessionId, UUID customerId);
-
-  VnPayPaymentUrlDTO createVnPayPaymentUrl(UUID paymentSessionId, UUID customerId, String ipAddress);
-
-  VnPayIpnResponseDTO handleVnPayIpn(Map<String, String> params);
-
-  VnPayReturnResultDTO getVnPayReturnResult(Map<String, String> params, UUID customerId);
 
   VietQrPaymentDTO createVietQrPayment(UUID paymentSessionId, UUID customerId);
 
