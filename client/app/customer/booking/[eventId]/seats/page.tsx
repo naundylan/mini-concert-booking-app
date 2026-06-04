@@ -1,274 +1,301 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { AlertCircle, ChevronLeft, Loader2, RefreshCw, Ticket } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { customerBookingService } from '@/lib/services/customer-booking.service'
+import { CustomerSeatCatalogDTO, CustomerSeatDTO } from '@/lib/types/customer-booking.type'
+import { useSeatsSocket } from '@/lib/hooks/useSeatsSocket'
 
-interface SelectedSeat {
-  row: string
-  col: number
-  type: 'vip' | 'general'
-}
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value)
 
-const SEAT_MAP = {
-  vip: [
-    { row: 'A', cols: 12, type: 'vip' },
-    { row: 'B', cols: 12, type: 'vip' },
-  ],
-  general: [
-    { row: 'C', cols: 16, type: 'general' },
-    { row: 'D', cols: 16, type: 'general' },
-    { row: 'E', cols: 16, type: 'general' },
-    { row: 'F', cols: 16, type: 'general' },
-  ],
-}
+const getApiErrorMessage = (err: any) =>
+  err?.response?.data?.message || 'Không tải được sơ đồ ghế. Vui lòng thử lại.'
 
-const SEAT_PRICES = {
-  vip: 120.0,
-  general: 45.0,
-}
+const selectedSeatStorageKey = (eventId: string) => `customer:selectedSeats:${eventId}`
 
 export default function SeatSelectionPage() {
   const router = useRouter()
   const params = useParams()
-  const eventId = params.eventId
+  const eventId = String(params.eventId || '')
 
-  const [selectedSeats, setSelectedSeats] = useState<SelectedSeat[]>([])
-  const [holdingSeats, setHoldingSeats] = useState<Set<string>>(new Set())
-  const [holdingTimers, setHoldingTimers] = useState<Record<string, number>>({})
+  const [catalog, setCatalog] = useState<CustomerSeatCatalogDTO | null>(null)
+  const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
-  // Simulate holding timer countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHoldingTimers((prev) => {
-        const updated = { ...prev }
-        for (const seatId of holdingSeats) {
-          if (updated[seatId] !== undefined) {
-            updated[seatId] -= 1
-            if (updated[seatId] <= 0) {
-              // Release the hold after 60 seconds
-              setHoldingSeats((s) => {
-                const newSet = new Set(s)
-                newSet.delete(seatId)
-                return newSet
-              })
-              delete updated[seatId]
-            }
-          }
-        }
-        return updated
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [holdingSeats])
-
-  const handleSeatClick = (row: string, col: number, type: 'vip' | 'general') => {
-    const seatId = `${row}-${col}`
-    
-    // Check if already selected
-    if (selectedSeats.some((s) => s.row === row && s.col === col)) {
-      setSelectedSeats(selectedSeats.filter((s) => !(s.row === row && s.col === col)))
-      setHoldingSeats((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(seatId)
-        return newSet
-      })
-      return
+  const loadCatalog = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const data = await customerBookingService.getCatalog(eventId)
+      setCatalog(data)
+      setSelectedSeatIds((current) =>
+        current.filter((seatId) => data.seats.some((seat) => seat.id === seatId && seat.status === 'AVAILABLE'))
+      )
+    } catch (err: any) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setLoading(false)
     }
+  }, [eventId])
 
-    // Add to selected
-    setSelectedSeats([...selectedSeats, { row, col, type }])
-    setHoldingSeats((prev) => new Set(prev).add(seatId))
-    setHoldingTimers((prev) => ({ ...prev, [seatId]: 60 }))
+  useEffect(() => {
+    if (eventId) loadCatalog()
+  }, [eventId, loadCatalog])
+
+  const patchSeatStatus = useCallback((seatIds: string[], status: CustomerSeatDTO['status']) => {
+    setCatalog((current) => {
+      if (!current) return current
+      const seatIdSet = new Set(seatIds)
+      return {
+        ...current,
+        seats: current.seats.map((seat) => (seatIdSet.has(seat.id) ? { ...seat, status } : seat)),
+      }
+    })
+    setSelectedSeatIds((current) => current.filter((seatId) => !seatIds.includes(seatId)))
+  }, [])
+
+  const applySeatSnapshot = useCallback((heldSeatIds: string[], soldSeatIds: string[]) => {
+    setCatalog((current) => {
+      if (!current) return current
+      const heldSeatIdSet = new Set(heldSeatIds)
+      const soldSeatIdSet = new Set(soldSeatIds)
+      return {
+        ...current,
+        seats: current.seats.map((seat) => {
+          if (soldSeatIdSet.has(seat.id)) return { ...seat, status: 'SOLD' }
+          if (heldSeatIdSet.has(seat.id)) return { ...seat, status: 'HELD' }
+          if (seat.status === 'HELD') return { ...seat, status: 'AVAILABLE' }
+          return seat
+        }),
+      }
+    })
+    setSelectedSeatIds((current) =>
+      current.filter((seatId) => !heldSeatIds.includes(seatId) && !soldSeatIds.includes(seatId))
+    )
+  }, [])
+
+  useSeatsSocket({
+    eventId,
+    onSnapshot: (snapshot) => {
+      applySeatSnapshot(snapshot.heldSeatIds, snapshot.soldSeatIds)
+    },
+    onSeatHeld: (event) => {
+      patchSeatStatus(event.seatIds, 'HELD')
+      setNotice('Một số ghế vừa được khách khác giữ. Danh sách chọn đã được cập nhật.')
+    },
+    onSeatReleased: (event) => patchSeatStatus(event.seatIds, 'AVAILABLE'),
+    onSeatSold: (event) => {
+      patchSeatStatus(event.seatIds, 'SOLD')
+      setNotice('Một số ghế vừa được bán. Danh sách chọn đã được cập nhật.')
+    },
+    onReconnect: loadCatalog,
+  })
+
+  const seatsByRow = useMemo(() => {
+    if (!catalog) return []
+    const rows = new Map<number, CustomerSeatDTO[]>()
+    for (const seat of catalog.seats) {
+      rows.set(seat.gridRow, [...(rows.get(seat.gridRow) || []), seat])
+    }
+    return Array.from(rows.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([row, seats]) => ({
+        row,
+        label: String.fromCharCode(65 + row),
+        seats: seats.sort((a, b) => a.gridColumn - b.gridColumn),
+      }))
+  }, [catalog])
+
+  const selectedSeats = useMemo(() => {
+    if (!catalog) return []
+    return catalog.seats.filter((seat) => selectedSeatIds.includes(seat.id))
+  }, [catalog, selectedSeatIds])
+
+  const totalAmount = selectedSeats.reduce((sum, seat) => sum + Number(seat.price || 0), 0)
+
+  const toggleSeat = (seat: CustomerSeatDTO) => {
+    if (seat.status !== 'AVAILABLE') return
+    setError('')
+    setNotice('')
+    setSelectedSeatIds((current) => {
+      if (current.includes(seat.id)) return current.filter((id) => id !== seat.id)
+      if (current.length >= 10) {
+        setNotice('Bạn chỉ được chọn tối đa 10 ghế mỗi lần đặt.')
+        return current
+      }
+      return [...current, seat.id]
+    })
   }
 
-  const subtotal = selectedSeats.reduce((sum, seat) => sum + SEAT_PRICES[seat.type], 0)
-  const serviceFee = subtotal * 0.05
-  const total = subtotal + serviceFee
+  const goToCheckout = () => {
+    if (selectedSeatIds.length === 0) return
+    window.sessionStorage.setItem(selectedSeatStorageKey(eventId), JSON.stringify(selectedSeatIds))
+    router.push(`/customer/booking/${eventId}/checkout`)
+  }
 
-  const handleReviewOrder = () => {
-    if (selectedSeats.length === 0) return
-    // Store booking in state/context and navigate
-    router.push(`/customer/booking/${eventId}/confirmation?seats=${selectedSeats.map((s) => `${s.row}${s.col}`).join(',')}`)
+  const getSeatClassName = (seat: CustomerSeatDTO) => {
+    const selected = selectedSeatIds.includes(seat.id)
+    if (selected) return 'bg-amber-300 text-slate-950 ring-2 ring-amber-500'
+    if (seat.status === 'SOLD') return 'bg-slate-300 text-slate-500 cursor-not-allowed'
+    if (seat.status === 'HELD') return 'bg-orange-200 text-orange-900 cursor-not-allowed'
+    if (seat.status === 'LOCKED' || seat.status === 'MAINTENANCE') {
+      return 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+    }
+    return 'text-white hover:brightness-95'
   }
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <Link
-          href={`/customer/events/${eventId}`}
-          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-4 text-sm font-medium"
+    <div className="space-y-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <Link
+            href={`/customer/events/${eventId}`}
+            className="mb-3 inline-flex items-center gap-2 text-sm text-indigo-600"
+          >
+            <ChevronLeft size={16} />
+            Quay lại chi tiết sự kiện
+          </Link>
+          <h1 className="text-3xl font-bold text-slate-950">{catalog?.eventName || 'Chọn ghế'}</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Chọn ghế ở bước này chỉ là lựa chọn trên giao diện. Ghế chỉ được giữ thật khi bạn bấm thanh toán.
+          </p>
+        </div>
+
+        <Button variant="outline" onClick={loadCatalog}>
+          <RefreshCw size={16} className="mr-2" />
+          Tải lại sơ đồ
+        </Button>
+      </div>
+
+      {(error || notice) && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            error ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}
         >
-          <ChevronLeft size={16} />
-          BACK TO EVENT DETAILS
-        </Link>
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">
-          The Velvet Cellar: Midnight Jazz
-        </h1>
-        <p className="text-slate-600">
-          Saturday, Oct 24 • Doors at 8:00 PM • New York City, NY
-        </p>
-      </div>
+          {error || notice}
+        </div>
+      )}
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Seating Map */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl p-8 border border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">Seating Map</h2>
-            <p className="text-sm text-slate-600 mb-6">Select your preferred zone in the venue</p>
-
-            {/* Legend */}
-            <div className="flex items-center gap-6 mb-8 pb-6 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-indigo-600 rounded" />
-                <span className="text-xs text-slate-600">VIP Lounge</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-indigo-400 rounded" />
-                <span className="text-xs text-slate-600">General Admission</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-300 rounded" />
-                <span className="text-xs text-slate-600">Holding (60s)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-slate-300 rounded" />
-                <span className="text-xs text-slate-600">Sold Out</span>
-              </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-sm text-slate-600">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin text-indigo-600" />
+          Đang tải sơ đồ ghế...
+        </div>
+      ) : !catalog ? (
+        <Card className="border border-dashed border-slate-300 p-12 text-center text-sm text-slate-500">
+          Không có dữ liệu sơ đồ ghế.
+        </Card>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          <Card className="border border-slate-200 bg-white p-5">
+            <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-slate-600">
+              <span className="flex items-center gap-1"><i className="h-3 w-3 rounded bg-indigo-600" /> Có thể chọn</span>
+              <span className="flex items-center gap-1"><i className="h-3 w-3 rounded bg-amber-300" /> Đang chọn</span>
+              <span className="flex items-center gap-1"><i className="h-3 w-3 rounded bg-orange-200" /> Đang giữ</span>
+              <span className="flex items-center gap-1"><i className="h-3 w-3 rounded bg-slate-300" /> Đã bán</span>
+              <span className="flex items-center gap-1"><i className="h-3 w-3 rounded bg-zinc-200" /> Không mở</span>
             </div>
 
-            {/* Stage Label */}
-            <div className="text-center mb-8">
-              <p className="text-xs font-semibold text-slate-400 tracking-widest">STAGE FOCUS AREA</p>
-            </div>
-
-            {/* Seats */}
-            <div className="space-y-4">
-              {Object.values(SEAT_MAP)
-                .flat()
-                .map((section) => (
-                  <div key={section.row} className="flex items-center gap-4">
-                    <span className="w-8 text-sm font-semibold text-slate-600">{section.row}</span>
-                    <div className="flex gap-2">
-                      {Array.from({ length: section.cols }).map((_, idx) => {
-                        const col = idx + 1
-                        const seatId = `${section.row}-${col}`
-                        const isSelected = selectedSeats.some((s) => s.row === section.row && s.col === col)
-                        const isHolding = holdingSeats.has(seatId)
-                        const isSoldOut = Math.random() > 0.85 // Mock 15% sold out
-
-                        return (
+            {seatsByRow.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 py-16 text-center text-sm text-slate-500">
+                Sự kiện này chưa có ghế để bán.
+              </div>
+            ) : (
+              <div className="overflow-auto rounded-xl bg-slate-100 p-5">
+                <div className="mb-8 rounded-b-full border-b-8 border-indigo-200 py-3 text-center text-xs font-bold tracking-[0.25em] text-slate-500">
+                  SÂN KHẤU
+                </div>
+                <div className="min-w-max space-y-2">
+                  {seatsByRow.map((row) => (
+                    <div key={row.row} className="flex items-center gap-3">
+                      <span className="w-7 text-sm font-semibold text-slate-500">{row.label}</span>
+                      <div className="flex gap-1.5">
+                        {row.seats.map((seat) => (
                           <button
-                            key={seatId}
-                            onClick={() =>
-                              !isSoldOut && handleSeatClick(section.row, col, section.type)
+                            key={seat.id}
+                            type="button"
+                            onClick={() => toggleSeat(seat)}
+                            disabled={seat.status !== 'AVAILABLE'}
+                            title={`${seat.label} - ${seat.ticketClassName} - ${formatMoney(seat.price)}`}
+                            style={
+                              seat.status === 'AVAILABLE' && !selectedSeatIds.includes(seat.id)
+                                ? { backgroundColor: seat.colorCode || '#4f46e5' }
+                                : undefined
                             }
-                            disabled={isSoldOut}
-                            className={`w-6 h-6 rounded text-xs font-semibold transition-all duration-200 ${
-                              isSoldOut
-                                ? 'bg-slate-300 cursor-not-allowed'
-                                : isSelected || isHolding
-                                  ? `${
-                                      section.type === 'vip'
-                                        ? 'bg-yellow-300 text-slate-900'
-                                        : 'bg-yellow-300 text-slate-900'
-                                    } ring-2 ring-offset-1 ring-yellow-400`
-                                  : `${
-                                      section.type === 'vip' ? 'bg-indigo-600' : 'bg-indigo-400'
-                                    } text-white hover:ring-2 hover:ring-offset-1 hover:ring-yellow-300 cursor-pointer`
-                            }`}
-                            title={seatId}
+                            className={`h-8 w-8 rounded-md text-[10px] font-semibold transition ${getSeatClassName(seat)}`}
                           >
-                            {isHolding && holdingTimers[seatId] ? (
-                              <span className="text-xs">{holdingTimers[seatId]}</span>
-                            ) : null}
+                            {seat.label}
                           </button>
-                        )
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          <div className="space-y-4">
+            <Card className="sticky top-6 border border-slate-200 bg-white p-6">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                <Ticket size={20} className="text-indigo-600" />
+                Vé đã chọn
+              </h2>
+
+              <div className="mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
+                {selectedSeats.length === 0 ? (
+                  <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">
+                    Chưa chọn ghế nào.
+                  </p>
+                ) : (
+                  selectedSeats.map((seat) => (
+                    <div key={seat.id} className="rounded-lg border border-indigo-100 bg-indigo-50 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-950">Ghế {seat.label}</p>
+                          <p className="text-xs text-slate-600">{seat.ticketClassName}</p>
+                        </div>
+                        <Badge className="bg-white text-indigo-700">{formatMoney(seat.price)}</Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
+                <span className="text-sm font-medium text-slate-600">Tổng tiền</span>
+                <span className="text-2xl font-bold text-indigo-600">{formatMoney(totalAmount)}</span>
+              </div>
+
+              <Button
+                className="mt-5 w-full bg-indigo-600 text-white hover:bg-indigo-700"
+                disabled={selectedSeatIds.length === 0}
+                onClick={goToCheckout}
+              >
+                Tiến hành thanh toán
+              </Button>
+
+              <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                Ghế chỉ được giữ 10 phút sau khi vào màn hình thanh toán.
+              </div>
+            </Card>
           </div>
         </div>
-
-        {/* Ticket Selection Panel */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl p-6 border border-slate-200 sticky top-8">
-            <h3 className="text-lg font-semibold text-slate-900 mb-6">Select Tickets</h3>
-
-            {/* Ticket Options */}
-            <div className="space-y-4 mb-6">
-              <div className="p-4 rounded-lg bg-indigo-50 border border-indigo-200">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">General Admission</h4>
-                    <p className="text-xs text-slate-600">Access to main floor & standing</p>
-                  </div>
-                  <span className="text-indigo-600 font-bold">$45.00</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-slate-600">In your selection</span>
-                  <span className="text-lg font-bold text-indigo-600">
-                    {selectedSeats.filter((s) => s.type === 'general').length}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-lg bg-indigo-50 border border-indigo-200">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">VIP Lounge Access</h4>
-                    <p className="text-xs text-slate-600">Premium seating & 2-zone access</p>
-                  </div>
-                  <span className="text-indigo-600 font-bold">$120.00</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-slate-600">Only 12 left</span>
-                  <span className="text-lg font-bold text-indigo-600">
-                    {selectedSeats.filter((s) => s.type === 'vip').length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Price Breakdown */}
-            <div className="space-y-2 pt-4 border-t border-slate-200">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-semibold text-slate-900">${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Service Fee</span>
-                <span className="font-semibold text-slate-900">${serviceFee.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-200">
-                <span>Total</span>
-                <span className="text-indigo-600">${total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* CTA Button */}
-            <Button
-              onClick={handleReviewOrder}
-              disabled={selectedSeats.length === 0}
-              className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg"
-            >
-              Review Order
-            </Button>
-
-            {/* Promo Section */}
-            <div className="mt-6 p-4 rounded-lg bg-indigo-900 text-white">
-              <h4 className="font-semibold text-sm mb-2">Unlock Member Pricing</h4>
-              <p className="text-xs">Save up to 15% on VIP tickets with a Curator membership</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

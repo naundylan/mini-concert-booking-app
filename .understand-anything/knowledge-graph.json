@@ -1,0 +1,306 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "mini-concert-booking-app",
+    "languages": ["java", "typescript", "javascript", "yaml", "dockerfile"],
+    "frameworks": ["spring-boot", "nextjs", "react"],
+    "description": "Mini concert ticket booking app with Spring Boot backend, Next.js frontend, PostgreSQL, and Redis.",
+    "analyzedAt": "2026-05-27T00:00:00Z",
+    "gitCommitHash": "32e8fee"
+  },
+  "nodes": [
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java",
+      "type": "file",
+      "name": "CustomerBookingServiceImpl",
+      "filePath": "server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java",
+      "summary": "Main service implementing customer booking flow: event browsing, seat catalog, checkout, payment confirmation, order/ticket management.",
+      "tags": ["service", "booking", "transactional"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java",
+      "type": "file",
+      "name": "CustomerBookingV1Controller",
+      "filePath": "server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java",
+      "summary": "REST controller exposing customer booking endpoints: events, catalog, checkout, orders, tickets.",
+      "tags": ["controller", "rest", "customer"]
+    },
+    {
+      "id": "file:client/app/customer/booking/[eventId]/checkout/page.tsx",
+      "type": "file",
+      "name": "Checkout Page",
+      "filePath": "client/app/customer/booking/[eventId]/checkout/page.tsx",
+      "summary": "Checkout page for customers to complete payment after selecting seats.",
+      "tags": ["page", "checkout", "customer"]
+    },
+    {
+      "id": "file:client/app/customer/booking/[eventId]/seats/page.tsx",
+      "type": "file",
+      "name": "Seat Selection Page",
+      "filePath": "client/app/customer/booking/[eventId]/seats/page.tsx",
+      "summary": "Seat selection interface showing event seat map with pricing and availability.",
+      "tags": ["page", "seat-selection", "customer"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/event/Event.java",
+      "type": "file",
+      "name": "Event Entity",
+      "filePath": "server/src/main/java/com/concert/booking/modules/event/Event.java",
+      "summary": "Event entity representing concerts/performances with scheduling, pricing, and seat information.",
+      "tags": ["entity", "jpa", "event"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/order/Order.java",
+      "type": "file",
+      "name": "Order Entity",
+      "filePath": "server/src/main/java/com/concert/booking/modules/order/Order.java",
+      "summary": "Order entity tracking ticket purchases with status, amounts, and customer references.",
+      "tags": ["entity", "jpa", "order"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/seat/Seat.java",
+      "type": "file",
+      "name": "Seat Entity",
+      "filePath": "server/src/main/java/com/concert/booking/modules/seat/Seat.java",
+      "summary": "Seat entity representing physical seats with grid position, status, and ticket class association.",
+      "tags": ["entity", "jpa", "seat"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/user/UserService.java",
+      "type": "file",
+      "name": "UserService",
+      "filePath": "server/src/main/java/com/concert/booking/modules/user/UserService.java",
+      "summary": "User management service handling customer and staff operations.",
+      "tags": ["service", "user"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/auth/AuthService.java",
+      "type": "file",
+      "name": "AuthService",
+      "filePath": "server/src/main/java/com/concert/booking/modules/auth/AuthService.java",
+      "summary": "Authentication service handling login, JWT token generation, and OAuth2 integration.",
+      "tags": ["service", "auth", "jwt"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/checkin/CheckInService.java",
+      "type": "file",
+      "name": "CheckInService",
+      "filePath": "server/src/main/java/com/concert/booking/modules/checkin/CheckInService.java",
+      "summary": "Check-in service for staff to verify tickets and mark attendance at events.",
+      "tags": ["service", "checkin", "staff"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/modules/admin/AdminCatalogV1Controller.java",
+      "type": "file",
+      "name": "AdminCatalogV1Controller",
+      "filePath": "server/src/main/java/com/concert/booking/modules/admin/AdminCatalogV1Controller.java",
+      "summary": "Admin controller for managing events, seats, and ticket classes.",
+      "tags": ["controller", "admin"]
+    },
+    {
+      "id": "file:docker-compose.yml",
+      "type": "config",
+      "name": "Docker Compose",
+      "filePath": "docker-compose.yml",
+      "summary": "Local development Docker orchestration for PostgreSQL, Redis, PgAdmin, and Socket.IO.",
+      "tags": ["infra", "docker", "compose"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/config/SocketIoConfig.java",
+      "type": "config",
+      "name": "Socket.IO Config",
+      "filePath": "server/src/main/java/com/concert/booking/config/SocketIoConfig.java",
+      "summary": "Socket.IO server configuration for real-time seat updates and notifications.",
+      "tags": ["config", "websocket", "socketio"]
+    },
+    {
+      "id": "file:server/src/main/java/com/concert/booking/config/RedisConfig.java",
+      "type": "config",
+      "name": "Redis Config",
+      "filePath": "server/src/main/java/com/concert/booking/config/RedisConfig.java",
+      "summary": "Redis configuration for caching checkout sessions and seat holds.",
+      "tags": ["config", "redis"]
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README",
+      "filePath": "README.md",
+      "summary": "Project documentation with setup instructions for local development and Docker deployment.",
+      "tags": ["docs"]
+    },
+    {
+      "id": "service:backend",
+      "type": "service",
+      "name": "Backend API",
+      "summary": "Spring Boot REST API server running on port 8080",
+      "tags": ["backend", "api"]
+    },
+    {
+      "id": "service:frontend",
+      "type": "service",
+      "name": "Frontend App",
+      "summary": "Next.js React application running on port 3000",
+      "tags": ["frontend", "web"]
+    },
+    {
+      "id": "service:redis",
+      "type": "service",
+      "name": "Redis Cache",
+      "summary": "Redis instance for temporary booking data and seat holds",
+      "tags": ["cache", "redis"]
+    },
+    {
+      "id": "service:database",
+      "type": "service",
+      "name": "PostgreSQL",
+      "summary": "PostgreSQL database for persistent data storage",
+      "tags": ["database", "postgres"]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java",
+      "target": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java",
+      "type": "imports",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java",
+      "target": "file:server/src/main/java/com/concert/booking/modules/event/Event.java",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java",
+      "target": "file:server/src/main/java/com/concert/booking/modules/order/Order.java",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java",
+      "target": "file:server/src/main/java/com/concert/booking/modules/seat/Seat.java",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:server/src/main/java/com/concert/booking/config/RedisConfig.java",
+      "target": "service:redis",
+      "type": "configures",
+      "weight": 0.5
+    },
+    {
+      "source": "file:docker-compose.yml",
+      "target": "service:backend",
+      "type": "deploys",
+      "weight": 0.5
+    },
+    {
+      "source": "file:docker-compose.yml",
+      "target": "service:frontend",
+      "type": "deploys",
+      "weight": 0.5
+    },
+    {
+      "source": "file:docker-compose.yml",
+      "target": "service:redis",
+      "type": "deploys",
+      "weight": 0.5
+    },
+    {
+      "source": "file:docker-compose.yml",
+      "target": "service:database",
+      "type": "deploys",
+      "weight": 0.5
+    },
+    {
+      "source": "file:client/app/customer/booking/[eventId]/seats/page.tsx",
+      "target": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java",
+      "type": "calls",
+      "weight": 0.8
+    },
+    {
+      "source": "file:client/app/customer/booking/[eventId]/checkout/page.tsx",
+      "target": "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java",
+      "type": "calls",
+      "weight": 0.8
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:frontend",
+      "name": "Frontend",
+      "description": "Next.js/React UI layer for customer and staff interactions including booking, check-in, and admin management.",
+      "nodeIds": [
+        "file:client/app/customer/booking/[eventId]/seats/page.tsx",
+        "file:client/app/customer/booking/[eventId]/checkout/page.tsx",
+        "file:client/app/customer/events/page.tsx"
+      ]
+    },
+    {
+      "id": "layer:backend-api",
+      "name": "Backend API",
+      "description": "Spring Boot REST API exposing endpoints for authentication, events, booking, orders, and check-in.",
+      "nodeIds": [
+        "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java",
+        "file:server/src/main/java/com/concert/booking/modules/auth/AuthV1Controller.java",
+        "file:server/src/main/java/com/concert/booking/modules/checkin/CheckInV1Controller.java",
+        "file:server/src/main/java/com/concert/booking/modules/admin/AdminCatalogV1Controller.java"
+      ]
+    },
+    {
+      "id": "layer:domain-model",
+      "name": "Domain Model",
+      "description": "Core business entities: Event, Seat, Order, Ticket, User.",
+      "nodeIds": [
+        "file:server/src/main/java/com/concert/booking/modules/event/Event.java",
+        "file:server/src/main/java/com/concert/booking/modules/order/Order.java",
+        "file:server/src/main/java/com/concert/booking/modules/seat/Seat.java",
+        "file:server/src/main/java/com/concert/booking/modules/ticket/Ticket.java"
+      ]
+    },
+    {
+      "id": "layer:infrastructure",
+      "name": "Infrastructure",
+      "description": "External services: PostgreSQL database, Redis cache, Socket.IO, Cloudinary.",
+      "nodeIds": [
+        "service:database",
+        "service:redis",
+        "service:backend"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Project Overview",
+      "description": "Mini concert booking app allows customers to browse events, select seats, and complete checkout. Staff can check-in attendees and admins manage events.",
+      "nodeIds": ["document:README.md"]
+    },
+    {
+      "order": 2,
+      "title": "Frontend Layer",
+      "description": "Next.js application with customer booking flow, staff check-in, and admin management pages.",
+      "nodeIds": [
+        "file:client/app/customer/booking/[eventId]/seats/page.tsx",
+        "file:client/app/customer/booking/[eventId]/checkout/page.tsx"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "Backend API",
+      "description": "Spring Boot REST API exposing endpoints for events, checkout, orders, and check-in.",
+      "nodeIds": [
+        "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingV1Controller.java"
+      ]
+    },
+    {
+      "order": 4,
+      "title": "Booking Flow",
+      "description": "Customer selects seats, creates checkout session, and confirms payment. Seats are held in Redis temporarily.",
+      "nodeIds": [
+        "file:server/src/main/java/com/concert/booking/modules/customerbooking/CustomerBookingServiceImpl.java"
+      ]
+    }
+  ]
+}

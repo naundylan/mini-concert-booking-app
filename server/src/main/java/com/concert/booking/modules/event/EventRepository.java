@@ -4,8 +4,11 @@ import com.concert.booking.modules.event.enums.EventStatus;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface EventRepository extends JpaRepository<Event, UUID> {
     @Query("SELECT e FROM Event e WHERE e.status = :status AND e.teasingTime <= :now")
@@ -32,4 +35,21 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     List<Event> findAll();
 
     List<Event> findByStatus(EventStatus status);
+
+    @Query(
+        """
+        SELECT e
+        FROM Event e
+        WHERE e.status IN :statuses
+          AND (
+            :keyword = ''
+            OR LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(e.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+        ORDER BY e.startTime ASC
+        """)
+    Page<Event> findCustomerVisibleEvents(
+        @Param("keyword") String keyword,
+        @Param("statuses") List<EventStatus> statuses,
+        Pageable pageable);
 }

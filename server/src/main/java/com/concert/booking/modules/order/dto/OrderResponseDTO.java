@@ -4,6 +4,7 @@ import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
 import com.concert.booking.modules.order.enums.PaymentStatus;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 import lombok.*;
@@ -18,6 +19,10 @@ public class OrderResponseDTO {
   UUID orderId;
   String orderCode;
   UUID customerId;
+  UUID eventId;
+  String eventName;
+  String eventLocation;
+  Timestamp eventStartTime;
   OrderStatus status;
   BigDecimal totalAmount;
   PaymentMethod paymentMethod;

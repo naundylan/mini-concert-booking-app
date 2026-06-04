@@ -18,12 +18,30 @@ Gradle lives inside `server/`, so backend commands should be run from that direc
 
 ## Local Development
 
+Redis is required for temporary customer booking data such as checkout sessions and held seats.
+
+Start the local infrastructure first:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d postgres redis
+```
+
 Backend:
 
 ```powershell
 cd server
 Copy-Item .env.example .env
 .\gradlew.bat bootRun
+```
+
+The default backend Redis settings for local Gradle runs are:
+
+```env
+SPRING_REDIS_HOST=localhost
+SPRING_REDIS_PORT=6379
+SPRING_REDIS_PASSWORD=
+SPRING_REDIS_TIMEOUT=2s
 ```
 
 Frontend:
@@ -46,9 +64,11 @@ docker compose up --build
 
 Services:
 
-- Backend: `http://localhost:8080`
+- Backend: `http://localhost:8081`
 - Frontend: `http://localhost:3000`
 - PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+- Socket.IO: `http://localhost:9092`
 - PgAdmin: `http://localhost:5050`
 
 Do not commit real `.env`, `server/.env`, or `client/.env.local` files.

@@ -9,6 +9,23 @@ application:
       secretKey: ${JWT_SECRET}
       accessTokenExpiration: ${JWT_ACCESS_EXPIRATION}
       refreshTokenExpiration: ${JWT_REFRESH_EXPIRATION}
+  socket:
+    hostname: ${SOCKET_HOST:0.0.0.0}
+    port: ${SOCKET_PORT:9092}
+    origin: ${SOCKET_ORIGIN:http://localhost:3000}
+  payment:
+    bank:
+      accountNumber: ${BANK_ACCOUNT_NUMBER:0000000000}
+      accountName: ${BANK_ACCOUNT_NAME:MINI CONCERT BOOKING}
+    vietqr:
+      bankId: ${VIETQR_BANK_ID:ICB}
+      accountNo: ${VIETQR_ACCOUNT_NO:}
+      accountName: ${VIETQR_ACCOUNT_NAME:}
+      template: ${VIETQR_TEMPLATE:compact2}
+    sepay:
+      apiKey: ${SEPAY_API_KEY:}
+      merchantAccount: ${VIETQR_ACCOUNT_NO:}
+      paymentPrefix: ${SEPAY_PAYMENT_PREFIX:SEVQR}
 
 cloudinary:
   cloudName: ${CLOUDINARY_CLOUD_NAME}
@@ -58,11 +75,12 @@ spring:
               scope:
                 - profile
                 - email
-  # data:
-  #   redis:
-  #     host: ${SPRING_REDIS_HOST}
-  #     port: ${SPRING_REDIS_PORT}
-  #     password: ${SPRING_REDIS_PASSWORD}
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
+      timeout: ${SPRING_REDIS_TIMEOUT:2s}
 
   servlet:
     multipart:
@@ -107,7 +125,7 @@ springdoc:
     tags-sorter: alpha
 
 server:
-  port: ${PORT}
+  port: ${SERVER_PORT:8081}
   tomcat:
     threads:
       max: ${TOMCAT_MAX_THREADS}

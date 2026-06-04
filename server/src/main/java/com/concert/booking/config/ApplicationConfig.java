@@ -32,7 +32,7 @@ public class ApplicationConfig {
   CloudinaryProperties cloudinaryProperties;
 
   @Bean
-  OpenAPI openAPI(@Value("${server.port:8080}") String serverPort) {
+  OpenAPI openAPI(@Value("${server.port:8081}") String serverPort) {
     return new OpenAPI()
         .servers(List.of(new Server().url("http://localhost:" + serverPort).description("Local")))
         .info(

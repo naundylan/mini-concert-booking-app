@@ -216,8 +216,8 @@ public class OrderServiceImpl implements OrderService {
             .findByOrderId(order.getId())
             .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy thanh toán"));
 
-    if (payment.getPaymentMethod() != PaymentMethod.VNPAY) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Đơn hàng không thanh toán qua VNPay");
+    if (payment.getPaymentMethod() != PaymentMethod.VIETQR) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Đơn hàng không thanh toán qua VietQR");
     }
 
     payment.setTransactionRef(request.getTransactionRef());
@@ -309,8 +309,8 @@ public class OrderServiceImpl implements OrderService {
   }
 
   private void validateSupportedPayment(PaymentMethod method) {
-    if (method == PaymentMethod.VNPAY) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "VNPay đang ở mức demo, chưa hỗ trợ tạo đơn POS");
+    if (method == PaymentMethod.VIETQR) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Phương thức thanh toán này chưa hỗ trợ tạo đơn POS");
     }
   }
 
