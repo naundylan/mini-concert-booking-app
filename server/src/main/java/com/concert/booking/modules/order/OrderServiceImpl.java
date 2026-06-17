@@ -4,6 +4,7 @@ import com.concert.booking.common.exception.AppException;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.event.enums.EventStatus;
+import com.concert.booking.modules.customerbooking.kafka.BookingPaidEvent;
 import com.concert.booking.modules.order.dto.*;
 import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
@@ -15,6 +16,7 @@ import com.concert.booking.modules.seat.SeatRepository;
 import com.concert.booking.modules.seat.enums.SeatStatus;
 import com.concert.booking.modules.ticket.TicketClass;
 import com.concert.booking.modules.ticket.TicketClassRepository;
+import com.concert.booking.modules.ticketmail.TicketDeliveryService;
 import com.concert.booking.modules.user.User;
 import com.concert.booking.modules.user.UserRepository;
 import com.concert.booking.modules.user.enums.AuthProvider;
@@ -52,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
   SeatHoldService seatHoldService;
   TicketClassRepository ticketClassRepository;
   UserRepository userRepository;
+  TicketDeliveryService ticketDeliveryService;
 
   @Override
   @Transactional(readOnly = true)
@@ -178,6 +181,7 @@ public class OrderServiceImpl implements OrderService {
     seatHoldService.confirmSold(seats, staffId);
     ticketRepository.saveAll(tickets);
 
+    deliverTicketsAfterCommit(order, payment, distinctSeatIds);
     return toOrderResponse(order, payment, tickets, ticketClassById);
   }
 
@@ -391,6 +395,21 @@ public class OrderServiceImpl implements OrderService {
       code = builder.toString();
     } while (orderRepository.existsByOrderCode(code));
     return code;
+  }
+
+  private void deliverTicketsAfterCommit(Order order, Payment payment, List<UUID> seatIds) {
+    BookingPaidEvent event =
+        new BookingPaidEvent(
+            order.getId(),
+            order.getOrderCode(),
+            order.getCustomerId(),
+            order.getEventId(),
+            order.getTotalAmount(),
+            payment.getPaymentMethod(),
+            payment.getTransactionRef(),
+            seatIds,
+            Instant.now());
+    ticketDeliveryService.deliverTicketsAfterCommit(event);
   }
 
   private SeatCatalogDTO.TicketClassDTO toTicketClassDTO(TicketClass ticketClass) {

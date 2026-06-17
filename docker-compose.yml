@@ -21,6 +21,28 @@ services:
     volumes:
       - redis_data:/data
 
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: ticket_kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_PORT:-9092}:29092"
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://114.29.236.199:29092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka_data:/bitnami/kafka
+
   app:
     build:
       context: ./server
@@ -33,6 +55,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - kafka
     environment:
       APPLICATION_NAME: ${APPLICATION_NAME:-mini-concert-booking-app}
       APPLICATION_VERSION: ${APPLICATION_VERSION:-0.0.1}
@@ -44,6 +67,10 @@ services:
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ${SPRING_REDIS_PASSWORD:-}
       SPRING_REDIS_TIMEOUT: ${SPRING_REDIS_TIMEOUT:-2s}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:19092}
+      KAFKA_CONSUMER_GROUP_ID: ${KAFKA_CONSUMER_GROUP_ID:-mini-concert-booking}
+      KAFKA_TOPIC_BOOKING_PAID: ${KAFKA_TOPIC_BOOKING_PAID:-booking.paid}
       SUPER_USER_USERNAME: ${SUPER_USER_USERNAME:-admin}
       SUPER_USER_PASSWORD: ${SUPER_USER_PASSWORD:-change-me}
       SUPER_USER_EMAIL: ${SUPER_USER_EMAIL:-admin@example.com}
@@ -70,6 +97,10 @@ services:
       SEPAY_PAYMENT_PREFIX: ${SEPAY_PAYMENT_PREFIX:-SEVQR}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      TICKET_MAIL_ENABLED: ${TICKET_MAIL_ENABLED:-true}
+      TICKET_MAIL_DELIVERY_MODE: ${TICKET_MAIL_DELIVERY_MODE:-auto}
+      TICKET_MAIL_HIGH_LOAD_ACTIVE_REQUESTS: ${TICKET_MAIL_HIGH_LOAD_ACTIVE_REQUESTS:-80}
+      TICKET_MAIL_SUBJECT: ${TICKET_MAIL_SUBJECT:-Ve cua ban - Mini Concert Booking}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
@@ -95,18 +126,7 @@ services:
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:9092}
       NEXT_PUBLIC_ENABLE_DEV_PAYMENT: ${NEXT_PUBLIC_ENABLE_DEV_PAYMENT:-true}
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: ticket_pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    depends_on:
-      - postgres
-
 volumes:
   postgres_data:
   redis_data:
+  kafka_data:
