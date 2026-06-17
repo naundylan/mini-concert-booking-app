@@ -18,6 +18,7 @@ import com.concert.booking.modules.customerbooking.dto.SePayWebhookDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSnapshotDTO;
 import com.concert.booking.modules.customerbooking.dto.SeatSummaryDTO;
 import com.concert.booking.modules.customerbooking.dto.VietQrPaymentDTO;
+import com.concert.booking.modules.customerbooking.kafka.BookingPaidEvent;
 import com.concert.booking.modules.customerbooking.redis.CheckoutSessionRedisService;
 import com.concert.booking.modules.customerbooking.redis.SeatHoldRedisService;
 import com.concert.booking.modules.customerbooking.sepay.SePayWebhookVerifier;
@@ -44,6 +45,7 @@ import com.concert.booking.modules.seat.SeatRepository;
 import com.concert.booking.modules.seat.enums.SeatStatus;
 import com.concert.booking.modules.ticket.TicketClass;
 import com.concert.booking.modules.ticket.TicketClassRepository;
+import com.concert.booking.modules.ticketmail.TicketDeliveryService;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.sql.Timestamp;
@@ -93,6 +95,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   SePayProperties sePayProperties;
   VietQrService vietQrService;
   SePayWebhookVerifier sePayWebhookVerifier;
+  TicketDeliveryService ticketDeliveryService;
 
   @Override
   @Transactional(readOnly = true)
@@ -631,7 +634,26 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     checkoutSessionRedisService.deleteActiveSession(event.getId(), customerId, paymentSessionId);
     seatSocketService.emitSeatSold(event.getId(), seatIds);
 
-    return toOrderResponse(order, payment, tickets, ticketClassById);
+    OrderResponseDTO response = toOrderResponse(order, payment, tickets, ticketClassById);
+    deliverTicketsAfterCommit(response, payment.getTransactionRef(), seatIds);
+    return response;
+  }
+
+  private void deliverTicketsAfterCommit(
+      OrderResponseDTO order, String transactionRef, List<UUID> seatIds) {
+    BookingPaidEvent event =
+        new BookingPaidEvent(
+            order.getOrderId(),
+            order.getOrderCode(),
+            order.getCustomerId(),
+            order.getEventId(),
+            order.getTotalAmount(),
+            order.getPaymentMethod(),
+            transactionRef,
+            seatIds,
+            Instant.now());
+
+    ticketDeliveryService.deliverTicketsAfterCommit(event);
   }
 
   private CheckoutPaymentStatusDTO checkoutPaymentStatus(

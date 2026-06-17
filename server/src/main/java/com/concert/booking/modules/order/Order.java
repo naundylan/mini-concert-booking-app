@@ -1,6 +1,7 @@
 package com.concert.booking.modules.order;
 
 import com.concert.booking.common.entity.AbstractAuditEntity;
+import com.concert.booking.modules.order.enums.EmailStatus;
 import com.concert.booking.modules.order.enums.OrderStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -50,6 +51,11 @@ public class Order extends AbstractAuditEntity {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 30)
   OrderStatus status;
+
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(name = "email_status", nullable = false, length = 30)
+  EmailStatus emailStatus = EmailStatus.PENDING;
 
   @Column(name = "expired_at")
   Timestamp expiredAt;

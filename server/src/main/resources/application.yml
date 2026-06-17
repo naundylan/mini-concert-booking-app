@@ -4,6 +4,7 @@ application:
     password: ${SUPER_USER_PASSWORD}
     fullName: ${SUPER_USER_FULL_NAME}
     email: ${SUPER_USER_EMAIL}
+    phone: ${SUPER_USER_PHONE:}
   security:
     jwt:
       secretKey: ${JWT_SECRET}
@@ -26,6 +27,15 @@ application:
       apiKey: ${SEPAY_API_KEY:}
       merchantAccount: ${VIETQR_ACCOUNT_NO:}
       paymentPrefix: ${SEPAY_PAYMENT_PREFIX:SEVQR}
+  kafka:
+    enabled: ${KAFKA_ENABLED:false}
+    topics:
+      bookingPaid: ${KAFKA_TOPIC_BOOKING_PAID:booking.paid}
+  ticket-mail:
+    enabled: ${TICKET_MAIL_ENABLED:true}
+    delivery-mode: ${TICKET_MAIL_DELIVERY_MODE:auto}
+    high-load-active-requests: ${TICKET_MAIL_HIGH_LOAD_ACTIVE_REQUESTS:80}
+    subject: ${TICKET_MAIL_SUBJECT:Ve cua ban - Mini Concert Booking}
 
 cloudinary:
   cloudName: ${CLOUDINARY_CLOUD_NAME}
@@ -70,8 +80,8 @@ spring:
         client:
           registration:
             google:
-              client-id: ${CLIENT_ID}
-              client-secret: ${CLIENT_SECRET}
+              client-id: ${GOOGLE_CLIENT_ID}
+              client-secret: ${GOOGLE_CLIENT_SECRET}
               scope:
                 - profile
                 - email
@@ -106,16 +116,19 @@ spring:
               - email
               - profile
 
-  # kafka:
-  #   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-  #   consumer:
-  #     group-id: ${KAFKA_CONSUMER_GROUP_ID}
-  #     auto-offset-reset: earliest
-  #     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  #     value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  #   producer:
-  #     key-serializer: org.apache.kafka.common.serialization.StringSerializer
-  #     value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:mini-concert-booking}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.concert.booking.modules.customerbooking.kafka
+        spring.json.value.default.type: com.concert.booking.modules.customerbooking.kafka.BookingPaidEvent
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 springdoc:
   swagger-ui:

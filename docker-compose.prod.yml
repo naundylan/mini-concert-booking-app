@@ -20,6 +20,3 @@ services:
     restart: always
     ports: []
 
-  pgadmin:
-    profiles:
-      - tools
