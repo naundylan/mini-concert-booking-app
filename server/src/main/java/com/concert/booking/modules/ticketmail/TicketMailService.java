@@ -99,6 +99,18 @@ public class TicketMailService {
     long initialDelayMs = ticketMailProperties.getRetryInitialDelayMs();
     double multiplier = ticketMailProperties.getRetryMultiplier();
 
+    // Idempotency check and status handling
+    if (order.getEmailStatus() == EmailStatus.SENT) {
+      log.info("Ticket email already sent for orderId={}. Skip sending.", orderId);
+      return;
+    }
+    // Mark as pending before attempt to avoid duplicate sends on retries
+    if (order.getEmailStatus() != EmailStatus.PENDING) {
+      order.setEmailStatus(EmailStatus.PENDING);
+      orderRepository.save(order);
+    }
+
+    // Retry loop unchanged
     int attempt = 0;
     long currentDelay = initialDelayMs;
 

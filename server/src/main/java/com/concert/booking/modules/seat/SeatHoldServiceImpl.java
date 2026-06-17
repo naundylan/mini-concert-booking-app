@@ -10,6 +10,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -17,29 +20,35 @@ import org.springframework.stereotype.Service;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SeatHoldServiceImpl implements SeatHoldService {
   SeatRepository seatRepository;
+  SeatHoldRedisService seatHoldRedisService;
 
-  @Override
+  @Transactional
   public List<Seat> lockAvailableSeats(UUID eventId, List<UUID> seatIds) {
+    // Sort and deduplicate seat IDs for deterministic locking
     List<UUID> sortedSeatIds = seatIds.stream().distinct().sorted().toList();
+    // Pessimistic lock on DB rows
     List<Seat> seats = seatRepository.findAllByIdForUpdate(sortedSeatIds);
     if (seats.size() != sortedSeatIds.size()) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Danh sách ghế không hợp lệ");
     }
-
-    List<Seat> conflictedSeats =
-        seats.stream()
-            .filter(seat -> !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
-            .toList();
+    // Validate seat availability
+    List<Seat> conflictedSeats = seats.stream()
+        .filter(seat -> !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
+        .toList();
     if (!conflictedSeats.isEmpty()) {
-      String conflicts =
-          conflictedSeats.stream()
-              .map(seat -> toSeatLabel(seat) + "(" + seat.getStatus() + ")")
-              .collect(java.util.stream.Collectors.joining(", "));
-      throw new AppException(
-          HttpStatus.CONFLICT,
+      String conflicts = conflictedSeats.stream()
+          .map(seat -> toSeatLabel(seat) + "(" + seat.getStatus() + ")")
+          .collect(java.util.stream.Collectors.joining(", "));
+      throw new AppException(HttpStatus.CONFLICT,
           "Các ghế không còn khả dụng hoặc không thuộc sự kiện đang bán: " + conflicts);
     }
-
+    // Register Redis lock to execute only after DB transaction commits successfully
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+      @Override
+      public void afterCommit() {
+        seatHoldRedisService.lockSeats(eventId, sortedSeatIds);
+      }
+    });
     return seats;
   }
 
