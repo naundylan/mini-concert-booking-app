@@ -101,7 +101,7 @@ public class AppSecurityConfig {
                       OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
                       OAuth2LoginDTO loginData = authService.processOAuth2Customer(oAuth2User);
 
-                      String frontendRedirectUrl = "http://localhost:3000/auth/callback";
+                      String frontendRedirectUrl = "http://144.29.236.199:3000/auth/callback";
                       String targetUrl =
                           frontendRedirectUrl
                               + "?email="
@@ -135,6 +135,7 @@ public class AppSecurityConfig {
             "http://localhost:3000",
             "http://localhost:*",
             "http://172.21.240.1:*",
+	    "http://114.29.236.199:*",
             "https://*.app.github.dev"));
     cors.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
     cors.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));

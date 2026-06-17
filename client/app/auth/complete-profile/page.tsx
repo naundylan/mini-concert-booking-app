@@ -1,11 +1,11 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { authService } from '@/lib/services/auth.service'
 import { normalizeRole } from '@/lib/auth-client'
 
-export default function CompleteProfile() {
+function CompleteProfileInner() {
   const searchParams = useSearchParams()
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -117,5 +117,13 @@ export default function CompleteProfile() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function CompleteProfile() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-10">Đang tải...</div>}>
+      <CompleteProfileInner />
+    </Suspense>
   )
 }
