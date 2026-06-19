@@ -11,21 +11,21 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EventUpdateDTO {
 
-    @Size(max = 255, message = "Tên sự kiện không được vượt quá 255 ký tự")
-    String name;
+  @Size(max = 255, message = "Tên sự kiện không được vượt quá 255 ký tự")
+  String name;
 
-    @Size(max = 500, message = "Địa điểm không được vượt quá 500 ký tự")
-    String location;
+  @Size(max = 500, message = "Địa điểm không được vượt quá 500 ký tự")
+  String location;
 
-    @Size(max = 500, message = "URL banner không được vượt quá 500 ký tự")
-    String bannerUrl;
+  @Size(max = 500, message = "URL banner không được vượt quá 500 ký tự")
+  String bannerUrl;
 
-    // Chỉ dùng khi DRAFT
-    java.sql.Timestamp teasingTime;
-    java.sql.Timestamp openTime;
-    java.sql.Timestamp startTime;
-    java.sql.Timestamp endTime;
+  // Chỉ dùng khi DRAFT
+  java.sql.Timestamp teasingTime;
+  java.sql.Timestamp openTime;
+  java.sql.Timestamp startTime;
+  java.sql.Timestamp endTime;
 
-    // Status update (CANCELED)
-    com.concert.booking.modules.event.enums.EventStatus status;
+  // Status update (CANCELED)
+  com.concert.booking.modules.event.enums.EventStatus status;
 }

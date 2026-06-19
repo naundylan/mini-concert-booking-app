@@ -11,6 +11,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SeatStatusUpdateDTO {
 
-    @NotBlank(message = "Trạng thái ghế không được để trống")
-    String status; // AVAILABLE, MAINTENANCE, SOLD, LOCKED
+  @NotBlank(message = "Trạng thái ghế không được để trống")
+  String status; // AVAILABLE, MAINTENANCE, SOLD, LOCKED
 }

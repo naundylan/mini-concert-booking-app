@@ -1,7 +1,6 @@
 package com.concert.booking.modules.auth.dto;
 
 import com.concert.booking.modules.user.UserInfo;
-
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -30,9 +30,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:3000")
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Tag(
-    name = "Authentication",
-    description = "Các API phục vụ xác thực hệ thống")
+@Tag(name = "Authentication", description = "Các API phục vụ xác thực hệ thống")
 public class AuthV1Controller {
 
   AuthService authService;
@@ -40,7 +38,9 @@ public class AuthV1Controller {
   AuthCookieService authCookieService;
   UserRepository userRepository;
 
-  @Operation(summary = "Đăng nhập", description = "Sử dụng username và password để lấy phiên đăng nhập.")
+  @Operation(
+      summary = "Đăng nhập",
+      description = "Sử dụng username và password để lấy phiên đăng nhập.")
   @BadRequestApiResponse
   @UnauthorizedApiResponse
   @PostMapping("/sign-in")
@@ -77,11 +77,14 @@ public class AuthV1Controller {
     return DataApiResponse.success(toSession(tokenDTO.getRole(), null), "Làm mới token thành công");
   }
 
-  @Operation(summary = "Thông tin phiên đăng nhập", description = "Lấy user hiện tại từ cookie JWT.")
+  @Operation(
+      summary = "Thông tin phiên đăng nhập",
+      description = "Lấy user hiện tại từ cookie JWT.")
   @GetMapping("/me")
   public DataApiResponse<AuthSessionDTO> me() {
     User user = getCurrentUser();
-    return DataApiResponse.success(toSession(user.getRole().name(), toUserInfo(user)), "Lấy phiên thành công");
+    return DataApiResponse.success(
+        toSession(user.getRole().name(), toUserInfo(user)), "Lấy phiên thành công");
   }
 
   @Operation(summary = "Đăng xuất", description = "Hủy bỏ phiên đăng nhập hiện tại.")

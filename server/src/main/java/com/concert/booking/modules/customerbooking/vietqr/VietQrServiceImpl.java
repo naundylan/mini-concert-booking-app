@@ -40,9 +40,11 @@ public class VietQrServiceImpl implements VietQrService {
             .opsForValue()
             .setIfAbsent(referenceKey(reference), paymentSessionId.toString(), ttl);
     if (!Boolean.TRUE.equals(success)) {
-      String existingPaymentSessionId = stringRedisTemplate.opsForValue().get(referenceKey(reference));
+      String existingPaymentSessionId =
+          stringRedisTemplate.opsForValue().get(referenceKey(reference));
       if (!paymentSessionId.toString().equals(existingPaymentSessionId)) {
-        throw new AppException(HttpStatus.CONFLICT, "Ma thanh toan VietQR vua bi trung. Vui long thu lai");
+        throw new AppException(
+            HttpStatus.CONFLICT, "Ma thanh toan VietQR vua bi trung. Vui long thu lai");
       }
     }
   }

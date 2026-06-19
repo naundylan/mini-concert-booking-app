@@ -14,17 +14,17 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SeatItemDTO {
 
-    UUID id; // ID của ghế (có thể null khi tạo mới)
+  UUID id; // ID của ghế (có thể null khi tạo mới)
 
-    @NotNull(message = "ID hạng vé không được để trống")
-    UUID ticketClassId;
+  @NotNull(message = "ID hạng vé không được để trống")
+  UUID ticketClassId;
 
-    @Min(value = 0, message = "Hàng ghế (Row) không hợp lệ")
-    int gridRow;
+  @Min(value = 0, message = "Hàng ghế (Row) không hợp lệ")
+  int gridRow;
 
-    @Min(value = 0, message = "Cột ghế (Column) không hợp lệ")
-    int gridColumn;
+  @Min(value = 0, message = "Cột ghế (Column) không hợp lệ")
+  int gridColumn;
 
-    @NotNull(message = "Trạng thái ghế không được để trống")
-    SeatStatus status;
+  @NotNull(message = "Trạng thái ghế không được để trống")
+  SeatStatus status;
 }

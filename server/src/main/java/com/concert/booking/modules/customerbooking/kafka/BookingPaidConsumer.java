@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
 public class BookingPaidConsumer {
   TicketMailService ticketMailService;
 
-  @KafkaListener(topics = "${application.kafka.topics.bookingPaid}")
+  @KafkaListener(
+      topics = "${application.kafka.topics.bookingPaid}",
+      containerFactory = "kafkaListenerContainerFactory")
   public void handleBookingPaid(BookingPaidEvent event) {
     log.info(
         "Consumed booking paid event. orderId={}, orderCode={}, paymentMethod={}",

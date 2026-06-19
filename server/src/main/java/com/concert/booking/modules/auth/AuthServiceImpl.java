@@ -252,7 +252,6 @@ public class AuthServiceImpl implements AuthService {
     return new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
   }
 
-
   @Override
   @Transactional
   public OAuth2LoginDTO processOAuth2Customer(OAuth2User oAuth2User) {
@@ -261,33 +260,41 @@ public class AuthServiceImpl implements AuthService {
     String fullName = oAuth2User.getAttribute("name");
 
     // Tìm User
-    User user = userRepository.findByGoogleId(googleId)
-        .map(existingUser -> {
-          existingUser.setFullName(fullName);
-          return userRepository.save(existingUser);
-        })
-        .orElseGet(() -> userRepository.findByEmail(email)
-            .map(existingUser -> {
-              existingUser.setGoogleId(googleId);
-              existingUser.setAuthProvider(AuthProvider.GOOGLE);
-              existingUser.setOnlineVerified(true);
-              existingUser.setFullName(fullName);
-              return userRepository.save(existingUser);
-            })
-            .orElse(null) // Nếu không tìm thấy, trả về null
-        );
+    User user =
+        userRepository
+            .findByGoogleId(googleId)
+            .map(
+                existingUser -> {
+                  existingUser.setFullName(fullName);
+                  return userRepository.save(existingUser);
+                })
+            .orElseGet(
+                () ->
+                    userRepository
+                        .findByEmail(email)
+                        .map(
+                            existingUser -> {
+                              existingUser.setGoogleId(googleId);
+                              existingUser.setAuthProvider(AuthProvider.GOOGLE);
+                              existingUser.setOnlineVerified(true);
+                              existingUser.setFullName(fullName);
+                              return userRepository.save(existingUser);
+                            })
+                        .orElse(null) // Nếu không tìm thấy, trả về null
+                );
 
     UserInfo userInfo;
     if (user != null) {
       // User tồn tại
-      userInfo = UserInfo.builder()
-          .email(user.getEmail())
-          .phone(user.getPhone())
-          .fullName(user.getFullName())
-          .googleId(user.getGoogleId())
-          .role(user.getRole().name())
-          .status(user.getStatus().name())
-          .build();
+      userInfo =
+          UserInfo.builder()
+              .email(user.getEmail())
+              .phone(user.getPhone())
+              .fullName(user.getFullName())
+              .googleId(user.getGoogleId())
+              .role(user.getRole().name())
+              .status(user.getStatus().name())
+              .build();
 
       // Nếu có số điện thoại -> Sinh token
       if (user.getPhone() != null) {
@@ -303,25 +310,22 @@ public class AuthServiceImpl implements AuthService {
             .build();
       } else {
         // Có user nhưng không có phone -> Chỉ trả về UserInfo để FE nhập thêm
-        return OAuth2LoginDTO.builder()
-            .userInfo(userInfo)
-            .build();
+        return OAuth2LoginDTO.builder().userInfo(userInfo).build();
       }
     } else {
       // User mới (chưa có trong DB)
-      userInfo = UserInfo.builder()
-          .email(email)
-          .phone(null)
-          .fullName(fullName)
-          .googleId(googleId)
-          .role(UserRole.CUSTOMER.name())
-          .status(UserStatus.ACTIVE.name())
-          .build();
+      userInfo =
+          UserInfo.builder()
+              .email(email)
+              .phone(null)
+              .fullName(fullName)
+              .googleId(googleId)
+              .role(UserRole.CUSTOMER.name())
+              .status(UserStatus.ACTIVE.name())
+              .build();
 
       // Trả về UserInfo để FE nhập phone
-      return OAuth2LoginDTO.builder()
-          .userInfo(userInfo)
-          .build();
+      return OAuth2LoginDTO.builder().userInfo(userInfo).build();
     }
   }
 
@@ -346,7 +350,8 @@ public class AuthServiceImpl implements AuthService {
 
       if (!userFromEmail.getId().equals(userFromPhone.getId())) {
         // Email và phone thuộc về 2 user khác nhau → lỗi
-        throw new AppException(HttpStatus.BAD_REQUEST, 
+        throw new AppException(
+            HttpStatus.BAD_REQUEST,
             "Email và số điện thoại không thuộc về cùng một tài khoản. Vui lòng liên hệ hỗ trợ.");
       }
 
@@ -365,11 +370,14 @@ public class AuthServiceImpl implements AuthService {
     if (user != null) {
       // User tồn tại (từ web hoặc POS) → merge thông tin
       // Kiểm tra trùng lặp nếu thay đổi email/phone
-      if ((user.getEmail() == null || !email.equals(user.getEmail())) && userRepository.existsByEmail(email)) {
+      if ((user.getEmail() == null || !email.equals(user.getEmail()))
+          && userRepository.existsByEmail(email)) {
         throw new AppException(HttpStatus.BAD_REQUEST, "Email đã được sử dụng bởi tài khoản khác");
       }
-      if ((user.getPhone() == null || !phone.equals(user.getPhone())) && userRepository.existsByPhone(phone)) {
-        throw new AppException(HttpStatus.BAD_REQUEST, "Số điện thoại đã được sử dụng bởi tài khoản khác");
+      if ((user.getPhone() == null || !phone.equals(user.getPhone()))
+          && userRepository.existsByPhone(phone)) {
+        throw new AppException(
+            HttpStatus.BAD_REQUEST, "Số điện thoại đã được sử dụng bởi tài khoản khác");
       }
 
       user.setEmail(email);
@@ -389,29 +397,31 @@ public class AuthServiceImpl implements AuthService {
         throw new AppException(HttpStatus.BAD_REQUEST, "Số điện thoại đã tồn tại trên hệ thống");
       }
 
-      user = User.builder()
-          .email(email)
-          .googleId(googleId)
-          .fullName(fullName)
-          .phone(phone)
-          .authProvider(AuthProvider.GOOGLE)
-          .role(UserRole.CUSTOMER)
-          .status(UserStatus.ACTIVE)
-          .onlineVerified(true)
-          .tokensValidFrom(Instant.now())
-          .build();
+      user =
+          User.builder()
+              .email(email)
+              .googleId(googleId)
+              .fullName(fullName)
+              .phone(phone)
+              .authProvider(AuthProvider.GOOGLE)
+              .role(UserRole.CUSTOMER)
+              .status(UserStatus.ACTIVE)
+              .onlineVerified(true)
+              .tokensValidFrom(Instant.now())
+              .build();
       userRepository.save(user);
     }
 
     // Tạo token và trả về
-    UserInfo userInfo = UserInfo.builder()
-        .email(user.getEmail())
-        .phone(user.getPhone())
-        .fullName(user.getFullName())
-        .googleId(user.getGoogleId())
-        .role(user.getRole().name())
-        .status(user.getStatus().name())
-        .build();
+    UserInfo userInfo =
+        UserInfo.builder()
+            .email(user.getEmail())
+            .phone(user.getPhone())
+            .fullName(user.getFullName())
+            .googleId(user.getGoogleId())
+            .role(user.getRole().name())
+            .status(user.getStatus().name())
+            .build();
 
     String accessToken = jwtService.generateAccessToken(user.getId());
     String refreshToken = jwtService.generateRefreshToken(user.getId());

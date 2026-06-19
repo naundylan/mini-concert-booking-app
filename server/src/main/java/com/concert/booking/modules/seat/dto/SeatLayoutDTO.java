@@ -13,7 +13,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SeatLayoutDTO {
 
-    @NotEmpty(message = "Danh sách ghế không được để trống")
-    @Valid
-    List<SeatItemDTO> seats;
+  @NotEmpty(message = "Danh sách ghế không được để trống")
+  @Valid
+  List<SeatItemDTO> seats;
 }

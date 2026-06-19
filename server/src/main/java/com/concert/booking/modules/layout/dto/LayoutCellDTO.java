@@ -21,8 +21,7 @@ public class LayoutCellDTO {
   // Editor-only preview. Seat labels are recomputed by the backend during apply.
   String previewLabel;
 
-  @NotBlank
-  String ticketClassKey;
+  @NotBlank String ticketClassKey;
 
   @Builder.Default Boolean customPreviewLabel = false;
 }

@@ -2,6 +2,7 @@ package com.concert.booking.modules.seat;
 
 import com.concert.booking.common.exception.AppException;
 import com.concert.booking.modules.seat.enums.SeatStatus;
+import com.concert.booking.modules.seat.redis.SeatHoldRedisService;
 import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -11,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -31,24 +30,28 @@ public class SeatHoldServiceImpl implements SeatHoldService {
     if (seats.size() != sortedSeatIds.size()) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Danh sách ghế không hợp lệ");
     }
-    // Validate seat availability
-    List<Seat> conflictedSeats = seats.stream()
-        .filter(seat -> !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
-        .toList();
+    // Validate seat availability in DB
+    List<Seat> conflictedSeats =
+        seats.stream()
+            .filter(
+                seat ->
+                    !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
+            .toList();
     if (!conflictedSeats.isEmpty()) {
-      String conflicts = conflictedSeats.stream()
-          .map(seat -> toSeatLabel(seat) + "(" + seat.getStatus() + ")")
-          .collect(java.util.stream.Collectors.joining(", "));
-      throw new AppException(HttpStatus.CONFLICT,
+      String conflicts =
+          conflictedSeats.stream()
+              .map(seat -> toSeatLabel(seat) + "(" + seat.getStatus() + ")")
+              .collect(java.util.stream.Collectors.joining(", "));
+      throw new AppException(
+          HttpStatus.CONFLICT,
           "Các ghế không còn khả dụng hoặc không thuộc sự kiện đang bán: " + conflicts);
     }
-    // Register Redis lock to execute only after DB transaction commits successfully
-    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-      @Override
-      public void afterCommit() {
-        seatHoldRedisService.lockSeats(eventId, sortedSeatIds);
-      }
-    });
+
+    // Check if any seat is already held in Redis by an online checkout session
+    if (seatHoldRedisService.hasAnyHeldSeat(eventId, sortedSeatIds)) {
+      throw new AppException(HttpStatus.CONFLICT, "Một số ghế đang được giữ bởi người khác");
+    }
+
     return seats;
   }
 
@@ -65,10 +68,17 @@ public class SeatHoldServiceImpl implements SeatHoldService {
   }
 
   @Override
+  @Transactional
   public void release(List<UUID> seatIds) {
-    log.warn("SeatHoldService.release() called but not yet implemented. seatIds={}", seatIds);
-    throw new UnsupportedOperationException(
-        "release() chưa được implement — dành cho online booking flow");
+    log.debug("Releasing seats from database: {}", seatIds);
+    List<Seat> seats = seatRepository.findAllById(seatIds);
+    seats.forEach(
+        seat -> {
+          if (seat.getStatus() == SeatStatus.LOCKED) {
+            seat.setStatus(SeatStatus.AVAILABLE);
+          }
+        });
+    seatRepository.saveAll(seats);
   }
 
   private String toSeatLabel(Seat seat) {

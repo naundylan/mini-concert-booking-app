@@ -1,9 +1,9 @@
 package com.concert.booking.modules.customerbooking.socket;
 
 import com.concert.booking.modules.customerbooking.dto.SeatSnapshotDTO;
-import com.concert.booking.modules.customerbooking.redis.SeatHoldRedisService;
 import com.concert.booking.modules.seat.Seat;
 import com.concert.booking.modules.seat.SeatRepository;
+import com.concert.booking.modules.seat.redis.SeatHoldRedisService;
 import com.corundumstudio.socketio.SocketIOServer;
 import jakarta.annotation.PostConstruct;
 import java.time.Instant;
@@ -74,8 +74,7 @@ public class SeatSocketService {
     socketIOServer
         .getRoomOperations(roomName(eventId))
         .sendEvent(
-            eventName,
-            SeatChangedSocketEvent.builder().eventId(eventId).seatIds(seatIds).build());
+            eventName, SeatChangedSocketEvent.builder().eventId(eventId).seatIds(seatIds).build());
   }
 
   private UUID parseEventId(JoinEventRequest request) {

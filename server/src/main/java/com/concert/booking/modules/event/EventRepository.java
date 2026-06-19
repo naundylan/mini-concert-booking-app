@@ -11,33 +11,30 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface EventRepository extends JpaRepository<Event, UUID> {
-    @Query("SELECT e FROM Event e WHERE e.status = :status AND e.teasingTime <= :now")
-    List<Event> findEventsToTease(EventStatus status, Timestamp now);
+  @Query("SELECT e FROM Event e WHERE e.status = :status AND e.teasingTime <= :now")
+  List<Event> findEventsToTease(EventStatus status, Timestamp now);
 
-    @Query("SELECT e FROM Event e WHERE e.status = :status AND e.openTime <= :now")
-    List<Event> findEventsToOpen(EventStatus status, Timestamp now);
+  @Query("SELECT e FROM Event e WHERE e.status = :status AND e.openTime <= :now")
+  List<Event> findEventsToOpen(EventStatus status, Timestamp now);
 
-    @Query("SELECT e FROM Event e WHERE e.status = :status AND e.startTime <= :now")
-    List<Event> findEventsToEndSale(EventStatus status, Timestamp now);
+  @Query("SELECT e FROM Event e WHERE e.status = :status AND e.startTime <= :now")
+  List<Event> findEventsToEndSale(EventStatus status, Timestamp now);
 
-    @Query(
-        """
+  @Query(
+      """
         SELECT e FROM Event e
         WHERE e.endTime >= :now
           AND e.status IN :statuses
         """)
-    List<Event> findCheckInCandidates(List<EventStatus> statuses, Timestamp now);
+  List<Event> findCheckInCandidates(List<EventStatus> statuses, Timestamp now);
 
-    
-    /**
-     * Lấy danh sách tất cả sự kiện
-     */
-    List<Event> findAll();
+  /** Lấy danh sách tất cả sự kiện */
+  List<Event> findAll();
 
-    List<Event> findByStatus(EventStatus status);
+  List<Event> findByStatus(EventStatus status);
 
-    @Query(
-        """
+  @Query(
+      """
         SELECT e
         FROM Event e
         WHERE e.status IN :statuses
@@ -48,8 +45,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
           )
         ORDER BY e.startTime ASC
         """)
-    Page<Event> findCustomerVisibleEvents(
-        @Param("keyword") String keyword,
-        @Param("statuses") List<EventStatus> statuses,
-        Pageable pageable);
+  Page<Event> findCustomerVisibleEvents(
+      @Param("keyword") String keyword,
+      @Param("statuses") List<EventStatus> statuses,
+      Pageable pageable);
 }
