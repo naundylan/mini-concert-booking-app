@@ -7,12 +7,14 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import com.concert.booking.common.constants.AppSecurityProperties;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MailService {
   JavaMailSender mailSender;
+  AppSecurityProperties appSecurityProperties;
 
   public void sendTextMail(String to, String subject, String content) {
     SimpleMailMessage message = new SimpleMailMessage();
@@ -24,7 +26,7 @@ public class MailService {
   }
 
   public void sendForgotPasswordMail(String to, String token) {
-    String resetLink = "http://localhost:3000/reset-password?token=" + token;
+    String resetLink = appSecurityProperties.getFrontendUrl() + "/reset-password?token=" + token;
     String subject = "Khôi phục mật khẩu";
     String content =
         """

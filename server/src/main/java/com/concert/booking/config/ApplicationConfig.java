@@ -32,9 +32,12 @@ public class ApplicationConfig {
   CloudinaryProperties cloudinaryProperties;
 
   @Bean
-  OpenAPI openAPI(@Value("${server.port:8081}") String serverPort) {
+  OpenAPI openAPI(
+      @Value("${server.port:8081}") String serverPort,
+      @Value("${application.api-url:}") String apiUrl) {
+    String finalUrl = (apiUrl == null || apiUrl.isBlank()) ? "http://localhost:" + serverPort : apiUrl;
     return new OpenAPI()
-        .servers(List.of(new Server().url("http://localhost:" + serverPort).description("Local")))
+        .servers(List.of(new Server().url(finalUrl).description("API Server")))
         .info(
             new Info()
                 .title("Restful API server")

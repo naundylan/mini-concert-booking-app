@@ -26,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.concert.booking.common.constants.AppSecurityProperties;
 
 @Configuration
 @EnableWebSecurity
@@ -36,18 +37,21 @@ public class AppSecurityConfig {
   private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
   private final AuthService authService;
   private final AuthCookieService authCookieService;
+  private final AppSecurityProperties appSecurityProperties;
 
   public AppSecurityConfig(
       JwtService jwtService,
       CustomAccessDeniedHandler customAccessDeniedHandler,
       CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
       @Lazy AuthService authService,
-      AuthCookieService authCookieService) {
+      AuthCookieService authCookieService,
+      AppSecurityProperties appSecurityProperties) {
     this.jwtService = jwtService;
     this.customAccessDeniedHandler = customAccessDeniedHandler;
     this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     this.authService = authService;
     this.authCookieService = authCookieService;
+    this.appSecurityProperties = appSecurityProperties;
   }
 
   static String[] SWAGGER_WHITELIST = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
@@ -101,7 +105,7 @@ public class AppSecurityConfig {
                       OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
                       OAuth2LoginDTO loginData = authService.processOAuth2Customer(oAuth2User);
 
-                      String frontendRedirectUrl = "http://144.29.236.199:3000/auth/callback";
+                      String frontendRedirectUrl = appSecurityProperties.getOauth2FrontendRedirectUrl();
                       String targetUrl =
                           frontendRedirectUrl
                               + "?email="
@@ -130,13 +134,7 @@ public class AppSecurityConfig {
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration cors = new CorsConfiguration();
     cors.setAllowCredentials(true);
-    cors.setAllowedOriginPatterns(
-        List.of(
-            "http://localhost:3000",
-            "http://localhost:*",
-            "http://172.21.240.1:*",
-	    "http://114.29.236.199:*",
-            "https://*.app.github.dev"));
+    cors.setAllowedOriginPatterns(appSecurityProperties.getCorsAllowedOrigins());
     cors.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
     cors.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
     cors.setExposedHeaders(List.of("Authorization"));

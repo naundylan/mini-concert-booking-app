@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Tag(
     name = "Authentication",
