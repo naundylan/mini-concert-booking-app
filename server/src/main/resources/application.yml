@@ -39,6 +39,7 @@ application:
   checkout:
     hold-ttl-minutes: ${CHECKOUT_HOLD_TTL_MINUTES:5}
 
+
 cloudinary:
   cloudName: ${CLOUDINARY_CLOUD_NAME}
   apiKey: ${CLOUDINARY_API_KEY}

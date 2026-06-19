@@ -35,14 +35,24 @@ public class KafkaConfig {
     log.info("Registering Kafka DefaultErrorHandler with DeadLetterPublishingRecoverer (DLQ)");
 
     // Configure DLQ recoverer: sends failed messages to <original_topic>.DLQ
-    DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
+    DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
+        (record, exception) -> {
+            log.error(
+                "Sending to DLQ: key={}, topic={}, partition={}, offset={}",
+                record.key(),
+                record.topic(),
+                record.partition(),
+                record.offset(),
+                exception);
+            return new org.apache.kafka.common.TopicPartition(record.topic() + ".DLQ", record.partition());
+        });
 
     // Retry 3 times, with a fixed backoff of 2 seconds (2000 milliseconds)
     FixedBackOff backOff = new FixedBackOff(2000L, 3L);
 
     DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
 
-    // Add logging when a recovery is triggered (i.e. message is sent to DLQ)
+    // Add logging when a recovery fails
     errorHandler.setRetryListeners(
         new org.springframework.kafka.listener.RetryListener() {
           @Override

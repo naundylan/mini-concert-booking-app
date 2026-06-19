@@ -5,6 +5,7 @@ import com.concert.booking.modules.customerbooking.kafka.BookingPaidEvent;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.event.enums.EventStatus;
+import com.concert.booking.modules.customerbooking.kafka.BookingPaidEvent;
 import com.concert.booking.modules.order.dto.*;
 import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
