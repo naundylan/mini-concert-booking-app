@@ -123,11 +123,12 @@ public class GlobalExceptionHandler {
       DataIntegrityViolationException ex) {
     log.warn("[LOG] Data integrity violation: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.CONFLICT)
-        .body(ApiResponse.apiBuilder()
-            .success(false)
-            .statusCode(HttpStatus.CONFLICT.value())
-            .message("Dữ liệu đã bị thay đổi bởi giao dịch khác. Vui lòng tải lại và thử lại.")
-            .build());
+        .body(
+            ApiResponse.apiBuilder()
+                .success(false)
+                .statusCode(HttpStatus.CONFLICT.value())
+                .message("Dữ liệu đã bị thay đổi bởi giao dịch khác. Vui lòng tải lại và thử lại.")
+                .build());
   }
 
   /**

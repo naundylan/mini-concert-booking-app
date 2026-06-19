@@ -52,20 +52,20 @@ public class AppSecurityConfig {
 
   static String[] SWAGGER_WHITELIST = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
   static String[] PUBLIC_ENDPOINTS = {
-      "/",
-      "/api/v1/orders/webhooks/**",
-      "/api/v1/customer/payments/vietqr/webhook",
-      "/api/v1/payments/webhook"
+    "/",
+    "/api/v1/orders/webhooks/**",
+    "/api/v1/customer/payments/vietqr/webhook",
+    "/api/v1/payments/webhook"
   };
   static String[] AUTH_ENDPOINTS = {
-      "/api/v1/auth/sign-in",
-      "/api/v1/auth/sign-out",
-      "/api/v1/auth/refresh",
-      "/api/v1/auth/google",
-      "/api/v1/auth/customer/complete-phone",
-      "/api/v1/auth/forgot-password",
-      "/oauth2/**",
-      "/login/**"
+    "/api/v1/auth/sign-in",
+    "/api/v1/auth/sign-out",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/google",
+    "/api/v1/auth/customer/complete-phone",
+    "/api/v1/auth/forgot-password",
+    "/oauth2/**",
+    "/login/**"
   };
 
   @Bean
