@@ -127,6 +127,8 @@ services:
       NEXT_PUBLIC_ENABLE_DEV_PAYMENT: ${NEXT_PUBLIC_ENABLE_DEV_PAYMENT:-true}
 
   ngrok:
+    profiles:
+      - dev
     image: ngrok/ngrok:latest
     container_name: ticket_ngrok
     restart: unless-stopped
