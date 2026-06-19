@@ -17,9 +17,7 @@ import org.hibernate.annotations.UuidGenerator;
           name = "uk_seat_event_position",
           columnNames = {"event_id", "grid_row", "grid_column"})
     },
-    indexes = {
-      @Index(name = "idx_seats_event_status", columnList = "event_id,status")
-    })
+    indexes = {@Index(name = "idx_seats_event_status", columnList = "event_id,status")})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,32 +25,31 @@ import org.hibernate.annotations.UuidGenerator;
 @SuperBuilder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Seat extends AbstractAuditEntity {
-    
-    @Id
-    @GeneratedValue
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
-    UUID id;
 
-    @Column(name = "event_id", nullable = false)
-    UUID eventId;
+  @Id
+  @GeneratedValue
+  @UuidGenerator(style = UuidGenerator.Style.TIME)
+  UUID id;
 
-    @Column(name = "ticket_class_id", nullable = false)
-    UUID ticketClassId;
+  @Column(name = "event_id", nullable = false)
+  UUID eventId;
 
-    @Column(name = "grid_row", nullable = false)
-    int gridRow;
+  @Column(name = "ticket_class_id", nullable = false)
+  UUID ticketClassId;
 
-    @Column(name = "grid_column", nullable = false)
-    int gridColumn;
+  @Column(name = "grid_row", nullable = false)
+  int gridRow;
 
-    @Column(length = 30)
-    String label;
+  @Column(name = "grid_column", nullable = false)
+  int gridColumn;
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    SeatStatus status = SeatStatus.AVAILABLE;
+  @Column(length = 30)
+  String label;
 
-    @Version
-    int version;
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  SeatStatus status = SeatStatus.AVAILABLE;
+
+  @Version int version;
 }

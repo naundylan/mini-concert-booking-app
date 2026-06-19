@@ -38,7 +38,11 @@ public class JwtService {
     return Jwts.builder()
         .subject(id.toString())
         .issuedAt(new Date())
-        .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshTokenExpiration())) // Sử dụng expiration của Refresh Token
+        .expiration(
+            new Date(
+                System.currentTimeMillis()
+                    + jwtProperties
+                        .getRefreshTokenExpiration())) // Sử dụng expiration của Refresh Token
         .signWith(this.getSignKey())
         .compact();
   }

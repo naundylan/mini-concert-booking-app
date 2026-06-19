@@ -57,8 +57,7 @@ public class AdminCatalogV1Controller {
       @PathVariable UUID eventId, @RequestBody @Valid SeatGenerateDTO dto) {
     UUID currentUserId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(
-        adminCatalogService.generateSeats(eventId, dto, currentUserId),
-        "Tạo ghế thành công");
+        adminCatalogService.generateSeats(eventId, dto, currentUserId), "Tạo ghế thành công");
   }
 
   @GetMapping("/events/{eventId}/seats")

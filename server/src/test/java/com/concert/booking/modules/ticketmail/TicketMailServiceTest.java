@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.concert.booking.common.constants.TicketMailProperties;
-import com.concert.booking.core.mail.MailService;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.order.Order;
@@ -33,7 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class TicketMailServiceTest {
 
-  @Mock MailService mailService;
+  @Mock TicketMailAsyncService ticketMailAsyncService;
   @Mock TicketMailProperties ticketMailProperties;
   @Mock OrderRepository orderRepository;
   @Mock TicketRepository ticketRepository;
@@ -71,7 +70,7 @@ class TicketMailServiceTest {
             .orderCode("O1234567")
             .totalAmount(new BigDecimal("500000"))
             .status(OrderStatus.PAID)
-            .emailStatus(EmailStatus.PENDING)
+            .emailStatus(null) // Starts as null
             .build();
 
     customer =
@@ -117,19 +116,19 @@ class TicketMailServiceTest {
     ticketMailService.sendTicketsForOrder(orderId);
 
     verifyNoInteractions(orderRepository);
-    verifyNoInteractions(mailService);
+    verifyNoInteractions(ticketMailAsyncService);
   }
 
   @Test
   void sendTicketsForOrder_orderNotPaid_shouldSkip() {
     when(ticketMailProperties.isEnabled()).thenReturn(true);
-    order.setStatus(OrderStatus.PENDING);
+    order.setStatus(OrderStatus.CANCELED);
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
     ticketMailService.sendTicketsForOrder(orderId);
 
     verify(orderRepository, never()).save(any());
-    verifyNoInteractions(mailService);
+    verifyNoInteractions(ticketMailAsyncService);
   }
 
   @Test
@@ -141,16 +140,25 @@ class TicketMailServiceTest {
     ticketMailService.sendTicketsForOrder(orderId);
 
     verify(orderRepository, never()).save(any());
-    verifyNoInteractions(mailService);
+    verifyNoInteractions(ticketMailAsyncService);
   }
 
   @Test
-  void sendTicketsForOrder_success_shouldUpdateStatusToSent() {
+  void sendTicketsForOrder_alreadyPending_shouldSkip() {
+    when(ticketMailProperties.isEnabled()).thenReturn(true);
+    order.setEmailStatus(EmailStatus.PENDING);
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+    ticketMailService.sendTicketsForOrder(orderId);
+
+    verify(orderRepository, never()).save(any());
+    verifyNoInteractions(ticketMailAsyncService);
+  }
+
+  @Test
+  void sendTicketsForOrder_success_shouldSavePendingAndCallAsyncService() {
     when(ticketMailProperties.isEnabled()).thenReturn(true);
     when(ticketMailProperties.getSubject()).thenReturn("Ve cua ban");
-    when(ticketMailProperties.getRetryMaxAttempts()).thenReturn(3);
-    when(ticketMailProperties.getRetryInitialDelayMs()).thenReturn(1L);
-    when(ticketMailProperties.getRetryMultiplier()).thenReturn(1.0);
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
     when(userRepository.findById(customerId)).thenReturn(Optional.of(customer));
@@ -160,63 +168,8 @@ class TicketMailServiceTest {
 
     ticketMailService.sendTicketsForOrder(orderId);
 
-    assertEquals(EmailStatus.SENT, order.getEmailStatus());
+    assertEquals(EmailStatus.PENDING, order.getEmailStatus());
     verify(orderRepository, times(1)).save(order);
-    verify(mailService, times(1)).sendHtmlMail(eq("test@example.com"), eq("Ve cua ban"), anyString());
-  }
-
-  @Test
-  void sendTicketsForOrder_smtpFailThenSuccess_shouldRetryAndSaveSent() {
-    when(ticketMailProperties.isEnabled()).thenReturn(true);
-    when(ticketMailProperties.getSubject()).thenReturn("Ve cua ban");
-    when(ticketMailProperties.getRetryMaxAttempts()).thenReturn(3);
-    when(ticketMailProperties.getRetryInitialDelayMs()).thenReturn(1L);
-    when(ticketMailProperties.getRetryMultiplier()).thenReturn(1.0);
-
-    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-    when(userRepository.findById(customerId)).thenReturn(Optional.of(customer));
-    when(ticketRepository.findByOrderId(orderId)).thenReturn(List.of(ticket));
-    when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-    when(ticketClassRepository.findByEventId(eventId)).thenReturn(List.of(ticketClass));
-
-    // Fail first time, succeed second time
-    doThrow(new RuntimeException("SMTP Server down"))
-        .doNothing()
-        .when(mailService)
-        .sendHtmlMail(anyString(), anyString(), anyString());
-
-    ticketMailService.sendTicketsForOrder(orderId);
-
-    assertEquals(EmailStatus.SENT, order.getEmailStatus());
-    verify(orderRepository, times(1)).save(order);
-    verify(mailService, times(2)).sendHtmlMail(eq("test@example.com"), eq("Ve cua ban"), anyString());
-  }
-
-  @Test
-  void sendTicketsForOrder_smtpFailAllAttempts_shouldSaveFailedAndThrow() {
-    when(ticketMailProperties.isEnabled()).thenReturn(true);
-    when(ticketMailProperties.getSubject()).thenReturn("Ve cua ban");
-    when(ticketMailProperties.getRetryMaxAttempts()).thenReturn(3);
-    when(ticketMailProperties.getRetryInitialDelayMs()).thenReturn(1L);
-    when(ticketMailProperties.getRetryMultiplier()).thenReturn(1.0);
-
-    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-    when(userRepository.findById(customerId)).thenReturn(Optional.of(customer));
-    when(ticketRepository.findByOrderId(orderId)).thenReturn(List.of(ticket));
-    when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-    when(ticketClassRepository.findByEventId(eventId)).thenReturn(List.of(ticketClass));
-
-    doThrow(new RuntimeException("SMTP Server down"))
-        .when(mailService)
-        .sendHtmlMail(anyString(), anyString(), anyString());
-
-    Exception ex = assertThrows(IllegalStateException.class, () -> {
-      ticketMailService.sendTicketsForOrder(orderId);
-    });
-
-    assertTrue(ex.getMessage().contains("Không thể gửi email sau 3 lần thử"));
-    assertEquals(EmailStatus.FAILED, order.getEmailStatus());
-    verify(orderRepository, times(1)).save(order);
-    verify(mailService, times(3)).sendHtmlMail(eq("test@example.com"), eq("Ve cua ban"), anyString());
+    verify(ticketMailAsyncService, times(1)).sendEmailAsync(any(TicketMailDto.class));
   }
 }

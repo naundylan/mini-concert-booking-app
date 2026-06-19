@@ -126,6 +126,19 @@ services:
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:9092}
       NEXT_PUBLIC_ENABLE_DEV_PAYMENT: ${NEXT_PUBLIC_ENABLE_DEV_PAYMENT:-true}
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ticket_ngrok
+    restart: unless-stopped
+    command:
+      - "http"
+      - "app:8081"
+      - "--domain=probe-studio-balmy.ngrok-free.dev"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - app
+
 volumes:
   postgres_data:
   redis_data:

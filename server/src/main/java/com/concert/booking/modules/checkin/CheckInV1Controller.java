@@ -22,14 +22,16 @@ public class CheckInV1Controller {
   @GetMapping("/events")
   @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<List<CheckInEventDTO>> getCheckInEvents() {
-    return DataApiResponse.success(checkInService.getCheckInEvents(), "Lấy danh sách sự kiện check-in thành công");
+    return DataApiResponse.success(
+        checkInService.getCheckInEvents(), "Lấy danh sách sự kiện check-in thành công");
   }
 
   @GetMapping("/search")
   @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<List<CheckInOrderDTO>> search(
       @RequestParam UUID eventId, @RequestParam String keyword) {
-    return DataApiResponse.success(checkInService.search(eventId, keyword), "Tìm vé check-in thành công");
+    return DataApiResponse.success(
+        checkInService.search(eventId, keyword), "Tìm vé check-in thành công");
   }
 
   @PostMapping("/tickets/{ticketId}")
@@ -38,13 +40,16 @@ public class CheckInV1Controller {
       @PathVariable UUID ticketId, @RequestBody @Valid TicketCheckInRequestDTO request) {
     UUID staffId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(
-        checkInService.checkInTicket(ticketId, request.getEventId(), staffId), "Xử lý check-in thành công");
+        checkInService.checkInTicket(ticketId, request.getEventId(), staffId),
+        "Xử lý check-in thành công");
   }
 
   @GetMapping("/history")
   @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<List<CheckInHistoryDTO>> getHistory(
-      @RequestParam(required = false) UUID eventId, @RequestParam(required = false) String keyword) {
-    return DataApiResponse.success(checkInService.getHistory(eventId, keyword), "Lay lich su check-in thanh cong");
+      @RequestParam(required = false) UUID eventId,
+      @RequestParam(required = false) String keyword) {
+    return DataApiResponse.success(
+        checkInService.getHistory(eventId, keyword), "Lay lich su check-in thanh cong");
   }
 }

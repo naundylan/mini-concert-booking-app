@@ -19,5 +19,6 @@ public interface SeatLayoutService {
 
   void archive(UUID id, UUID currentUserId);
 
-  LayoutApplyResponseDTO applyToEvent(UUID eventId, UUID layoutId, LayoutApplyDTO dto, UUID currentUserId);
+  LayoutApplyResponseDTO applyToEvent(
+      UUID eventId, UUID layoutId, LayoutApplyDTO dto, UUID currentUserId);
 }

@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @Builder
 @NoArgsConstructor
-@AllArgsConstructor 
+@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TokenDTO {
   String accessToken;

@@ -38,16 +38,14 @@ public class CustomerBookingV1Controller {
   @PreAuthorize("hasRole('CUSTOMER')")
   public DataApiResponse<CustomerEventDetailDTO> getEventDetail(@PathVariable UUID eventId) {
     return DataApiResponse.success(
-        customerBookingService.getEventDetail(eventId),
-        "Lấy chi tiết sự kiện thành công");
+        customerBookingService.getEventDetail(eventId), "Lấy chi tiết sự kiện thành công");
   }
 
   @GetMapping("/events/{eventId}/catalog")
   @PreAuthorize("hasRole('CUSTOMER')")
   public DataApiResponse<CustomerSeatCatalogDTO> getCatalog(@PathVariable UUID eventId) {
     return DataApiResponse.success(
-        customerBookingService.getCatalog(eventId),
-        "Lấy sơ đồ ghế thành công");
+        customerBookingService.getCatalog(eventId), "Lấy sơ đồ ghế thành công");
   }
 
   @PostMapping("/checkout")
@@ -56,8 +54,7 @@ public class CustomerBookingV1Controller {
       @RequestBody @Valid CheckoutRequestDTO request) {
     UUID customerId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(
-        customerBookingService.checkout(request, customerId),
-        "Tạo phiên thanh toán thành công");
+        customerBookingService.checkout(request, customerId), "Tạo phiên thanh toán thành công");
   }
 
   @GetMapping("/checkout/{paymentSessionId}")
@@ -120,8 +117,7 @@ public class CustomerBookingV1Controller {
   public DataApiResponse<OrderResponseDTO> getOrder(@PathVariable UUID orderId) {
     UUID customerId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(
-        customerBookingService.getCustomerOrder(orderId, customerId),
-        "Lấy đơn hàng thành công");
+        customerBookingService.getCustomerOrder(orderId, customerId), "Lấy đơn hàng thành công");
   }
 
   @GetMapping("/tickets")
@@ -129,7 +125,6 @@ public class CustomerBookingV1Controller {
   public DataApiResponse<Page<CustomerTicketDTO>> getTickets(Pageable pageable) {
     UUID customerId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(
-        customerBookingService.getTickets(customerId, pageable),
-        "Lấy danh sách vé thành công");
+        customerBookingService.getTickets(customerId, pageable), "Lấy danh sách vé thành công");
   }
 }

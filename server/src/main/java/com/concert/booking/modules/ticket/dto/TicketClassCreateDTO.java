@@ -15,14 +15,14 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TicketClassCreateDTO {
 
-    @NotBlank(message = "Tên hạng vé không được để trống")
-    @Size(max = 100, message = "Tên hạng vé không được vượt quá 100 ký tự")
-    String name;
+  @NotBlank(message = "Tên hạng vé không được để trống")
+  @Size(max = 100, message = "Tên hạng vé không được vượt quá 100 ký tự")
+  String name;
 
-    @Size(max = 20, message = "Mã màu không được vượt quá 20 ký tự")
-    String colorCode;
+  @Size(max = 20, message = "Mã màu không được vượt quá 20 ký tự")
+  String colorCode;
 
-    @NotNull(message = "Giá vé không được để trống")
-    @Min(value = 0, message = "Giá vé không được âm")
-    BigDecimal price;
+  @NotNull(message = "Giá vé không được để trống")
+  @Min(value = 0, message = "Giá vé không được âm")
+  BigDecimal price;
 }

@@ -1,4 +1,4 @@
-package com.concert.booking.modules.customerbooking.redis;
+package com.concert.booking.modules.seat.redis;
 
 import com.concert.booking.common.exception.AppException;
 import java.time.Duration;
@@ -78,7 +78,8 @@ public class SeatHoldRedisServiceImpl implements SeatHoldRedisService {
   public boolean hasAnyHeldSeat(UUID eventId, List<UUID> seatIds) {
     return seatIds.stream()
         .anyMatch(
-            seatId -> Boolean.TRUE.equals(stringRedisTemplate.hasKey(seatHoldKey(eventId, seatId))));
+            seatId ->
+                Boolean.TRUE.equals(stringRedisTemplate.hasKey(seatHoldKey(eventId, seatId))));
   }
 
   @Override

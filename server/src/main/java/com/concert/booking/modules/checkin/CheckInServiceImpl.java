@@ -46,10 +46,13 @@ public class CheckInServiceImpl implements CheckInService {
   @Transactional(readOnly = true)
   public List<CheckInEventDTO> getCheckInEvents() {
     Timestamp now = Timestamp.from(Instant.now());
-    return eventRepository.findCheckInCandidates(List.of(EventStatus.ONSALE, EventStatus.ENDED), now)
+    return eventRepository
+        .findCheckInCandidates(List.of(EventStatus.ONSALE, EventStatus.ENDED), now)
         .stream()
         .filter(event -> isWithinCheckInWindow(event, now))
-        .sorted(Comparator.comparing(Event::getStartTime, Comparator.nullsLast(Comparator.naturalOrder())))
+        .sorted(
+            Comparator.comparing(
+                Event::getStartTime, Comparator.nullsLast(Comparator.naturalOrder())))
         .map(this::toEventDTO)
         .toList();
   }
@@ -98,7 +101,12 @@ public class CheckInServiceImpl implements CheckInService {
       throw new AppException(HttpStatus.BAD_REQUEST, "Vé không thuộc sự kiện này");
     }
     if (order.getStatus() != OrderStatus.PAID) {
-      return toResponse(CheckInResultStatus.INVALID, "Đơn hàng chưa hoàn tất thanh toán", order, customer, ticket);
+      return toResponse(
+          CheckInResultStatus.INVALID,
+          "Đơn hàng chưa hoàn tất thanh toán",
+          order,
+          customer,
+          ticket);
     }
     if (ticket.getStatus() == TicketStatus.CANCELED) {
       return toResponse(CheckInResultStatus.CANCELED, "Vé đã bị hủy", order, customer, ticket);
@@ -107,7 +115,8 @@ public class CheckInServiceImpl implements CheckInService {
       return toResponse(CheckInResultStatus.ALREADY_USED, "Vé đã sử dụng", order, customer, ticket);
     }
     if (ticket.getStatus() != TicketStatus.UNUSED) {
-      return toResponse(CheckInResultStatus.INVALID, "Trạng thái vé không hợp lệ", order, customer, ticket);
+      return toResponse(
+          CheckInResultStatus.INVALID, "Trạng thái vé không hợp lệ", order, customer, ticket);
     }
 
     Timestamp now = Timestamp.from(Instant.now());
@@ -130,7 +139,9 @@ public class CheckInServiceImpl implements CheckInService {
   @Transactional(readOnly = true)
   public List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword) {
     String normalizedKeyword = keyword == null ? "" : keyword.trim();
-    return ticketRepository.findCheckInHistory(eventId, normalizedKeyword, PageRequest.of(0, 100)).stream()
+    return ticketRepository
+        .findCheckInHistory(eventId, normalizedKeyword, PageRequest.of(0, 100))
+        .stream()
         .map(this::toHistoryDTO)
         .toList();
   }
@@ -158,13 +169,15 @@ public class CheckInServiceImpl implements CheckInService {
     return event.getEndTime() != null && !now.after(event.getEndTime());
   }
 
-  private CheckInResponseDTO resolveOptimisticLockConflict(UUID ticketId, Order order, User customer) {
+  private CheckInResponseDTO resolveOptimisticLockConflict(
+      UUID ticketId, Order order, User customer) {
     Ticket latestTicket =
         ticketRepository
             .findById(ticketId)
             .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy vé"));
     if (latestTicket.getStatus() == TicketStatus.USED) {
-      return toResponse(CheckInResultStatus.ALREADY_USED, "Vé đã sử dụng", order, customer, latestTicket);
+      return toResponse(
+          CheckInResultStatus.ALREADY_USED, "Vé đã sử dụng", order, customer, latestTicket);
     }
     throw new AppException(HttpStatus.CONFLICT, "Vé vừa được cập nhật, vui lòng quét lại");
   }
@@ -195,7 +208,8 @@ public class CheckInServiceImpl implements CheckInService {
 
   private CheckInResponseDTO toResponse(
       CheckInResultStatus result, String message, Order order, User customer, Ticket ticket) {
-    TicketClass ticketClass = ticketClassRepository.findById(ticket.getTicketClassId()).orElse(null);
+    TicketClass ticketClass =
+        ticketClassRepository.findById(ticket.getTicketClassId()).orElse(null);
     CheckInTicketDTO ticketDTO = toTicketDTO(ticket, ticketClass);
     return CheckInResponseDTO.builder()
         .result(result)
@@ -215,7 +229,9 @@ public class CheckInServiceImpl implements CheckInService {
 
   private CheckInTicketDTO toTicketDTO(Ticket ticket, TicketClass ticketClass) {
     User checkInStaff =
-        ticket.getCheckInBy() != null ? userRepository.findById(ticket.getCheckInBy()).orElse(null) : null;
+        ticket.getCheckInBy() != null
+            ? userRepository.findById(ticket.getCheckInBy()).orElse(null)
+            : null;
     return CheckInTicketDTO.builder()
         .ticketId(ticket.getId())
         .seatLabel(ticket.getSeatLabel())
@@ -233,10 +249,14 @@ public class CheckInServiceImpl implements CheckInService {
   private CheckInHistoryDTO toHistoryDTO(Ticket ticket) {
     Order order = orderRepository.findById(ticket.getOrderId()).orElse(null);
     Event event = order != null ? eventRepository.findById(order.getEventId()).orElse(null) : null;
-    User customer = order != null ? userRepository.findById(order.getCustomerId()).orElse(null) : null;
+    User customer =
+        order != null ? userRepository.findById(order.getCustomerId()).orElse(null) : null;
     User checkInStaff =
-        ticket.getCheckInBy() != null ? userRepository.findById(ticket.getCheckInBy()).orElse(null) : null;
-    TicketClass ticketClass = ticketClassRepository.findById(ticket.getTicketClassId()).orElse(null);
+        ticket.getCheckInBy() != null
+            ? userRepository.findById(ticket.getCheckInBy()).orElse(null)
+            : null;
+    TicketClass ticketClass =
+        ticketClassRepository.findById(ticket.getTicketClassId()).orElse(null);
 
     return CheckInHistoryDTO.builder()
         .ticketId(ticket.getId())

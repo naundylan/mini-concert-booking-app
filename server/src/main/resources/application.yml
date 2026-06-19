@@ -36,6 +36,9 @@ application:
     delivery-mode: ${TICKET_MAIL_DELIVERY_MODE:auto}
     high-load-active-requests: ${TICKET_MAIL_HIGH_LOAD_ACTIVE_REQUESTS:80}
     subject: ${TICKET_MAIL_SUBJECT:Ve cua ban - Mini Concert Booking}
+  checkout:
+    hold-ttl-minutes: ${CHECKOUT_HOLD_TTL_MINUTES:5}
+
 
 cloudinary:
   cloudName: ${CLOUDINARY_CLOUD_NAME}
@@ -55,15 +58,16 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
   flyway:
-    enabled: false
-
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
   mail:
     host: smtp.gmail.com
     port: 587

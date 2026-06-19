@@ -12,6 +12,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EventStatusUpdateDTO {
 
-    @NotNull(message = "Trạng thái sự kiện không được để trống")
-    EventStatus status;
+  @NotNull(message = "Trạng thái sự kiện không được để trống")
+  EventStatus status;
 }

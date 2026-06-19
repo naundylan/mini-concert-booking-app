@@ -45,7 +45,8 @@ public class OrderV1Controller {
   @PreAuthorize("hasRole('STAFF')")
   public DataApiResponse<OrderResponseDTO> createOrder(@RequestBody @Valid OrderCreateDTO request) {
     UUID staffId = AuthUtils.getCurrentUserId();
-    return DataApiResponse.success(orderService.createOrder(request, staffId), "Tạo đơn hàng thành công");
+    return DataApiResponse.success(
+        orderService.createOrder(request, staffId), "Tạo đơn hàng thành công");
   }
 
   @GetMapping("/pos/{orderCode}")

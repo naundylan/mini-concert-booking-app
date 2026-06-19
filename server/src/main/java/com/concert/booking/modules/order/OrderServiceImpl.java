@@ -1,6 +1,7 @@
 package com.concert.booking.modules.order;
 
 import com.concert.booking.common.exception.AppException;
+import com.concert.booking.modules.customerbooking.kafka.BookingPaidEvent;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.event.enums.EventStatus;
@@ -165,15 +166,16 @@ public class OrderServiceImpl implements OrderService {
             .map(
                 seat -> {
                   TicketClass ticketClass = ticketClassById.get(seat.getTicketClassId());
-                  Ticket ticket = Ticket.builder()
-                      .orderId(order.getId())
-                      .seatId(seat.getId())
-                      .ticketClassId(ticketClass.getId())
-                      .seatLabel(toSeatLabel(seat))
-                      .price(ticketClass.getPrice())
-                      .status(TicketStatus.UNUSED)
-                      .createdBy(staffId)
-                      .build();
+                  Ticket ticket =
+                      Ticket.builder()
+                          .orderId(order.getId())
+                          .seatId(seat.getId())
+                          .ticketClassId(ticketClass.getId())
+                          .seatLabel(toSeatLabel(seat))
+                          .price(ticketClass.getPrice())
+                          .status(TicketStatus.UNUSED)
+                          .createdBy(staffId)
+                          .build();
                   return ticket;
                 })
             .toList();
@@ -226,7 +228,8 @@ public class OrderServiceImpl implements OrderService {
 
     payment.setTransactionRef(request.getTransactionRef());
     payment.setAmount(request.getAmount() != null ? request.getAmount() : payment.getAmount());
-    payment.setStatus(Boolean.TRUE.equals(request.getSuccess()) ? PaymentStatus.CONFIRMED : PaymentStatus.FAILED);
+    payment.setStatus(
+        Boolean.TRUE.equals(request.getSuccess()) ? PaymentStatus.CONFIRMED : PaymentStatus.FAILED);
     paymentRepository.save(payment);
 
     List<Ticket> tickets = ticketRepository.findByOrderId(order.getId());
@@ -314,11 +317,13 @@ public class OrderServiceImpl implements OrderService {
 
   private void validateSupportedPayment(PaymentMethod method) {
     if (method == PaymentMethod.VIETQR) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Phương thức thanh toán này chưa hỗ trợ tạo đơn POS");
+      throw new AppException(
+          HttpStatus.BAD_REQUEST, "Phương thức thanh toán này chưa hỗ trợ tạo đơn POS");
     }
   }
 
-  private BigDecimal calculateTotalAmount(List<Seat> seats, Map<UUID, TicketClass> ticketClassById) {
+  private BigDecimal calculateTotalAmount(
+      List<Seat> seats, Map<UUID, TicketClass> ticketClassById) {
     return seats.stream()
         .map(
             seat -> {
@@ -473,10 +478,13 @@ public class OrderServiceImpl implements OrderService {
         .totalAmount(order.getTotalAmount())
         .paymentMethod(payment.getPaymentMethod())
         .paymentStatus(payment.getStatus())
-        .amountReceived(payment.getAmountReceived() != null ? payment.getAmountReceived() : payment.getAmount())
+        .amountReceived(
+            payment.getAmountReceived() != null ? payment.getAmountReceived() : payment.getAmount())
         .items(
             tickets.stream()
-                .map(ticket -> toTicketResponse(ticket, ticketClassById.get(ticket.getTicketClassId())))
+                .map(
+                    ticket ->
+                        toTicketResponse(ticket, ticketClassById.get(ticket.getTicketClassId())))
                 .toList())
         .build();
   }

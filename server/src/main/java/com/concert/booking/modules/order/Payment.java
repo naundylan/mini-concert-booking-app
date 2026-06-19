@@ -15,7 +15,8 @@ import org.hibernate.annotations.UuidGenerator;
 @Table(
     name = "payments",
     indexes = @Index(name = "idx_payment_order", columnList = "order_id"),
-    uniqueConstraints = @UniqueConstraint(name = "uk_payment_transaction_ref", columnNames = "transaction_ref"))
+    uniqueConstraints =
+        @UniqueConstraint(name = "uk_payment_transaction_ref", columnNames = "transaction_ref"))
 @Getter
 @Setter
 @NoArgsConstructor

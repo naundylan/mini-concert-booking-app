@@ -58,7 +58,8 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
 
   @Override
   @Transactional
-  public TicketClass updateTicketClass(UUID ticketClassId, AdminTicketClassUpdateDTO dto, UUID updatedBy) {
+  public TicketClass updateTicketClass(
+      UUID ticketClassId, AdminTicketClassUpdateDTO dto, UUID updatedBy) {
     TicketClass ticketClass = getTicketClass(ticketClassId);
     Event event = getEvent(ticketClass.getEventId());
     ensureDraft(event);
@@ -227,7 +228,10 @@ public class AdminCatalogServiceImpl implements AdminCatalogService {
         .id(seat.getId())
         .gridRow(seat.getGridRow())
         .gridColumn(seat.getGridColumn())
-        .label(seat.getLabel() != null ? seat.getLabel() : toSeatLabel(seat.getGridRow(), seat.getGridColumn()))
+        .label(
+            seat.getLabel() != null
+                ? seat.getLabel()
+                : toSeatLabel(seat.getGridRow(), seat.getGridColumn()))
         .status(seat.getStatus())
         .ticketClass(toTicketClassDTO(ticketClass))
         .build();
