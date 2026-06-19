@@ -45,7 +45,8 @@ public class SeatLayoutV1Controller {
   public DataApiResponse<LayoutResponseDTO> update(
       @PathVariable UUID id, @RequestBody @Valid LayoutUpdateDTO dto) {
     return DataApiResponse.success(
-        seatLayoutService.update(id, dto, AuthUtils.getCurrentUserId()), "Cập nhật layout thành công");
+        seatLayoutService.update(id, dto, AuthUtils.getCurrentUserId()),
+        "Cập nhật layout thành công");
   }
 
   @DeleteMapping("/layouts/{id}")
@@ -68,7 +69,9 @@ public class SeatLayoutV1Controller {
 
   @PostMapping("/events/{eventId}/layouts/{layoutId}/apply")
   public DataApiResponse<LayoutApplyResponseDTO> apply(
-      @PathVariable UUID eventId, @PathVariable UUID layoutId, @RequestBody @Valid LayoutApplyDTO dto) {
+      @PathVariable UUID eventId,
+      @PathVariable UUID layoutId,
+      @RequestBody @Valid LayoutApplyDTO dto) {
     return DataApiResponse.success(
         seatLayoutService.applyToEvent(eventId, layoutId, dto, AuthUtils.getCurrentUserId()),
         "Apply layout thành công");

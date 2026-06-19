@@ -796,8 +796,13 @@ export default function LayoutsPage() {
     setHistory([nextDraft])
     setHistoryIndex(0)
     const restoredClasses = classesFromCells(nextDraft.cells)
-    setTicketClasses(restoredClasses)
-    setSelectedKey(restoredClasses[0]?.key || '')
+    if (restoredClasses.length === 0) {
+      setTicketClasses([STANDARD_CLASS])
+      setSelectedKey(STANDARD_CLASS.key)
+    } else {
+      setTicketClasses(restoredClasses)
+      setSelectedKey(restoredClasses[0].key)
+    }
     setHasUnsavedChanges(false)
   }
 

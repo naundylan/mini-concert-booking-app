@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 /**
  * Scheduler tự động chuyển trạng thái sự kiện mỗi phút.
  *
- * <p>Quy trình: DRAFT -> TEASING tại teasingTime, TEASING -> ONSALE tại openTime, ONSALE ->
- * ENDED tại startTime để dừng bán vé khi sự kiện bắt đầu.
+ * <p>Quy trình: DRAFT -> TEASING tại teasingTime, TEASING -> ONSALE tại openTime, ONSALE -> ENDED
+ * tại startTime để dừng bán vé khi sự kiện bắt đầu.
  */
 @Slf4j
 @Service

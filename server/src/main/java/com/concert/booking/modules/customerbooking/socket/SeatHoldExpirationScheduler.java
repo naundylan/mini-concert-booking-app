@@ -1,6 +1,6 @@
 package com.concert.booking.modules.customerbooking.socket;
 
-import com.concert.booking.modules.customerbooking.redis.SeatHoldRedisService;
+import com.concert.booking.modules.seat.redis.SeatHoldRedisService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

@@ -2,6 +2,7 @@ package com.concert.booking.modules.seat;
 
 import com.concert.booking.common.exception.AppException;
 import com.concert.booking.modules.seat.enums.SeatStatus;
+import com.concert.booking.modules.seat.redis.SeatHoldRedisService;
 import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -10,6 +11,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -17,18 +19,23 @@ import org.springframework.stereotype.Service;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SeatHoldServiceImpl implements SeatHoldService {
   SeatRepository seatRepository;
+  SeatHoldRedisService seatHoldRedisService;
 
-  @Override
+  @Transactional
   public List<Seat> lockAvailableSeats(UUID eventId, List<UUID> seatIds) {
+    // Sort and deduplicate seat IDs for deterministic locking
     List<UUID> sortedSeatIds = seatIds.stream().distinct().sorted().toList();
+    // Pessimistic lock on DB rows
     List<Seat> seats = seatRepository.findAllByIdForUpdate(sortedSeatIds);
     if (seats.size() != sortedSeatIds.size()) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Danh sách ghế không hợp lệ");
     }
-
+    // Validate seat availability in DB
     List<Seat> conflictedSeats =
         seats.stream()
-            .filter(seat -> !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
+            .filter(
+                seat ->
+                    !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
             .toList();
     if (!conflictedSeats.isEmpty()) {
       String conflicts =
@@ -38,6 +45,11 @@ public class SeatHoldServiceImpl implements SeatHoldService {
       throw new AppException(
           HttpStatus.CONFLICT,
           "Các ghế không còn khả dụng hoặc không thuộc sự kiện đang bán: " + conflicts);
+    }
+
+    // Check if any seat is already held in Redis by an online checkout session
+    if (seatHoldRedisService.hasAnyHeldSeat(eventId, sortedSeatIds)) {
+      throw new AppException(HttpStatus.CONFLICT, "Một số ghế đang được giữ bởi người khác");
     }
 
     return seats;
@@ -56,10 +68,17 @@ public class SeatHoldServiceImpl implements SeatHoldService {
   }
 
   @Override
+  @Transactional
   public void release(List<UUID> seatIds) {
-    log.warn("SeatHoldService.release() called but not yet implemented. seatIds={}", seatIds);
-    throw new UnsupportedOperationException(
-        "release() chưa được implement — dành cho online booking flow");
+    log.debug("Releasing seats from database: {}", seatIds);
+    List<Seat> seats = seatRepository.findAllById(seatIds);
+    seats.forEach(
+        seat -> {
+          if (seat.getStatus() == SeatStatus.LOCKED) {
+            seat.setStatus(SeatStatus.AVAILABLE);
+          }
+        });
+    seatRepository.saveAll(seats);
   }
 
   private String toSeatLabel(Seat seat) {

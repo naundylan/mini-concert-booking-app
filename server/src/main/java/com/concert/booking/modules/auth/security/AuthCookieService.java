@@ -48,8 +48,7 @@ public class AuthCookieService {
     return getCookieValue(request, REFRESH_TOKEN_COOKIE);
   }
 
-  private void addCookie(
-      HttpServletResponse response, String name, String value, Duration maxAge) {
+  private void addCookie(HttpServletResponse response, String name, String value, Duration maxAge) {
     ResponseCookie cookie =
         ResponseCookie.from(name, value == null ? "" : value)
             .httpOnly(true)

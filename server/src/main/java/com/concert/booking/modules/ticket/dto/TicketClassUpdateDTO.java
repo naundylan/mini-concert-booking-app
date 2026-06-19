@@ -13,7 +13,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TicketClassUpdateDTO {
 
-    @NotNull(message = "Giá vé không được để trống")
-    @Min(value = 0, message = "Giá vé không được âm")
-    BigDecimal price;
+  @NotNull(message = "Giá vé không được để trống")
+  @Min(value = 0, message = "Giá vé không được âm")
+  BigDecimal price;
 }

@@ -15,10 +15,10 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserInfo {
-    String email;
-    String phone;
-    String fullName;
-    String googleId;
-    String role;
-    String status;
+  String email;
+  String phone;
+  String fullName;
+  String googleId;
+  String role;
+  String status;
 }

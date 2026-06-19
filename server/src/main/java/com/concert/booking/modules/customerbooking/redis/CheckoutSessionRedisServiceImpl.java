@@ -59,7 +59,9 @@ public class CheckoutSessionRedisServiceImpl implements CheckoutSessionRedisServ
 
   @Override
   public void addActiveSession(UUID eventId, UUID customerId, UUID paymentSessionId) {
-    stringRedisTemplate.opsForSet().add(activeKey(eventId, customerId), paymentSessionId.toString());
+    stringRedisTemplate
+        .opsForSet()
+        .add(activeKey(eventId, customerId), paymentSessionId.toString());
   }
 
   @Override
@@ -91,7 +93,9 @@ public class CheckoutSessionRedisServiceImpl implements CheckoutSessionRedisServ
 
   @Override
   public void deleteActiveSession(UUID eventId, UUID customerId, UUID paymentSessionId) {
-    stringRedisTemplate.opsForSet().remove(activeKey(eventId, customerId), paymentSessionId.toString());
+    stringRedisTemplate
+        .opsForSet()
+        .remove(activeKey(eventId, customerId), paymentSessionId.toString());
   }
 
   private String key(UUID paymentSessionId) {

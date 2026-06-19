@@ -19,23 +19,22 @@ import org.hibernate.annotations.UuidGenerator;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TicketClass extends AbstractAuditEntity {
 
-    @Id
-    @GeneratedValue
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
-    UUID id;
+  @Id
+  @GeneratedValue
+  @UuidGenerator(style = UuidGenerator.Style.TIME)
+  UUID id;
 
-    @Column(name = "event_id", nullable = false)
-    UUID eventId;
+  @Column(name = "event_id", nullable = false)
+  UUID eventId;
 
-    @Column(nullable = false, length = 100)
-    String name;
+  @Column(nullable = false, length = 100)
+  String name;
 
-    @Column(name = "color_code", length = 20)
-    String colorCode;
+  @Column(name = "color_code", length = 20)
+  String colorCode;
 
-    @Column(nullable = false)
-    BigDecimal price;
+  @Column(nullable = false)
+  BigDecimal price;
 
-    @Version
-    int version;
+  @Version int version;
 }

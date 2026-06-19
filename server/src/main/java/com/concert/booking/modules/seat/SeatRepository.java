@@ -9,40 +9,40 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
-    List<Seat> findByEventId(UUID eventId);
-    List<Seat> findByEventIdAndIdIn(UUID eventId, List<UUID> ids);
-    List<Seat> findByTicketClassId(UUID ticketClassId);
-    boolean existsByEventIdAndStatus(UUID eventId, SeatStatus status);
-    boolean existsByEventIdAndGridRowAndGridColumn(UUID eventId, int gridRow, int gridColumn);
-    long countByEventId(UUID eventId);
-    long countByEventIdAndStatus(UUID eventId, SeatStatus status);
-    void deleteByEventId(UUID eventId);
+  List<Seat> findByEventId(UUID eventId);
 
-    /**
-     * Kiểm tra xem có ghế SOLD nào cho ticket class cụ thể hay không (Layout Safety check)
-     */
-    @Query("SELECT COUNT(s) > 0 FROM Seat s WHERE s.ticketClassId = :ticketClassId AND s.status = 'SOLD'")
-    boolean hasSoldSeatsForTicketClass(UUID ticketClassId);
+  List<Seat> findByEventIdAndIdIn(UUID eventId, List<UUID> ids);
 
-    /**
-     * Lấy danh sách ghế có trạng thái SOLD cho một sự kiện
-     */
-    @Query("SELECT s FROM Seat s WHERE s.eventId = :eventId AND s.status = 'SOLD'")
-    List<Seat> findSoldSeatsByEventId(UUID eventId);
+  List<Seat> findByTicketClassId(UUID ticketClassId);
 
-    /**
-     * Đếm ghế SOLD theo ticket class (để kiểm tra Price Locking)
-     */
-    @Query("SELECT COUNT(s) FROM Seat s WHERE s.ticketClassId = :ticketClassId AND s.status = 'SOLD'")
-    long countSoldSeatsByTicketClass(UUID ticketClassId);
+  boolean existsByEventIdAndStatus(UUID eventId, SeatStatus status);
 
-    /**
-     * Kiểm tra xem có ghế MAINTENANCE nào cho sự kiện hay không
-     */
-    @Query("SELECT COUNT(s) > 0 FROM Seat s WHERE s.eventId = :eventId AND s.status = 'MAINTENANCE'")
-    boolean hasMaintenanceSeats(UUID eventId);
+  boolean existsByEventIdAndGridRowAndGridColumn(UUID eventId, int gridRow, int gridColumn);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds ORDER BY s.id")
-    List<Seat> findAllByIdForUpdate(List<UUID> seatIds);
+  long countByEventId(UUID eventId);
+
+  long countByEventIdAndStatus(UUID eventId, SeatStatus status);
+
+  void deleteByEventId(UUID eventId);
+
+  /** Kiểm tra xem có ghế SOLD nào cho ticket class cụ thể hay không (Layout Safety check) */
+  @Query(
+      "SELECT COUNT(s) > 0 FROM Seat s WHERE s.ticketClassId = :ticketClassId AND s.status = 'SOLD'")
+  boolean hasSoldSeatsForTicketClass(UUID ticketClassId);
+
+  /** Lấy danh sách ghế có trạng thái SOLD cho một sự kiện */
+  @Query("SELECT s FROM Seat s WHERE s.eventId = :eventId AND s.status = 'SOLD'")
+  List<Seat> findSoldSeatsByEventId(UUID eventId);
+
+  /** Đếm ghế SOLD theo ticket class (để kiểm tra Price Locking) */
+  @Query("SELECT COUNT(s) FROM Seat s WHERE s.ticketClassId = :ticketClassId AND s.status = 'SOLD'")
+  long countSoldSeatsByTicketClass(UUID ticketClassId);
+
+  /** Kiểm tra xem có ghế MAINTENANCE nào cho sự kiện hay không */
+  @Query("SELECT COUNT(s) > 0 FROM Seat s WHERE s.eventId = :eventId AND s.status = 'MAINTENANCE'")
+  boolean hasMaintenanceSeats(UUID eventId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT s FROM Seat s WHERE s.id IN :seatIds ORDER BY s.id")
+  List<Seat> findAllByIdForUpdate(List<UUID> seatIds);
 }

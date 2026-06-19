@@ -88,7 +88,8 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
 
     if (dto.getLayoutData() != null) {
       if (layout.getStatus() != LayoutStatus.DRAFT) {
-        throw new AppException(HttpStatus.BAD_REQUEST, "Layout đã publish chỉ được sửa thông tin mô tả");
+        throw new AppException(
+            HttpStatus.BAD_REQUEST, "Layout đã publish chỉ được sửa thông tin mô tả");
       }
       LayoutDataDTO data = normalizeData(dto.getLayoutData());
       LayoutMetrics metrics = calculateMetrics(data);
@@ -172,7 +173,8 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
       throw new AppException(HttpStatus.BAD_REQUEST, "Layout chưa có ghế nào được vẽ");
     }
     if (seatRepository.existsByEventIdAndStatus(eventId, SeatStatus.SOLD)) {
-      throw new AppException(HttpStatus.CONFLICT, "Không thể apply layout vì event đã có vé bán ra");
+      throw new AppException(
+          HttpStatus.CONFLICT, "Không thể apply layout vì event đã có vé bán ra");
     }
 
     // ticketClassKey belongs to the reusable layout template. ticketClassId belongs to this event.
@@ -196,7 +198,8 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
     }
 
     // Seat rows/columns are copied from the layout, but labels are recomputed here.
-    // layoutData.cells.previewLabel is editor-only. Seat.label is the source of truth for POS, tickets, and check-in.
+    // layoutData.cells.previewLabel is editor-only. Seat.label is the source of truth for POS,
+    // tickets, and check-in.
     LayoutMetrics metrics = calculateMetrics(data);
     List<Seat> seats =
         data.getCells().stream()
@@ -232,10 +235,14 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
             .filter(key -> !mapping.containsKey(key))
             .collect(Collectors.toCollection(TreeSet::new));
     if (!missingKeys.isEmpty()) {
-      throw new AppException(HttpStatus.BAD_REQUEST, "Thiếu mapping hạng vé cho: " + String.join(", ", missingKeys));
+      throw new AppException(
+          HttpStatus.BAD_REQUEST, "Thiếu mapping hạng vé cho: " + String.join(", ", missingKeys));
     }
     List<UUID> invalidClassIds =
-        mapping.values().stream().filter(id -> !ticketClassById.containsKey(id)).distinct().toList();
+        mapping.values().stream()
+            .filter(id -> !ticketClassById.containsKey(id))
+            .distinct()
+            .toList();
     if (!invalidClassIds.isEmpty()) {
       throw new AppException(HttpStatus.BAD_REQUEST, "Hạng vé không thuộc event");
     }
@@ -264,7 +271,9 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
                     LinkedHashMap::new))
             .values()
             .stream()
-            .sorted(Comparator.comparingInt(LayoutCellDTO::getRow).thenComparingInt(LayoutCellDTO::getCol))
+            .sorted(
+                Comparator.comparingInt(LayoutCellDTO::getRow)
+                    .thenComparingInt(LayoutCellDTO::getCol))
             .toList();
     // Decorations describe non-seat editor landmarks such as a stage/screen.
     // They are preserved in layout JSONB but are never counted or applied as Seat inventory.
@@ -307,7 +316,8 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
     int maxRow = cells.stream().mapToInt(LayoutCellDTO::getRow).max().orElse(0);
     int minCol = cells.stream().mapToInt(LayoutCellDTO::getCol).min().orElse(0);
     int maxCol = cells.stream().mapToInt(LayoutCellDTO::getCol).max().orElse(0);
-    return new LayoutMetrics(minRow, maxRow, minCol, maxCol, maxRow - minRow + 1, maxCol - minCol + 1, cells.size());
+    return new LayoutMetrics(
+        minRow, maxRow, minCol, maxCol, maxRow - minRow + 1, maxCol - minCol + 1, cells.size());
   }
 
   private LayoutDataDTO.UsedBoundsDTO toUsedBounds(LayoutMetrics metrics) {

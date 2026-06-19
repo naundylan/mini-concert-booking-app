@@ -1,4 +1,4 @@
-package com.concert.booking.modules.customerbooking.redis;
+package com.concert.booking.modules.seat.redis;
 
 import java.time.Duration;
 import java.util.List;
