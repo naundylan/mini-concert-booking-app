@@ -11,6 +11,7 @@ import {
   LogOut,
   User,
   X,
+  ShoppingBag,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ const MENU_ITEMS = [
   { label: 'Events', icon: Calendar, href: '/admin/events' },
   { label: 'Layouts', icon: Map, href: '/admin/layouts' },
   { label: 'Staff', icon: Users, href: '/admin/staff' },
+  { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
   { label: 'Reports', icon: TrendingUp, href: '/admin/reports' },
 ];
 

@@ -30,4 +30,15 @@ export const userService = {
   resetStaffPassword: async (id: string, data: ResetStaffPasswordRequest): Promise<void> => {
     await axiosClient.put(`/users/staff/${id}/reset-password`, data);
   },
+
+  getProfile: async (): Promise<User> => {
+    const response = await axiosClient.get<{ data: User }>("/users/profile");
+    return response.data;
+  },
+
+  updateProfile: async (data: { fullName: string }): Promise<User> => {
+    const response = await axiosClient.put<{ data: User }>("/users/profile", data);
+    return response.data;
+  },
 };
+
