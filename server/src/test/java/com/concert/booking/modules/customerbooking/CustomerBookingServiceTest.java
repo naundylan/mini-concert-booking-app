@@ -11,6 +11,7 @@ import com.concert.booking.common.exception.AppException;
 import com.concert.booking.modules.customerbooking.dto.CheckoutRequestDTO;
 import com.concert.booking.modules.customerbooking.dto.CheckoutSessionDTO;
 import com.concert.booking.modules.customerbooking.dto.CustomerSelectedSeatDTO;
+import com.concert.booking.modules.customerbooking.dto.SePayWebhookDTO;
 import com.concert.booking.modules.customerbooking.redis.CheckoutSessionRedisService;
 import com.concert.booking.modules.customerbooking.sepay.SePayWebhookVerifier;
 import com.concert.booking.modules.customerbooking.socket.SeatSocketService;
@@ -18,10 +19,16 @@ import com.concert.booking.modules.customerbooking.vietqr.VietQrService;
 import com.concert.booking.modules.event.Event;
 import com.concert.booking.modules.event.EventRepository;
 import com.concert.booking.modules.event.enums.EventStatus;
+import com.concert.booking.modules.order.Order;
 import com.concert.booking.modules.order.OrderRepository;
+import com.concert.booking.modules.order.Payment;
 import com.concert.booking.modules.order.PaymentRepository;
+import com.concert.booking.modules.order.Ticket;
 import com.concert.booking.modules.order.TicketRepository;
+import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
+import com.concert.booking.modules.order.enums.PaymentStatus;
+import com.concert.booking.modules.order.enums.TicketStatus;
 import com.concert.booking.modules.seat.Seat;
 import com.concert.booking.modules.seat.SeatHoldService;
 import com.concert.booking.modules.seat.SeatRepository;
@@ -34,6 +41,7 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -286,5 +294,163 @@ class CustomerBookingServiceTest {
     assertEquals(
         "Ban chi co toi da 3 phien thanh toan dang giu ghe cho su kien nay",
         exception.getMessage());
+  }
+
+  @Test
+  void handleSePayWebhook_success_shouldConfirmPaymentAndCreateOrder() {
+    // Arrange
+    String authHeader = "Apikey safe-sepay-key";
+    String reference = "MCB-12345678";
+    SePayWebhookDTO payload =
+        SePayWebhookDTO.builder()
+            .id(999L)
+            .accountNumber("0000000000")
+            .code(reference)
+            .transferType("in")
+            .transferAmount(new BigDecimal("500000"))
+            .build();
+
+    UUID seatId = checkoutSession.getSelectedSeats().get(0).getId();
+    List<UUID> seatIds = List.of(seatId);
+
+    Event event =
+        Event.builder()
+            .id(eventId)
+            .status(EventStatus.ONSALE)
+            .startTime(Timestamp.from(Instant.now().plusSeconds(3600)))
+            .build();
+
+    Seat seat =
+        Seat.builder()
+            .id(seatId)
+            .eventId(eventId)
+            .ticketClassId(UUID.randomUUID())
+            .status(SeatStatus.AVAILABLE)
+            .build();
+
+    TicketClass ticketClass =
+        TicketClass.builder()
+            .id(seat.getTicketClassId())
+            .name("VIP")
+            .price(new BigDecimal("500000"))
+            .build();
+
+    Order order =
+        Order.builder()
+            .id(UUID.randomUUID())
+            .orderCode("O1234567")
+            .eventId(eventId)
+            .customerId(customerId)
+            .totalAmount(new BigDecimal("500000"))
+            .status(OrderStatus.PAID)
+            .build();
+
+    Payment payment =
+        Payment.builder()
+            .id(UUID.randomUUID())
+            .orderId(order.getId())
+            .amount(new BigDecimal("500000"))
+            .paymentMethod(PaymentMethod.VIETQR)
+            .status(PaymentStatus.CONFIRMED)
+            .build();
+
+    when(sePayWebhookVerifier.verify(authHeader)).thenReturn(true);
+    when(paymentRepository.findByTransactionRef(reference)).thenReturn(Optional.empty());
+    when(vietQrService.findPaymentSessionId(reference)).thenReturn(Optional.of(paymentSessionId));
+    when(checkoutSessionRedisService.findById(paymentSessionId))
+        .thenReturn(Optional.of(checkoutSession));
+    when(seatHoldRedisService.ownsAllHeldSeats(eventId, paymentSessionId, seatIds)).thenReturn(true);
+    when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+    when(seatHoldService.lockAvailableSeats(eventId, seatIds)).thenReturn(List.of(seat));
+    when(ticketClassRepository.findByEventId(eventId)).thenReturn(List.of(ticketClass));
+
+    when(orderRepository.save(any(Order.class))).thenReturn(order);
+    when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
+
+    // Act
+    Map<String, Boolean> result = customerBookingService.handleSePayWebhook(authHeader, payload);
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.get("success"));
+
+    verify(orderRepository, times(1)).save(any(Order.class));
+    verify(paymentRepository, times(1)).save(any(Payment.class));
+    verify(seatHoldService, times(1)).confirmSold(anyList(), eq(customerId));
+    verify(ticketRepository, times(1)).saveAll(anyList());
+    verify(seatHoldRedisService, times(1)).releaseSeats(eventId, seatIds);
+    verify(checkoutSessionRedisService, times(1)).delete(paymentSessionId);
+    verify(checkoutSessionRedisService, times(1))
+        .deleteActiveSession(eventId, customerId, paymentSessionId);
+    verify(seatSocketService, times(1)).emitSeatSold(eventId, seatIds);
+    verify(ticketDeliveryService, times(1)).deliverTicketsAfterCommit(any());
+    verify(vietQrService, times(1)).markSePayWebhookProcessed(999L);
+  }
+
+  @Test
+  void handleSePayWebhook_invalidHeader_shouldThrowUnauthorized() {
+    // Arrange
+    String authHeader = "invalid-key";
+    when(sePayWebhookVerifier.verify(authHeader)).thenReturn(false);
+
+    // Act & Assert
+    AppException exception =
+        assertThrows(
+            AppException.class,
+            () -> {
+              customerBookingService.handleSePayWebhook(authHeader, new SePayWebhookDTO());
+            });
+
+    assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+    assertEquals("SePay webhook khong hop le", exception.getMessage());
+  }
+
+  @Test
+  void handleSePayWebhook_alreadyProcessed_shouldReturnSuccessDirectly() {
+    // Arrange
+    String authHeader = "valid-key";
+    String reference = "MCB-12345678";
+    SePayWebhookDTO payload =
+        SePayWebhookDTO.builder().id(999L).transferType("in").code(reference).build();
+
+    when(sePayWebhookVerifier.verify(authHeader)).thenReturn(true);
+    when(paymentRepository.findByTransactionRef(reference)).thenReturn(Optional.of(new Payment()));
+
+    // Act
+    Map<String, Boolean> result = customerBookingService.handleSePayWebhook(authHeader, payload);
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.get("success"));
+    verify(vietQrService, times(1)).markSePayWebhookProcessed(999L);
+    verifyNoMoreInteractions(orderRepository);
+  }
+
+  @Test
+  void handleSePayWebhook_sessionExpired_shouldReturnSuccessWithoutCreatingOrder() {
+    // Arrange
+    String authHeader = "valid-key";
+    String reference = "MCB-12345678";
+    SePayWebhookDTO payload =
+        SePayWebhookDTO.builder()
+            .id(999L)
+            .transferType("in")
+            .code(reference)
+            .transferAmount(new BigDecimal("500000"))
+            .build();
+
+    when(sePayWebhookVerifier.verify(authHeader)).thenReturn(true);
+    when(paymentRepository.findByTransactionRef(reference)).thenReturn(Optional.empty());
+    when(vietQrService.findPaymentSessionId(reference)).thenReturn(Optional.of(paymentSessionId));
+    when(checkoutSessionRedisService.findById(paymentSessionId))
+        .thenReturn(Optional.empty()); // Expired/Gone
+
+    // Act
+    Map<String, Boolean> result = customerBookingService.handleSePayWebhook(authHeader, payload);
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.get("success"));
+    verifyNoInteractions(orderRepository);
   }
 }
