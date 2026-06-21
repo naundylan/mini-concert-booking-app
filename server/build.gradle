@@ -85,9 +85,9 @@ spotless {
     }
 }
 
-// tasks.withType(Test).configureEach {
-//     enabled = false
-// }
+test {
+    useJUnitPlatform()
+}
 
 bootJar {
     mainClass = 'com.concert.booking.TicketBookingApplication'
