@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface EventRepository extends JpaRepository<Event, UUID> {
+  @Query("SELECT COUNT(e) FROM Event e WHERE e.status IN (com.concert.booking.modules.event.enums.EventStatus.ONSALE, com.concert.booking.modules.event.enums.EventStatus.TEASING)")
+  long countActiveEvents();
+
   @Query("SELECT e FROM Event e WHERE e.status = :status AND e.teasingTime <= :now")
   List<Event> findEventsToTease(EventStatus status, Timestamp now);
 

@@ -1,5 +1,6 @@
 package com.concert.booking.modules.order;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface TicketRepository extends JpaRepository<Ticket, UUID> {
   List<Ticket> findByOrderId(UUID orderId);
+
+  long countByOrderId(UUID orderId);
+
+  @Query("SELECT COUNT(t) FROM Ticket t JOIN Order o ON o.id = t.orderId WHERE o.status = com.concert.booking.modules.order.enums.OrderStatus.PAID AND o.createdAt >= :start AND o.createdAt < :end")
+  long countTicketsSoldBetween(@Param("start") Instant start, @Param("end") Instant end);
+
+  @Query("SELECT COUNT(t) FROM Ticket t WHERE t.status = com.concert.booking.modules.order.enums.TicketStatus.USED")
+  long countUsedTickets();
+
+  @Query("SELECT COUNT(t) FROM Ticket t WHERE t.status IN (com.concert.booking.modules.order.enums.TicketStatus.USED, com.concert.booking.modules.order.enums.TicketStatus.UNUSED)")
+  long countTotalPaidTickets();
+
+
 
   @Query(
       """
