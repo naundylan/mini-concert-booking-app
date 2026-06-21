@@ -7,6 +7,8 @@ import com.concert.booking.modules.user.dto.CreateCustomerDTO;
 import com.concert.booking.modules.user.dto.CreateStaffDTO;
 import com.concert.booking.modules.user.dto.ResetStaffPasswordDTO;
 import com.concert.booking.modules.user.dto.UpdateStaffStatusDTO;
+import com.concert.booking.modules.user.dto.UpdateStaffDTO;
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -72,5 +74,23 @@ public class UserV1Controller {
     UUID currentUserId = AuthUtils.getCurrentUserId();
     userService.resetStaffPassword(staffId, dto, currentUserId);
     return DataApiResponse.success(null, "Reset mật khẩu Staff thành công");
+  }
+
+  @Operation(summary = "Lấy danh sách nhân viên", description = "Admin lấy danh sách tất cả Staff.")
+  @PreAuthorize("hasRole('ADMIN')")
+  @GetMapping("/staff")
+  public DataApiResponse<List<User>> getAllStaff() {
+    return DataApiResponse.success(userService.getAllStaff(), "Lấy danh sách nhân viên thành công");
+  }
+
+  @Operation(summary = "Cập nhật thông tin nhân viên", description = "Admin chỉnh sửa thông tin chi tiết của Staff.")
+  @BadRequestApiResponse
+  @PreAuthorize("hasRole('ADMIN')")
+  @PutMapping("/staff/{staffId}")
+  public DataApiResponse<User> updateStaff(
+      @PathVariable UUID staffId, @RequestBody @Valid UpdateStaffDTO dto) {
+    UUID currentUserId = AuthUtils.getCurrentUserId();
+    User updated = userService.updateStaff(staffId, dto, currentUserId);
+    return DataApiResponse.success(updated, "Cập nhật nhân viên thành công");
   }
 }
