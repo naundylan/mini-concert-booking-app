@@ -594,7 +594,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     List<UUID> seatIds =
         session.getSelectedSeats().stream().map(CustomerSelectedSeatDTO::getId).toList();
     Event event = getOnSaleEventForBooking(session.getEventId());
-    List<Seat> seats = seatHoldService.lockAvailableSeats(event.getId(), seatIds);
+    List<Seat> seats = seatHoldService.lockAvailableSeatsWithoutRedisCheck(event.getId(), seatIds);
     Map<UUID, TicketClass> ticketClassById =
         ticketClassRepository.findByEventId(event.getId()).stream()
             .collect(Collectors.toMap(TicketClass::getId, Function.identity()));

@@ -7,6 +7,7 @@ import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { authService } from "@/lib/services/auth.service"
 import { getDefaultRouteByRole, normalizeRole } from "@/lib/auth-client"
+import { toast } from "@/hooks/use-toast"
 
 const staffLoginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -66,14 +67,23 @@ export default function AuthPage() {
       const redirectUrl = getDefaultRouteByRole(role)
 
       if (!redirectUrl || normalizedRole === 'CUSTOMER') {
-        alert("Tài khoản này không có quyền truy cập cổng Admin/Staff.")
+        toast({
+          title: "Lỗi phân quyền",
+          description: "Tài khoản này không có quyền truy cập cổng Admin/Staff.",
+          variant: "destructive",
+        })
         return
       }
 
       window.location.href = redirectUrl
     } catch (error: any) {
       console.error("Login failed:", error)
-      alert(error.response?.data?.message || "Đăng nhập thất bại!")
+      const errorMessage = error.response?.data?.message || "Đăng nhập thất bại!"
+      toast({
+        title: "Đăng nhập thất bại",
+        description: errorMessage,
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }

@@ -6,6 +6,8 @@ import java.util.UUID;
 public interface SeatHoldService {
   List<Seat> lockAvailableSeats(UUID eventId, List<UUID> seatIds);
 
+  List<Seat> lockAvailableSeatsWithoutRedisCheck(UUID eventId, List<UUID> seatIds);
+
   void confirmSold(List<Seat> seats, UUID updatedBy);
 
   void release(List<UUID> seatIds);

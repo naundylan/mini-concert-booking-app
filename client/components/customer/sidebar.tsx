@@ -2,18 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, TicketIcon, Heart, LogOut } from 'lucide-react'
+import { Home, TicketIcon, Heart, LogOut, Settings } from 'lucide-react'
 import { authService } from '@/lib/services/auth.service'
 
 export default function CustomerSidebar() {
   const pathname = usePathname()
 
   const menuItems = [
-    { label: 'Home', icon: Home, href: '/customer' },
-    { label: 'Events', icon: TicketIcon, href: '/customer/events' },
-    { label: 'My Tickets', icon: TicketIcon, href: '/customer/my-tickets' },
-    { label: 'Favorites', icon: Heart, href: '/customer/favorites' },
+    { label: 'Trang chủ', icon: Home, href: '/customer' },
+    { label: 'Sự kiện', icon: TicketIcon, href: '/customer/events' },
+    { label: 'Vé của tôi', icon: TicketIcon, href: '/customer/my-tickets' },
+    { label: 'Cài đặt', icon: Settings, href: '/customer/settings' },
   ]
+
 
   const handleLogout = () => {
     authService.logout()

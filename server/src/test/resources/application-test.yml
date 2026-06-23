@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: true
+  data:
+    redis:
+      repositories:
+        enabled: false
+  kafka:
+    listener:
+      auto-startup: false
+
+application:
+  kafka:
+    enabled: true
+    topics:
+      bookingPaid: booking.paid
+  security:
+    jwt:
+      secretKey: 9a4f2c8d3e7b1a5c6d8e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9
+      accessTokenExpiration: 900000
+      refreshTokenExpiration: 604800000
+    cors-allowed-origins: http://localhost:3000
+    oauth2-frontend-redirect-url: http://localhost:3000/auth/callback
+  admin:
+    username: admin
+    password: password123
+    fullName: Super Admin
+    email: admin@concert.com
+  socket:
+    hostname: localhost
+    port: 9092
+    origin: http://localhost:3000
+  payment:
+    vietqr:
+      bankId: ICB
+      accountNo: 12345678
+      accountName: TEST
+    sepay:
+      apiKey: test-api-key
+      merchantAccount: 12345678
+      paymentPrefix: SEVQR
+  checkout:
+    hold-ttl-minutes: 5
+  ticket-mail:
+    enabled: true
+    subject: "Vé xem ca nhạc của bạn"
