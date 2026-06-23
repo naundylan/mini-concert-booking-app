@@ -20,9 +20,24 @@ import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import org.junit.jupiter.api.BeforeEach;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(BaseIntegrationTest.OfflineMockConfig.class)
 public abstract class BaseIntegrationTest {
 
   @Autowired protected MockMvc mockMvc;
@@ -30,6 +45,14 @@ public abstract class BaseIntegrationTest {
   @MockBean protected Cloudinary cloudinary;
   @MockBean protected JavaMailSender javaMailSender;
   @MockBean protected SocketIOServer socketIOServer;
+  @MockBean protected com.concert.booking.modules.customerbooking.socket.SeatHoldExpirationScheduler seatHoldExpirationScheduler;
+
+  @BeforeEach
+  void setUpSocketIOServerMock() {
+    com.corundumstudio.socketio.BroadcastOperations mockBroadcast = mock(com.corundumstudio.socketio.BroadcastOperations.class);
+    when(socketIOServer.getRoomOperations(anyString())).thenReturn(mockBroadcast);
+    when(socketIOServer.getRoomOperations(any(String[].class))).thenReturn(mockBroadcast);
+  }
 
   // Real beans connected to testcontainers (if Docker is running)
   @Autowired(required = false) protected StringRedisTemplate stringRedisTemplate;
@@ -41,7 +64,10 @@ public abstract class BaseIntegrationTest {
   public static final boolean DOCKER_AVAILABLE = checkDockerAvailable();
 
   // Define containers (do not start them unless Docker is running)
-  static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
+  static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
+      .withUsername("postgres")
+      .withPassword("password")
+      .withDatabaseName("ticket_booking_db");
   static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.0"));
   static final GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7.0-alpine"))
       .withExposedPorts(6379);
@@ -96,6 +122,43 @@ public abstract class BaseIntegrationTest {
           "org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration," +
           "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
       );
+    }
+  }
+
+  @TestConfiguration
+  @Conditional(BaseIntegrationTest.DockerOfflineCondition.class)
+  public static class OfflineMockConfig {
+    @Bean
+    @ConditionalOnMissingBean(StringRedisTemplate.class)
+    public StringRedisTemplate stringRedisTemplate() {
+      return mock(StringRedisTemplate.class);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "redisTemplate")
+    @SuppressWarnings("unchecked")
+    public RedisTemplate<String, Object> redisTemplate() {
+      return mock(RedisTemplate.class);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(RedisConnectionFactory.class)
+    public RedisConnectionFactory redisConnectionFactory() {
+      return mock(RedisConnectionFactory.class);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(KafkaTemplate.class)
+    @SuppressWarnings("unchecked")
+    public KafkaTemplate<String, Object> kafkaTemplate() {
+      return mock(KafkaTemplate.class);
+    }
+  }
+
+  public static class DockerOfflineCondition implements Condition {
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+      return !BaseIntegrationTest.isDockerAvailable();
     }
   }
 }

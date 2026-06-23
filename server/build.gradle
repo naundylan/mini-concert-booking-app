@@ -104,7 +104,16 @@ bootJar {
 }
 
 tasks.withType(JavaExec).configureEach {
-    def envFile = file("${project.rootDir}/.env")
+    def envFile = file("${projectDir}/.env.local")
+    if (!envFile.exists()) {
+        envFile = file("${projectDir}/.env")
+    }
+    if (!envFile.exists()) {
+        envFile = file("${project.rootDir}/.env.local")
+    }
+    if (!envFile.exists()) {
+        envFile = file("${project.rootDir}/.env")
+    }
     if (envFile.exists()) {
         envFile.eachLine { line ->
             def envLine = line.trim()
@@ -117,6 +126,6 @@ tasks.withType(JavaExec).configureEach {
         }
         println "Gradle: Loaded environment variables from ${envFile.absolutePath}"
     } else {
-        println "Gradle: server/.env not found; relying on process environment"
+        println "Gradle: server/.env.local or server/.env not found; relying on process environment"
     }
 }

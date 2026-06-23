@@ -15,6 +15,7 @@ import com.concert.booking.modules.order.TicketRepository;
 import com.concert.booking.modules.order.enums.EmailStatus;
 import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
+import com.concert.booking.modules.order.enums.TicketStatus;
 import com.concert.booking.modules.ticket.TicketClass;
 import com.concert.booking.modules.ticket.TicketClassRepository;
 import com.concert.booking.modules.user.User;
@@ -34,7 +35,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+
 @EnabledIf("com.concert.booking.BaseIntegrationTest#isDockerAvailable")
+@SpringBootTest(properties = "spring.kafka.listener.auto-startup=true")
+@DirtiesContext
 class BookingEmailKafkaIntegrationTest extends BaseIntegrationTest {
 
   @Autowired UserRepository userRepository;
@@ -83,9 +89,10 @@ class BookingEmailKafkaIntegrationTest extends BaseIntegrationTest {
         .eventId(event.getId())
         .totalAmount(new BigDecimal("1000000"))
         .status(OrderStatus.PAID)
-        .emailStatus(EmailStatus.PENDING)
         .build();
     order = orderRepository.save(order);
+
+
 
     Ticket ticket = Ticket.builder()
         .orderId(order.getId())
@@ -93,6 +100,7 @@ class BookingEmailKafkaIntegrationTest extends BaseIntegrationTest {
         .seatId(UUID.randomUUID())
         .seatLabel("A-01")
         .price(new BigDecimal("1000000"))
+        .status(TicketStatus.UNUSED)
         .build();
     ticket = ticketRepository.save(ticket);
 

@@ -52,10 +52,9 @@ public class Order extends AbstractAuditEntity {
   @Column(nullable = false, length = 30)
   OrderStatus status;
 
-  @Builder.Default
   @Enumerated(EnumType.STRING)
-  @Column(name = "email_status", nullable = false, length = 30)
-  EmailStatus emailStatus = EmailStatus.PENDING;
+  @Column(name = "email_status", length = 30)
+  EmailStatus emailStatus;
 
   @Column(name = "expired_at")
   Timestamp expiredAt;

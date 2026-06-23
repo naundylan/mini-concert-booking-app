@@ -361,7 +361,7 @@ class CustomerBookingServiceTest {
         .thenReturn(Optional.of(checkoutSession));
     when(seatHoldRedisService.ownsAllHeldSeats(eventId, paymentSessionId, seatIds)).thenReturn(true);
     when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-    when(seatHoldService.lockAvailableSeats(eventId, seatIds)).thenReturn(List.of(seat));
+    when(seatHoldService.lockAvailableSeatsWithoutRedisCheck(eventId, seatIds)).thenReturn(List.of(seat));
     when(ticketClassRepository.findByEventId(eventId)).thenReturn(List.of(ticketClass));
 
     when(orderRepository.save(any(Order.class))).thenReturn(order);

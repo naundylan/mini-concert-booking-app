@@ -12,7 +12,7 @@ spring:
         enabled: false
   kafka:
     listener:
-      auto-startup: true
+      auto-startup: false
 
 application:
   kafka:

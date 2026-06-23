@@ -13,7 +13,10 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import org.springframework.test.annotation.DirtiesContext;
+
 @EnabledIf("com.concert.booking.BaseIntegrationTest#isDockerAvailable")
+@DirtiesContext
 class SeatHoldRedisIntegrationTest extends BaseIntegrationTest {
 
   @Autowired SeatHoldRedisService seatHoldRedisService;
