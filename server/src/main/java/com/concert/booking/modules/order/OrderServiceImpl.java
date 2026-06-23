@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -494,5 +496,76 @@ public class OrderServiceImpl implements OrderService {
       return seat.getLabel();
     }
     return (char) ('A' + seat.getGridRow()) + String.valueOf(seat.getGridColumn() + 1);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Page<AdminOrderResponseDTO> getAdminOrders(
+      String keyword, UUID eventId, OrderStatus status, Pageable pageable) {
+    Page<Order> orders = orderRepository.searchAdminOrders(keyword, eventId, status, pageable);
+
+    return orders.map(order -> {
+      User customer = userRepository.findById(order.getCustomerId()).orElse(null);
+      Event event = eventRepository.findById(order.getEventId()).orElse(null);
+      User salesStaff = order.getStaffId() != null ? userRepository.findById(order.getStaffId()).orElse(null) : null;
+      long ticketCount = ticketRepository.countByOrderId(order.getId());
+
+      return AdminOrderResponseDTO.builder()
+          .id(order.getId())
+          .orderCode(order.getOrderCode())
+          .customerName(customer != null ? customer.getFullName() : "N/A")
+          .customerPhone(customer != null ? customer.getPhone() : null)
+          .customerEmail(customer != null ? customer.getEmail() : null)
+          .eventName(event != null ? event.getName() : "N/A")
+          .totalAmount(order.getTotalAmount())
+          .status(order.getStatus())
+          .createdAt(order.getCreatedAt())
+          .ticketCount(ticketCount)
+          .channel(order.getStaffId() != null ? "POS" : "ONLINE")
+          .salesStaffName(salesStaff != null ? salesStaff.getFullName() : null)
+          .build();
+    });
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AdminOrderDetailResponseDTO getAdminOrderDetail(UUID orderId) {
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+
+    User customer = userRepository.findById(order.getCustomerId()).orElse(null);
+    Event event = eventRepository.findById(order.getEventId()).orElse(null);
+    User salesStaff = order.getStaffId() != null ? userRepository.findById(order.getStaffId()).orElse(null) : null;
+
+    List<Ticket> tickets = ticketRepository.findByOrderId(orderId);
+    List<AdminOrderDetailResponseDTO.AdminTicketDetailDTO> ticketDTOs = tickets.stream().map(t -> {
+      TicketClass ticketClass = ticketClassRepository.findById(t.getTicketClassId()).orElse(null);
+      User checkInStaff = t.getCheckInBy() != null ? userRepository.findById(t.getCheckInBy()).orElse(null) : null;
+
+      return AdminOrderDetailResponseDTO.AdminTicketDetailDTO.builder()
+          .id(t.getId())
+          .seatLabel(t.getSeatLabel())
+          .ticketClassName(ticketClass != null ? ticketClass.getName() : "N/A")
+          .price(t.getPrice())
+          .status(t.getStatus().name())
+          .checkInTime(t.getCheckInTime())
+          .checkInStaffName(checkInStaff != null ? checkInStaff.getFullName() : null)
+          .build();
+    }).collect(Collectors.toList());
+
+    return AdminOrderDetailResponseDTO.builder()
+        .id(order.getId())
+        .orderCode(order.getOrderCode())
+        .customerName(customer != null ? customer.getFullName() : "N/A")
+        .customerPhone(customer != null ? customer.getPhone() : null)
+        .customerEmail(customer != null ? customer.getEmail() : null)
+        .eventName(event != null ? event.getName() : "N/A")
+        .totalAmount(order.getTotalAmount())
+        .status(order.getStatus())
+        .createdAt(order.getCreatedAt())
+        .channel(order.getStaffId() != null ? "POS" : "ONLINE")
+        .salesStaffName(salesStaff != null ? salesStaff.getFullName() : null)
+        .tickets(ticketDTOs)
+        .build();
   }
 }

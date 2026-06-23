@@ -195,4 +195,28 @@ public class UserServiceImpl implements UserService {
 
     return userRepository.save(staff);
   }
+
+  @Override
+  @Transactional(readOnly = true)
+  public User getUserProfile(UUID userId) {
+    return userRepository.findById(userId)
+        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Người dùng không tồn tại"));
+  }
+
+  @Override
+  @Transactional
+  public User updateCustomerProfile(UUID userId, String fullName) {
+    User customer = userRepository.findById(userId)
+        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Người dùng không tồn tại"));
+
+    if (fullName == null || fullName.trim().isBlank()) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Họ và tên không được để trống");
+    }
+
+    customer.setFullName(fullName.trim());
+    customer.setUpdatedBy(userId);
+
+    return userRepository.save(customer);
+  }
 }
+

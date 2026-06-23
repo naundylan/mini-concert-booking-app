@@ -12,7 +12,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -96,6 +95,7 @@ CREATE TABLE public.orders (
     status character varying(30) NOT NULL,
     total_amount numeric(38,2) NOT NULL,
     version integer NOT NULL,
+    email_status character varying(30),
     CONSTRAINT orders_status_check CHECK (((status)::text = ANY ((ARRAY['PAID'::character varying, 'CANCELED'::character varying])::text[])))
 );
 

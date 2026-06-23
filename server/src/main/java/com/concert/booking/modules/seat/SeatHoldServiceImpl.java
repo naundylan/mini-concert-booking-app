@@ -56,6 +56,32 @@ public class SeatHoldServiceImpl implements SeatHoldService {
   }
 
   @Override
+  @Transactional
+  public List<Seat> lockAvailableSeatsWithoutRedisCheck(UUID eventId, List<UUID> seatIds) {
+    List<UUID> sortedSeatIds = seatIds.stream().distinct().sorted().toList();
+    List<Seat> seats = seatRepository.findAllByIdForUpdate(sortedSeatIds);
+    if (seats.size() != sortedSeatIds.size()) {
+      throw new AppException(HttpStatus.BAD_REQUEST, "Danh sách ghế không hợp lệ");
+    }
+    List<Seat> conflictedSeats =
+        seats.stream()
+            .filter(
+                seat ->
+                    !eventId.equals(seat.getEventId()) || seat.getStatus() != SeatStatus.AVAILABLE)
+            .toList();
+    if (!conflictedSeats.isEmpty()) {
+      String conflicts =
+          conflictedSeats.stream()
+              .map(seat -> toSeatLabel(seat) + "(" + seat.getStatus() + ")")
+              .collect(java.util.stream.Collectors.joining(", "));
+      throw new AppException(
+          HttpStatus.CONFLICT,
+          "Các ghế không còn khả dụng hoặc không thuộc sự kiện đang bán: " + conflicts);
+    }
+    return seats;
+  }
+
+  @Override
   public void confirmSold(List<Seat> seats, UUID updatedBy) {
     // POS offline: staff xác nhận thanh toán trực tiếp nên ghế đi thẳng AVAILABLE -> SOLD.
     // HELD/Redis TTL dành cho luồng online booking sau này.

@@ -11,6 +11,7 @@ import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.backoff.FixedBackOff;
 
 @Slf4j
@@ -20,13 +21,16 @@ public class KafkaConfig {
 
   @Bean
   public ConcurrentKafkaListenerContainerFactory<Object, Object> kafkaListenerContainerFactory(
-      ConsumerFactory<Object, Object> consumerFactory, CommonErrorHandler errorHandler) {
-    log.info("Configuring ConcurrentKafkaListenerContainerFactory with AckMode.RECORD");
+      ConsumerFactory<Object, Object> consumerFactory,
+      CommonErrorHandler errorHandler,
+      @Value("${spring.kafka.listener.auto-startup:true}") boolean autoStartup) {
+    log.info("Configuring ConcurrentKafkaListenerContainerFactory with autoStartup={}", autoStartup);
     ConcurrentKafkaListenerContainerFactory<Object, Object> factory =
         new ConcurrentKafkaListenerContainerFactory<>();
     factory.setConsumerFactory(consumerFactory);
     factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
     factory.setCommonErrorHandler(errorHandler);
+    factory.setAutoStartup(autoStartup);
     return factory;
   }
 

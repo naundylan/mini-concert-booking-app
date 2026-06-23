@@ -64,6 +64,15 @@ dependencies {
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'com.h2database:h2'
+    
+    // Testcontainers
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:kafka'
 }
 
 java {
@@ -85,9 +94,9 @@ spotless {
     }
 }
 
-// tasks.withType(Test).configureEach {
-//     enabled = false
-// }
+test {
+    useJUnitPlatform()
+}
 
 bootJar {
     mainClass = 'com.concert.booking.TicketBookingApplication'
@@ -95,7 +104,16 @@ bootJar {
 }
 
 tasks.withType(JavaExec).configureEach {
-    def envFile = file("${project.rootDir}/.env")
+    def envFile = file("${projectDir}/.env.local")
+    if (!envFile.exists()) {
+        envFile = file("${projectDir}/.env")
+    }
+    if (!envFile.exists()) {
+        envFile = file("${project.rootDir}/.env.local")
+    }
+    if (!envFile.exists()) {
+        envFile = file("${project.rootDir}/.env")
+    }
     if (envFile.exists()) {
         envFile.eachLine { line ->
             def envLine = line.trim()
@@ -108,6 +126,6 @@ tasks.withType(JavaExec).configureEach {
         }
         println "Gradle: Loaded environment variables from ${envFile.absolutePath}"
     } else {
-        println "Gradle: server/.env not found; relying on process environment"
+        println "Gradle: server/.env.local or server/.env not found; relying on process environment"
     }
 }

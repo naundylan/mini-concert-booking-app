@@ -8,6 +8,7 @@ import com.concert.booking.modules.user.dto.CreateStaffDTO;
 import com.concert.booking.modules.user.dto.ResetStaffPasswordDTO;
 import com.concert.booking.modules.user.dto.UpdateStaffStatusDTO;
 import com.concert.booking.modules.user.dto.UpdateStaffDTO;
+import com.concert.booking.modules.user.dto.UpdateProfileDTO;
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -93,4 +94,23 @@ public class UserV1Controller {
     User updated = userService.updateStaff(staffId, dto, currentUserId);
     return DataApiResponse.success(updated, "Cập nhật nhân viên thành công");
   }
+
+  @Operation(summary = "Lấy hồ sơ cá nhân", description = "Lấy thông tin cá nhân của người dùng hiện tại.")
+  @GetMapping("/profile")
+  @PreAuthorize("isAuthenticated()")
+  public DataApiResponse<User> getProfile() {
+    UUID currentUserId = AuthUtils.getCurrentUserId();
+    return DataApiResponse.success(userService.getUserProfile(currentUserId), "Lấy thông tin cá nhân thành công");
+  }
+
+  @Operation(summary = "Cập nhật hồ sơ cá nhân", description = "Cập nhật Họ và tên của người dùng hiện tại.")
+  @BadRequestApiResponse
+  @PutMapping("/profile")
+  @PreAuthorize("isAuthenticated()")
+  public DataApiResponse<User> updateProfile(@RequestBody @Valid UpdateProfileDTO dto) {
+    UUID currentUserId = AuthUtils.getCurrentUserId();
+    User updated = userService.updateCustomerProfile(currentUserId, dto.getFullName());
+    return DataApiResponse.success(updated, "Cập nhật hồ sơ thành công");
+  }
 }
+

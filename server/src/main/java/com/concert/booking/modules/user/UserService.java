@@ -24,4 +24,8 @@ public interface UserService {
   void updateStaffStatus(UUID staffId, UpdateStaffStatusDTO dto, UUID updatedBy);
 
   void resetStaffPassword(UUID staffId, ResetStaffPasswordDTO dto, UUID updatedBy);
+
+  User getUserProfile(UUID userId);
+
+  User updateCustomerProfile(UUID userId, String fullName);
 }
