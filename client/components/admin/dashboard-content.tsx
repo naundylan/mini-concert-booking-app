@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Download, Loader2 } from 'lucide-react';
 import { adminDashboardService, AdminDashboardStats } from '@/lib/services/admin-dashboard.service';
 import { toast } from '@/hooks/use-toast';

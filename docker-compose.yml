@@ -26,7 +26,6 @@ services:
     container_name: ticket_kafka
     restart: unless-stopped
     ports:
-      - "9092:9092"
       - "${KAFKA_PORT:-19092}:19092"
     environment:
       KAFKA_NODE_ID: 1
@@ -86,7 +85,7 @@ services:
       TOMCAT_MIN_SPARE_THREADS: ${TOMCAT_MIN_SPARE_THREADS:-10}
       TOMCAT_MAX_QUEUE_CAPACITY: ${TOMCAT_MAX_QUEUE_CAPACITY:-100}
       SOCKET_HOST: 0.0.0.0
-      SOCKET_PORT: 9092
+      SOCKET_PORT: ${SOCKET_PORT:-9092}
       SOCKET_ORIGIN: ${SOCKET_ORIGIN:-http://localhost:3000}
       BANK_ACCOUNT_NUMBER: ${BANK_ACCOUNT_NUMBER:-0000000000}
       BANK_ACCOUNT_NAME: ${BANK_ACCOUNT_NAME:-MINI CONCERT BOOKING}
