@@ -464,6 +464,7 @@ export default function LayoutsPage() {
   const [history, setHistory] = useState<DraftState[]>([defaultDraft()])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [isPainting, setIsPainting] = useState(false)
+  const [isPanning, setIsPanning] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [stageState, setStageState] = useState<StageState>({ x: 24, y: 24, scale: 1 })
   const [viewport, setViewport] = useState({ width: 900, height: 560 })
@@ -703,6 +704,7 @@ export default function LayoutsPage() {
 
   const cancelDrag = () => {
     setIsPainting(false)
+    setIsPanning(false)
     setDragStartCell(null)
     setDragEndCell(null)
     dragPointerRef.current = null
@@ -727,7 +729,7 @@ export default function LayoutsPage() {
         event.preventDefault()
         redo()
       }
-      if (event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey && !isTypingTarget(event.target)) {
+      if ((event.ctrlKey || event.shiftKey) && !event.altKey && !event.metaKey && !isTypingTarget(event.target)) {
         const key = event.key.toLowerCase()
         if (key === 'v') {
           event.preventDefault()
@@ -749,6 +751,10 @@ export default function LayoutsPage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [history, historyIndex])
+
+  useEffect(() => {
+    setIsPanning(false)
+  }, [tool])
 
   const openLayout = (layout: SeatLayout) => {
     const nextDraft = {
@@ -1624,7 +1630,23 @@ export default function LayoutsPage() {
               scaleX={stageState.scale}
               scaleY={stageState.scale}
               draggable={tool === 'pan'}
-              onDragEnd={(event: any) => setStageState((current) => ({ ...current, x: event.target.x(), y: event.target.y() }))}
+              onDragStart={() => setIsPanning(true)}
+              onDragEnd={(event: any) => {
+                setIsPanning(false)
+                setStageState((current) => ({ ...current, x: event.target.x(), y: event.target.y() }))
+              }}
+              style={{
+                cursor:
+                  tool === 'pan'
+                    ? isPanning
+                      ? 'grabbing'
+                      : 'grab'
+                    : tool === 'paint'
+                    ? 'crosshair'
+                    : tool === 'erase'
+                    ? 'cell'
+                    : 'default',
+              }}
               onWheel={(event: any) => {
                 event.evt.preventDefault()
                 zoomAtPointer(event.target.getStage(), event.evt.deltaY)
