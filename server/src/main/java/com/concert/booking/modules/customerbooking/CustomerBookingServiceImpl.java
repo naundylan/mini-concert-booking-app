@@ -69,6 +69,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Slf4j
@@ -335,12 +337,32 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
       return Map.of("success", true);
     }
 
+    // Lock/Mark webhook as processed in Redis at the very beginning of processing
+    boolean marked = vietQrService.markSePayWebhookProcessed(payload.getId());
+    if (!marked) {
+      log.info("SePay webhook already processed or in progress: {}", payload.getId());
+      return Map.of("success", true);
+    }
+
+    // Register synchronization to remove the Redis lock in case of rollback
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+              if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                log.warn("SePay webhook transaction rolled back; removing Redis mark for sePayId={}", payload.getId());
+                vietQrService.deleteSePayWebhookProcessed(payload.getId());
+              }
+            }
+          });
+    }
+
     String reference = parseVietQrReference(payload);
     if (reference == null) {
       return Map.of("success", true);
     }
     if (paymentRepository.findByTransactionRef(reference).isPresent()) {
-      vietQrService.markSePayWebhookProcessed(payload.getId());
       return Map.of("success", true);
     }
 
@@ -374,7 +396,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
     completePaidCheckoutSession(
         paymentSessionId, session.getCustomerId(), PaymentMethod.VIETQR, reference);
-    vietQrService.markSePayWebhookProcessed(payload.getId());
     return Map.of("success", true);
   }
 

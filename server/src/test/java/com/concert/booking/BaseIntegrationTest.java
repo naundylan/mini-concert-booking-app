@@ -106,6 +106,9 @@ public abstract class BaseIntegrationTest {
       // Redis connection (Redis Container)
       registry.add("spring.data.redis.host", redis::getHost);
       registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+
+      // Enable Kafka
+      registry.add("application.kafka.enabled", () -> "true");
     } else {
       // Graceful fallback to H2 Database for offline testing
       registry.add("spring.datasource.url", () -> "jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
@@ -114,6 +117,9 @@ public abstract class BaseIntegrationTest {
       registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
       registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.H2Dialect");
       registry.add("spring.flyway.enabled", () -> "false"); // Disable migrations on H2
+
+      // Disable Kafka
+      registry.add("application.kafka.enabled", () -> "false");
 
       // Dynamically exclude Redis and Kafka AutoConfigurations to prevent connection attempts
       registry.add("spring.autoconfigure.exclude", () ->
@@ -149,8 +155,8 @@ public abstract class BaseIntegrationTest {
 
     @Bean
     @ConditionalOnMissingBean(KafkaTemplate.class)
-    @SuppressWarnings("unchecked")
-    public KafkaTemplate<String, Object> kafkaTemplate() {
+    @SuppressWarnings("rawtypes")
+    public KafkaTemplate kafkaTemplate() {
       return mock(KafkaTemplate.class);
     }
   }
