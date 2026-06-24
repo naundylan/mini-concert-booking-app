@@ -147,6 +147,7 @@ springdoc:
 
 server:
   port: ${SERVER_PORT:8081}
+  forward-headers-strategy: framework
   tomcat:
     threads:
       max: ${TOMCAT_MAX_THREADS}
