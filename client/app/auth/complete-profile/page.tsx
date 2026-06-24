@@ -110,9 +110,8 @@ function CompleteProfileInner() {
         </form>
 
         <p className="text-center text-sm text-gray-500">
-          Bạn đã có tài khoản?{' '}
           <a href="/auth" className="text-blue-600 hover:underline">
-            Đăng nhập tại đây
+            Đăng nhập bằng tài khoản khác
           </a>
         </p>
       </div>

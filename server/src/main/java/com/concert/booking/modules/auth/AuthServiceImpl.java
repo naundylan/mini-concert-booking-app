@@ -386,7 +386,7 @@ public class AuthServiceImpl implements AuthService {
       user.setPhone(phone);
       user.setAuthProvider(AuthProvider.GOOGLE);
       user.setOnlineVerified(true);
-      user.setTokensValidFrom(Instant.now()); // Invalidate old tokens
+      user.setTokensValidFrom(Instant.now().minusSeconds(5)); // Invalidate old tokens
       userRepository.save(user);
     } else {
       // Tạo user mới hoàn toàn
@@ -407,7 +407,7 @@ public class AuthServiceImpl implements AuthService {
               .role(UserRole.CUSTOMER)
               .status(UserStatus.ACTIVE)
               .onlineVerified(true)
-              .tokensValidFrom(Instant.now())
+              .tokensValidFrom(Instant.now().minusSeconds(5))
               .build();
       userRepository.save(user);
     }
