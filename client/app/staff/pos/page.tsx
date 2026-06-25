@@ -229,7 +229,10 @@ export default function POSPage() {
 
   const validateCustomerAndSeats = () => {
     if (!selectedEventId) return 'Vui lòng chọn sự kiện trước khi bán vé.'
-    if (!customerPhone.trim()) return 'SĐT khách hàng là bắt buộc.'
+    const phone = customerPhone.trim()
+    if (!phone) return 'SĐT khách hàng là bắt buộc.'
+    if (!/^\d{10}$/.test(phone)) return 'SĐT phải có đúng 10 chữ số.'
+    if (!/^(0[35789])\d{8}$/.test(phone)) return 'SĐT không hợp lệ. Vui lòng nhập SĐT Việt Nam (ví dụ: 0909123456).'
     if (!customerName.trim()) return 'Tên khách hàng là bắt buộc.'
     if (customerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
       return 'Email khách hàng không hợp lệ.'
@@ -402,16 +405,18 @@ export default function POSPage() {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label htmlFor="phone" className="mb-2 block text-xs font-medium text-slate-700">
-                        SĐT bắt buộc
+                        Số điện thoại <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="0909123456"
+                        placeholder="Ví dụ: 0909123456"
                         value={customerPhone}
                         onChange={(event) => setCustomerPhone(event.target.value)}
+                        maxLength={10}
                         className="bg-indigo-50 text-sm"
                       />
+                      <p className="mt-1 text-[11px] text-slate-400">10 chữ số, bắt đầu bằng 03x / 05x / 07x / 08x / 09x</p>
                     </div>
                     <div>
                       <Label htmlFor="name" className="mb-2 block text-xs font-medium text-slate-700">
@@ -428,12 +433,12 @@ export default function POSPage() {
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor="email" className="mb-2 block text-xs font-medium text-slate-700">
-                        Email nhận vé điện tử tùy chọn
+                        Email nhận vé điện tử <span className="text-slate-400">(tùy chọn)</span>
                       </Label>
                       <Input
                         id="email"
                         type="email"
-                        placeholder="customer@example.com"
+                        placeholder="khachhang@gmail.com"
                         value={customerEmail}
                         onChange={(event) => setCustomerEmail(event.target.value)}
                         className="bg-indigo-50 text-sm"
