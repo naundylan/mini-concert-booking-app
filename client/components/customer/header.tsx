@@ -17,7 +17,7 @@ export default function CustomerHeader({ onOpenSidebar = () => {} }: HeaderProps
         type="button"
         onClick={onOpenSidebar}
         className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 mr-2"
-        aria-label="Open menu"
+        aria-label="Mở menu"
       >
         <Menu size={20} />
       </button>

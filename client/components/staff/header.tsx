@@ -16,7 +16,7 @@ export default function Header({ onOpenSidebar = () => {} }: HeaderProps) {
         type="button"
         onClick={onOpenSidebar}
         className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 lg:hidden mr-2"
-        aria-label="Open staff menu"
+        aria-label="Mở menu nhân viên"
       >
         <Menu size={20} />
       </button>

@@ -40,10 +40,10 @@ interface EventFormProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'DRAFT', color: 'bg-slate-200 text-slate-800' },
-  { value: 'ONSALE', label: 'ONSALE', color: 'bg-green-200 text-green-800' },
-  { value: 'TEASING', label: 'TEASING', color: 'bg-yellow-200 text-yellow-800' },
-  { value: 'CANCELED', label: 'CANCELED', color: 'bg-red-200 text-red-800' },
+  { value: 'DRAFT', label: 'Bản nháp', color: 'bg-slate-200 text-slate-800' },
+  { value: 'ONSALE', label: 'Đang mở bán', color: 'bg-green-200 text-green-800' },
+  { value: 'TEASING', label: 'Sắp mở bán', color: 'bg-yellow-200 text-yellow-800' },
+  { value: 'CANCELED', label: 'Đã hủy', color: 'bg-red-200 text-red-800' },
 ]
 
 export default function EventForm({ mode, initialData, onSubmit, onCancel }: EventFormProps) {
@@ -93,7 +93,20 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
     }) || formDefaultValues,
   })
 
-  // Đã xóa phần khai báo trùng lặp ở đây
+  const getFieldLabel = (field: string) => {
+    switch (field) {
+      case 'teasingTime':
+        return 'Thời gian giới thiệu (Teasing)'
+      case 'openTime':
+        return 'Thời gian mở bán'
+      case 'startTime':
+        return 'Thời gian bắt đầu sự kiện'
+      case 'endTime':
+        return 'Thời gian kết thúc sự kiện'
+      default:
+        return field
+    }
+  }
 
   // Update banner preview
   const handleBannerUrlChange = (url: string) => {
@@ -114,7 +127,7 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
       {isOnsale && (
         <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg flex gap-3">
           <AlertCircle size={20} className="text-indigo-600 flex-shrink-0" />
-          <p className="text-xs text-indigo-700">Sự kiện đang ONSALE, chỉ có thể hủy.</p>
+          <p className="text-xs text-indigo-700">Sự kiện đang mở bán, chỉ có thể chọn hủy bỏ sự kiện.</p>
         </div>
       )}
 
@@ -122,23 +135,23 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
       {!isCanceled && !isOnsale && (
         <div>
           <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
-            Editable Information
+            Thông tin chỉnh sửa
           </h3>
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label className="text-xs font-medium text-slate-700 mb-2 block">Event Name</Label>
-                <Input {...register('name')} className="text-sm" placeholder="Event name" />
+                <Label className="text-xs font-medium text-slate-700 mb-2 block">Tên sự kiện</Label>
+                <Input {...register('name')} className="text-sm" placeholder="Tên sự kiện" />
                 {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
               </div>
               <div>
-                <Label className="text-xs font-medium text-slate-700 mb-2 block">Location</Label>
-                <Input {...register('location')} className="text-sm" placeholder="Event location" />
+                <Label className="text-xs font-medium text-slate-700 mb-2 block">Địa điểm</Label>
+                <Input {...register('location')} className="text-sm" placeholder="Địa điểm diễn ra" />
                 {errors.location && <p className="text-xs text-red-600 mt-1">{errors.location.message}</p>}
               </div>
             </div>
             <div>
-              <Label className="text-xs font-medium text-slate-700 mb-2 block">Banner URL</Label>
+              <Label className="text-xs font-medium text-slate-700 mb-2 block">Ảnh bìa (Banner URL)</Label>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Input
                   {...register('bannerUrl')}
@@ -160,12 +173,12 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
       {/* Scheduling — chỉ hiện khi DRAFT hoặc Create */}
       {(!isEditMode || isDraft) && (
         <div>
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Scheduling</h3>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Thời gian diễn ra</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {(['teasingTime', 'openTime', 'startTime', 'endTime'] as const).map((field) => (
               <div key={field}>
                 <Label className="text-xs font-medium text-slate-700 mb-2 block capitalize">
-                  {field.replace('Time', ' Time')}
+                  {getFieldLabel(field)}
                 </Label>
                 <Input type="datetime-local" {...register(field)} className="text-sm" />
                 {errors[field] && <p className="text-xs text-red-600 mt-1">{errors[field]?.message}</p>}
@@ -178,7 +191,7 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
       {/* Status — chỉ hiện khi edit và không phải CANCELED */}
       {isEditMode && !isCanceled && (
         <div>
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Event Status</h3>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Trạng thái sự kiện</h3>
           <div className="flex gap-2 flex-wrap">
             {getStatusOptions().map((option) => (
               <button
@@ -200,10 +213,10 @@ export default function EventForm({ mode, initialData, onSubmit, onCancel }: Eve
 
       {/* Actions */}
       <div className="flex gap-3 justify-end pt-6 border-t border-slate-200">
-        <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
+        <Button variant="outline" onClick={onCancel} type="button">Hủy</Button>
         {!isCanceled && (
           <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            {isEditMode ? 'Save Changes' : 'Create Event'}
+            {isEditMode ? 'Lưu thay đổi' : 'Tạo sự kiện'}
           </Button>
         )}
       </div>

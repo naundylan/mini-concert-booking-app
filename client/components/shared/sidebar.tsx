@@ -2,16 +2,22 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   Calendar,
   Users,
   Map,
-  TrendingUp,
   LogOut,
   User,
   X,
   ShoppingBag,
+  ShoppingCart,
+  QrCode,
+  Clock,
+  Home,
+  Ticket,
+  Settings,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,18 +25,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { authService } from '@/lib/services/auth.service';
 
-const MENU_ITEMS = [
-  { label: 'Dashboard', icon: BarChart3, href: '/admin/dashboard' },
-  { label: 'Events', icon: Calendar, href: '/admin/events' },
-  { label: 'Layouts', icon: Map, href: '/admin/layouts' },
-  { label: 'Staff', icon: Users, href: '/admin/staff' },
-  { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
-];
-
 type SidebarProps = {
+  role: 'ADMIN' | 'STAFF' | 'CUSTOMER';
   collapsed: boolean;
   mobileOpen: boolean;
   onToggleCollapse: () => void;
@@ -38,13 +37,15 @@ type SidebarProps = {
 };
 
 export default function Sidebar({
+  role,
   collapsed,
   mobileOpen,
   onToggleCollapse,
   onCloseMobile,
 }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [userFullName, setUserFullName] = useState('Guest');
+  const [userFullName, setUserFullName] = useState('Khách');
+  const pathname = usePathname();
 
   useEffect(() => {
     authService
@@ -63,6 +64,65 @@ export default function Sidebar({
     console.log('Navigate to profile');
   };
 
+  // Define menu items based on role
+  const getMenuItems = () => {
+    switch (role) {
+      case 'ADMIN':
+        return [
+          { label: 'Bảng điều khiển', icon: BarChart3, href: '/admin/dashboard' },
+          { label: 'Sự kiện', icon: Calendar, href: '/admin/events' },
+          { label: 'Sơ đồ ghế', icon: Map, href: '/admin/layouts' },
+          { label: 'Nhân viên', icon: Users, href: '/admin/staff' },
+          { label: 'Đơn hàng', icon: ShoppingBag, href: '/admin/orders' },
+        ];
+      case 'STAFF':
+        return [
+          { label: 'Bán vé', icon: ShoppingCart, href: '/staff/pos' },
+          { label: 'Soát vé', icon: QrCode, href: '/staff/check-in' },
+          { label: 'Lịch sử', icon: Clock, href: '/staff/history' },
+        ];
+      case 'CUSTOMER':
+        return [
+          { label: 'Trang chủ', icon: Home, href: '/customer' },
+          { label: 'Sự kiện', icon: Calendar, href: '/customer/events' },
+          { label: 'Vé của tôi', icon: Ticket, href: '/customer/my-tickets' },
+          { label: 'Cài đặt', icon: Settings, href: '/customer/settings' },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case 'ADMIN':
+        return 'Quản trị viên';
+      case 'STAFF':
+        return 'Nhân viên';
+      case 'CUSTOMER':
+        return 'Khách hàng';
+      default:
+        return '';
+    }
+  };
+
+  const getSubText = () => {
+    switch (role) {
+      case 'ADMIN':
+        return 'Trang Quản trị';
+      case 'STAFF':
+        return 'Trang Nhân viên';
+      case 'CUSTOMER':
+        return 'Trang Đặt vé';
+      default:
+        return '';
+    }
+  };
+
+  const menuItems = getMenuItems();
+  const roleLabel = getRoleLabel();
+  const subText = getSubText();
+
   const content = (
     <>
       <div className={`border-b border-indigo-900 ${collapsed ? 'p-4' : 'p-6'}`}>
@@ -71,20 +131,20 @@ export default function Sidebar({
             type="button"
             onClick={onToggleCollapse}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold transition hover:bg-indigo-500"
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+            title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
           >
             K
           </button>
           <div className={collapsed ? 'lg:hidden' : 'block'}>
-            <h1 className="font-bold tracking-tight">Ticket</h1>
-            <p className="text-xs text-slate-400">Admin Console</p>
+            <h1 className="font-bold tracking-tight">Kinetic</h1>
+            <p className="text-xs text-indigo-300">{subText}</p>
           </div>
           <button
             type="button"
             onClick={onCloseMobile}
             className="ml-auto rounded-lg p-2 text-slate-300 hover:bg-indigo-900/60 lg:hidden"
-            aria-label="Close admin menu"
+            aria-label="Đóng menu"
           >
             <X size={18} />
           </button>
@@ -92,17 +152,25 @@ export default function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto p-4">
-        {MENU_ITEMS.map((item) => {
+        {menuItems.map((item) => {
           const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== '/admin/dashboard' &&
+              item.href !== '/customer' &&
+              pathname.startsWith(item.href));
+
           return (
             <Link key={item.href} href={item.href} onClick={onCloseMobile}>
               <button
-                className={`flex w-full items-center rounded-lg py-3 text-sm font-medium transition-colors hover:bg-indigo-900/50 ${
-                  collapsed ? 'justify-center px-2 lg:gap-0' : 'gap-3 px-4'
-                }`}
+                className={`flex w-full items-center rounded-lg py-3 text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-indigo-200 hover:text-white hover:bg-indigo-900/50'
+                } ${collapsed ? 'justify-center px-2 lg:gap-0' : 'gap-3 px-4'}`}
                 title={collapsed ? item.label : undefined}
               >
-                <Icon size={18} className="shrink-0 text-indigo-400" />
+                <Icon size={18} className={`shrink-0 ${isActive ? 'text-white' : 'text-indigo-400'}`} />
                 <span className={collapsed ? 'lg:hidden' : 'inline'}>{item.label}</span>
               </button>
             </Link>
@@ -119,23 +187,25 @@ export default function Sidebar({
               }`}
             >
               <Avatar className="h-10 w-10 border border-indigo-400">
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" />
-                <AvatarFallback className="bg-indigo-600 text-white">AM</AvatarFallback>
+                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userFullName}`} />
+                <AvatarFallback className="bg-indigo-600 text-white">
+                  {userFullName.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className={collapsed ? 'hidden' : 'min-w-0 flex-1 text-left'}>
-                <p className="truncate text-sm font-medium">{userFullName}</p>
-                <p className="text-xs text-indigo-300">Admin</p>
+                <p className="truncate text-sm font-medium text-white">{userFullName}</p>
+                <p className="text-xs text-indigo-300">{roleLabel}</p>
               </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={handleMyProfile} className="cursor-pointer">
               <User size={16} className="mr-2" />
-              <span>My Profile</span>
+              <span>Hồ sơ của tôi</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
               <LogOut size={16} className="mr-2" />
-              <span>Logout</span>
+              <span>Đăng xuất</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

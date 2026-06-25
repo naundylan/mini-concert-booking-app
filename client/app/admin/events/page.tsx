@@ -50,7 +50,7 @@ export default function EventsPage() {
       setEvents(response.data)
     } catch (error: any) {
       console.error('Failed to fetch events:', error)
-      toast({ title: 'Error', description: 'Failed to load events.', variant: 'destructive' })
+      toast({ title: 'Lỗi', description: 'Không thể tải danh sách sự kiện.', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -65,8 +65,8 @@ export default function EventsPage() {
       setTicketClasses(classesResponse.data)
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error?.response?.data?.message || 'Failed to load ticket classes and seats.',
+        title: 'Lỗi',
+        description: error?.response?.data?.message || 'Không thể tải hạng vé và ghế ngồi.',
         variant: 'destructive',
       })
     } finally {
@@ -90,7 +90,7 @@ export default function EventsPage() {
   const handleCreateTicketClass = async () => {
     if (!selectedEvent) return
     if (!ticketClassForm.name.trim() || !ticketClassForm.price) {
-      toast({ title: 'Error', description: 'Ticket class name and price are required.', variant: 'destructive' })
+      toast({ title: 'Lỗi', description: 'Tên hạng vé và giá tiền là bắt buộc.', variant: 'destructive' })
       return
     }
 
@@ -103,9 +103,9 @@ export default function EventsPage() {
       })
       setTicketClassForm({ name: '', colorCode: '#4f46e5', price: '' })
       await loadCatalog(selectedEvent.id)
-      toast({ title: 'Success', description: 'Ticket class created successfully!' })
+      toast({ title: 'Thành công', description: 'Hạng vé đã được tạo thành công!' })
     } catch (error: any) {
-      toast({ title: 'Error', description: error?.response?.data?.message || 'Failed to create ticket class.', variant: 'destructive' })
+      toast({ title: 'Lỗi', description: error?.response?.data?.message || 'Không thể tạo hạng vé.', variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
@@ -137,7 +137,7 @@ export default function EventsPage() {
           endTime:     toISOWithOffset(data.endTime),
         }
         await eventService.create(apiData)
-        toast({ title: 'Success', description: 'Event created successfully!' })
+        toast({ title: 'Thành công', description: 'Sự kiện đã được tạo thành công!' })
 
       } else if (formMode === 'edit' && selectedEvent) {
         const currentStatus = selectedEvent.status
@@ -166,7 +166,7 @@ export default function EventsPage() {
         }
 
         await eventService.update(selectedEvent.id, apiData)
-        toast({ title: 'Success', description: 'Event updated successfully!' })
+        toast({ title: 'Thành công', description: 'Cập nhật sự kiện thành công!' })
       }
 
       await fetchEvents()
@@ -174,8 +174,8 @@ export default function EventsPage() {
       setShowDetailsDialog(false)
       setSelectedEvent(null)
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || 'Failed to save event.'
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+      const errorMessage = error?.response?.data?.message || 'Không thể lưu sự kiện.'
+      toast({ title: 'Lỗi', description: errorMessage, variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
@@ -199,11 +199,22 @@ export default function EventsPage() {
     }
   }
 
+  const translateStatus = (status: string) => {
+    switch (status) {
+      case 'ONSALE':   return 'Đang mở bán'
+      case 'TEASING':  return 'Sắp mở bán'
+      case 'CANCELED': return 'Đã hủy'
+      case 'DRAFT':    return 'Bản nháp'
+      case 'ENDED':    return 'Đã kết thúc'
+      default:         return status
+    }
+  }
+
   const formatDateTime = (isoString: string) => {
     if (!isoString || isoString === 'TBD') return 'TBD'
     const date = new Date(isoString)
     if (isNaN(date.getTime())) return isoString
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('vi-VN', {
       month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit', year: 'numeric',
     })
@@ -221,28 +232,28 @@ export default function EventsPage() {
     <div className="flex flex-col gap-6">
       {/* Page Header */}
       <div>
-        <p className="text-xs font-semibold text-indigo-600 tracking-wide uppercase mb-2">Management</p>
+        <p className="text-xs font-semibold text-indigo-600 tracking-wide uppercase mb-2">Quản lý</p>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Events</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Sự kiện</h1>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-slate-600">Filter:</label>
+              <label className="text-xs font-medium text-slate-600">Bộ lọc:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-auto"
               >
-                <option value="All Statuses">All Statuses</option>
-                <option value="DRAFT">DRAFT</option>
-                <option value="TEASING">TEASING</option>
-                <option value="ONSALE">ONSALE</option>
-                <option value="ENDED">ENDED</option>
-                <option value="CANCELED">CANCELED</option>
+                <option value="All Statuses">Tất cả trạng thái</option>
+                <option value="DRAFT">Bản nháp (DRAFT)</option>
+                <option value="TEASING">Sắp mở bán (TEASING)</option>
+                <option value="ONSALE">Đang mở bán (ONSALE)</option>
+                <option value="ENDED">Đã kết thúc (ENDED)</option>
+                <option value="CANCELED">Đã hủy (CANCELED)</option>
               </select>
             </div>
             <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto" onClick={handleOpenCreateForm}>
               <Plus size={16} className="mr-2" />
-              Create Event
+              Tạo sự kiện
             </Button>
           </div>
         </div>
@@ -252,11 +263,11 @@ export default function EventsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-          <span className="ml-3 text-sm text-slate-600">Loading events...</span>
+          <span className="ml-3 text-sm text-slate-600">Đang tải sự kiện...</span>
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
-          <p className="text-slate-500">No events found</p>
+          <p className="text-slate-500">Không tìm thấy sự kiện nào</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -294,7 +305,7 @@ export default function EventsPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar size={14} />
-                      <span className="text-slate-500">START</span>
+                      <span className="text-slate-500">BẮT ĐẦU</span>
                     </div>
                     <span className="font-medium text-slate-700">
                       {event.startTime ? formatDateTime(event.startTime) : ''}
@@ -303,7 +314,7 @@ export default function EventsPage() {
                 </div>
                 <div className="flex-shrink-0">
                   <Badge className={`text-xs font-semibold border ${getStatusColor(event.status)}`}>
-                    {event.status}
+                    {translateStatus(event.status)}
                   </Badge>
                 </div>
               </div>
@@ -319,10 +330,10 @@ export default function EventsPage() {
             <div className="flex items-center gap-3">
               <Eye size={20} className="text-indigo-600" />
               <div>
-                <DialogTitle>Event Details</DialogTitle>
+                <DialogTitle>Chi tiết sự kiện</DialogTitle>
                 {selectedEvent && (
                   <Badge className={`mt-2 text-xs font-semibold border ${getStatusColor(selectedEvent.status)}`}>
-                    {selectedEvent.status}
+                    {translateStatus(selectedEvent.status)}
                   </Badge>
                 )}
               </div>
@@ -338,16 +349,16 @@ export default function EventsPage() {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <span className="text-white text-xs font-semibold bg-black/40 px-3 py-1 rounded">PREVIEW ONLY</span>
+                  <span className="text-white text-xs font-semibold bg-black/40 px-3 py-1 rounded">CHỈ XEM TRƯỚC</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
-                  { label: 'Event Name', value: selectedEvent.name },
-                  { label: 'Status',     value: selectedEvent.status },
-                  { label: 'Start Time', value: selectedEvent.startTime ? formatDateTime(selectedEvent.startTime) : '' },
-                  { label: 'End Time',   value: selectedEvent.endTime   ? formatDateTime(selectedEvent.endTime)   : '' },
+                  { label: 'Tên sự kiện', value: selectedEvent.name },
+                  { label: 'Trạng thái',     value: translateStatus(selectedEvent.status) },
+                  { label: 'Thời gian bắt đầu', value: selectedEvent.startTime ? formatDateTime(selectedEvent.startTime) : '' },
+                  { label: 'Thời gian kết thúc',   value: selectedEvent.endTime   ? formatDateTime(selectedEvent.endTime)   : '' },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <label className="text-xs font-semibold text-indigo-600 block mb-1">{label}</label>
@@ -360,32 +371,32 @@ export default function EventsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-indigo-600 block mb-1">Location</label>
+                <label className="text-xs font-semibold text-indigo-600 block mb-1">Địa điểm</label>
                 <input type="text" value={selectedEvent.location} disabled
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-indigo-600 block mb-1">Event Banner URL</label>
+                <label className="text-xs font-semibold text-indigo-600 block mb-1">Đường dẫn ảnh bìa (Banner URL)</label>
                 <input type="text" value={selectedEvent.bannerUrl || ''} disabled
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-600 truncate" />
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
                 <p className="text-xs text-slate-600">
-                  This event is currently in <span className="font-semibold">read-only</span> mode.
-                  To make changes, click Edit.
+                  Sự kiện này hiện ở chế độ <span className="font-semibold">chỉ xem</span>.
+                  Để chỉnh sửa thông tin, vui lòng bấm nút Chỉnh sửa.
                 </p>
               </div>
 
               <div className="border-t border-slate-200 pt-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-slate-900">Ticket Classes</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Các hạng vé</h3>
                   {catalogLoading && <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />}
                 </div>
                 <div className="space-y-2 mb-4">
                   {ticketClasses.length === 0 ? (
                     <p className="text-xs text-slate-500 rounded-lg border border-dashed border-slate-200 p-3">
-                      No ticket classes yet.
+                      Chưa có hạng vé nào.
                     </p>
                   ) : (
                     ticketClasses.map((ticketClass) => (
@@ -408,7 +419,7 @@ export default function EventsPage() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_110px_130px_auto]">
                   <input
                     type="text"
-                    placeholder="VIP"
+                    placeholder="Tên hạng vé (Ví dụ: VIP)"
                     value={ticketClassForm.name}
                     onChange={(event) => setTicketClassForm((current) => ({ ...current, name: event.target.value }))}
                     className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
@@ -424,7 +435,7 @@ export default function EventsPage() {
                   <input
                     type="number"
                     min={0}
-                    placeholder="500000"
+                    placeholder="Giá vé (Ví dụ: 500000)"
                     value={ticketClassForm.price}
                     onChange={(event) => setTicketClassForm((current) => ({ ...current, price: event.target.value }))}
                     className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
@@ -436,25 +447,24 @@ export default function EventsPage() {
                     onClick={handleCreateTicketClass}
                     disabled={submitting || selectedEvent.status !== 'DRAFT'}
                   >
-                    Add
+                    Thêm
                   </Button>
                 </div>
               </div>
 
               <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-900 mb-2">Seats</h3>
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Sơ đồ ghế ngồi</h3>
                 <p className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-800">
-                  Seats are generated by applying a published layout from the Layouts screen. Ticket classes can be
-                  created here, or directly while mapping a layout to this event.
+                  Ghế ngồi được tạo bằng cách áp dụng một sơ đồ ghế đã xuất bản từ màn hình Sơ đồ ghế. Hạng vé có thể được tạo ở đây, hoặc tạo trực tiếp khi liên kết sơ đồ ghế với sự kiện.
                 </p>
               </div>
             </div>
           )}
 
           <DialogFooter className="pt-4 border-t border-slate-200 gap-3 mt-4">
-            <Button variant="outline" onClick={handleCloseDialog} className="text-slate-700">Cancel</Button>
+            <Button variant="outline" onClick={handleCloseDialog} className="text-slate-700">Hủy</Button>
             <Button className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-medium" onClick={handleOpenEditForm}>
-              ✏️ Edit Event
+              ✏️ Sửa sự kiện
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -465,7 +475,7 @@ export default function EventsPage() {
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
           <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{formMode === 'create' ? 'Create New Event' : 'Edit Event'}</DialogTitle>
+              <DialogTitle>{formMode === 'create' ? 'Tạo sự kiện mới' : 'Chỉnh sửa sự kiện'}</DialogTitle>
             </DialogHeader>
             <EventForm
               mode={formMode}

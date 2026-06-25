@@ -17,7 +17,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         type="button"
         onClick={onOpenSidebar}
         className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 lg:hidden"
-        aria-label="Open admin menu"
+        aria-label="Mở menu quản trị"
       >
         <Menu size={21} />
       </button>
@@ -30,7 +30,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           />
           <Input
             type="text"
-            placeholder="Search events, users, or metrics..."
+            placeholder="Tìm kiếm sự kiện, người dùng hoặc chỉ số..."
             className="h-9 border-slate-200 bg-slate-50 pl-10 text-sm"
           />
         </div>
@@ -45,7 +45,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         <Link
           href="/admin/settings/security"
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          title="Go to Settings"
+          title="Đi tới Cài đặt"
         >
           <Settings size={18} className="text-slate-600" />
         </Link>

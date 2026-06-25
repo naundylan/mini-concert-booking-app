@@ -81,7 +81,7 @@ export default function MyTicketsPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-950">Vé của tôi</h1>
-          <p className="mt-1 text-sm text-slate-600">Xem vé điện tử và thông tin check-in của bạn.</p>
+          <p className="mt-1 text-sm text-slate-600">Xem vé điện tử và thông tin soát vé của bạn.</p>
         </div>
 
         <div className="relative min-w-[280px]">
@@ -132,7 +132,9 @@ export default function MyTicketsPage() {
                         <h2 className="line-clamp-2 font-bold text-slate-950">{ticket.eventName || 'Sự kiện'}</h2>
                         <p className="mt-1 text-xs text-slate-500">Mã vé: {ticketId}</p>
                       </div>
-                      <Badge className="bg-indigo-50 text-indigo-700">{ticket.status || 'UNUSED'}</Badge>
+                      <Badge className="bg-indigo-50 text-indigo-700">
+                        {ticket.status === 'UNUSED' ? 'Chưa sử dụng' : ticket.status === 'USED' ? 'Đã sử dụng' : ticket.status === 'CANCELED' ? 'Đã hủy' : ticket.status || 'Chưa sử dụng'}
+                      </Badge>
                     </div>
 
                     <div className="mt-3 space-y-1 text-sm text-slate-600">
@@ -171,7 +173,7 @@ export default function MyTicketsPage() {
                                 className="h-44 w-44 object-contain"
                               />
                               <p className="mt-2 text-xs font-mono text-slate-500 break-all text-center">
-                                Payload: {qrPayload}
+                                Mã vé: {qrPayload}
                               </p>
                             </div>
 
@@ -236,7 +238,9 @@ export default function MyTicketsPage() {
                                   </div>
                                   <div className="flex justify-between">
                                     <span className="text-slate-500">Phương thức thanh toán:</span>
-                                    <span className="font-semibold text-slate-900">{ticket.paymentMethod || '--'}</span>
+                                    <span className="font-semibold text-slate-900">
+                                      {ticket.paymentMethod === 'CASH' ? 'Tiền mặt' : ticket.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : ticket.paymentMethod || '--'}
+                                    </span>
                                   </div>
                                 </div>
                               </div>

@@ -56,18 +56,18 @@ const CLASS_COLORS = ['#4f46e5', '#16a34a', '#eab308', '#dc2626', '#0891b2', '#9
 const TEMPLATE_OPTIONS: Array<{ value: LayoutTemplateType; label: string; description: string }> = [
   {
     value: 'HALL_RECTANGLE',
-    label: 'Hall rectangle',
-    description: 'One rectangular seating area with simple aisles and a stage at the top.',
+    label: 'Khán phòng hình chữ nhật',
+    description: 'Một khu vực ghế ngồi hình chữ nhật với các lối đi đơn giản và sân khấu ở phía đầu.',
   },
   {
     value: 'STADIUM_ELLIPSE',
-    label: 'Stadium ellipse',
-    description: 'Large elliptical bowl layout, available for 500 seats and above.',
+    label: 'Sân vận động hình ellipse',
+    description: 'Bố cục hình chảo ellipse lớn, chỉ phù hợp cho quy mô từ 500 ghế trở lên.',
   },
   {
     value: 'COUNTDOWN_CROSS',
-    label: 'Countdown cross',
-    description: 'Four audience zones around a central stage.',
+    label: 'Sân khấu trung tâm',
+    description: 'Bốn khu vực khán giả bao quanh một sân khấu trung tâm.',
   },
 ]
 
@@ -116,7 +116,7 @@ type GeneratedTemplate = {
 }
 
 const defaultDraft = (): DraftState => ({
-  name: 'New layout',
+  name: 'Sơ đồ mới',
   description: '',
   venueName: '',
   templateType: null,
@@ -596,7 +596,7 @@ export default function LayoutsPage() {
         pages: Math.max(1, response.meta.pages),
       })
     } catch (error) {
-      toast({ title: 'Error', description: getErrorMessage(error, 'Không tải được layouts'), variant: 'destructive' })
+      toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không tải được danh sách sơ đồ'), variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -833,9 +833,9 @@ export default function LayoutsPage() {
       setTool('paint')
       setTemplateDialogOpen(false)
       setStageState({ x: 24, y: 24, scale: 1 })
-      toast({ title: 'Generated', description: `Generated ${generated.cells.length} standard seats.` })
+      toast({ title: 'Đã tạo', description: `Đã tạo ${generated.cells.length} ghế tiêu chuẩn.` })
     } catch (error) {
-      toast({ title: 'Invalid template', description: error instanceof Error ? error.message : 'Cannot generate template', variant: 'destructive' })
+      toast({ title: 'Mẫu không hợp lệ', description: error instanceof Error ? error.message : 'Không thể tạo mẫu', variant: 'destructive' })
     }
   }
 
@@ -1122,7 +1122,7 @@ export default function LayoutsPage() {
     setSaving(true)
     try {
       const payload = {
-        name: draft.name.trim() || 'Untitled layout',
+        name: draft.name.trim() || 'Sơ đồ không tiêu đề',
         description: draft.description || null,
         venueName: draft.venueName || null,
         layoutData: toLayoutData(draft),
@@ -1136,10 +1136,10 @@ export default function LayoutsPage() {
       localStorage.removeItem(previousDraftKey)
       localStorage.removeItem(`layout-draft:${saved.id}`)
       await fetchLayouts(meta.page)
-      if (showToast) toast({ title: 'Saved', description: 'Layout draft saved.' })
+      if (showToast) toast({ title: 'Đã lưu', description: 'Đã lưu bản nháp sơ đồ.' })
     } catch (error) {
       if (showToast) {
-        toast({ title: 'Error', description: getErrorMessage(error, 'Không lưu được layout'), variant: 'destructive' })
+        toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không lưu được sơ đồ ghế'), variant: 'destructive' })
       }
     } finally {
       setSaving(false)
@@ -1152,9 +1152,9 @@ export default function LayoutsPage() {
       const published = await layoutService.publish(selectedLayout.id)
       setSelectedLayout(published)
       await fetchLayouts(meta.page)
-      toast({ title: 'Published', description: 'Layout is now read-only.' })
+      toast({ title: 'Đã xuất bản', description: 'Sơ đồ hiện tại đã chuyển sang chỉ đọc.' })
     } catch (error) {
-      toast({ title: 'Error', description: getErrorMessage(error, 'Không publish được layout'), variant: 'destructive' })
+      toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không xuất bản được sơ đồ ghế'), variant: 'destructive' })
     }
   }
 
@@ -1163,9 +1163,9 @@ export default function LayoutsPage() {
       const clone = await layoutService.clone(layout.id)
       await fetchLayouts(0)
       openLayout(clone)
-      toast({ title: 'Cloned', description: 'Created editable draft copy.' })
+      toast({ title: 'Đã sao chép', description: 'Đã tạo bản nháp có thể chỉnh sửa.' })
     } catch (error) {
-      toast({ title: 'Error', description: getErrorMessage(error, 'Không clone được layout'), variant: 'destructive' })
+      toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không sao chép được sơ đồ'), variant: 'destructive' })
     }
   }
 
@@ -1175,9 +1175,9 @@ export default function LayoutsPage() {
       if (selectedLayout?.id === layout.id) setSelectedLayout(null)
       setArchiveTarget(null)
       await fetchLayouts(0)
-      toast({ title: 'Archived', description: 'Layout archived.' })
+      toast({ title: 'Đã lưu trữ', description: 'Sơ đồ đã được lưu trữ.' })
     } catch (error) {
-      toast({ title: 'Error', description: getErrorMessage(error, 'Không archive được layout'), variant: 'destructive' })
+      toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không lưu trữ được sơ đồ'), variant: 'destructive' })
     }
   }
 
@@ -1191,7 +1191,7 @@ export default function LayoutsPage() {
       const response = await eventService.getAll()
       setEvents(response.data.filter((event) => event.status === 'DRAFT'))
     } catch (error) {
-      toast({ title: 'Error', description: 'Không tải được danh sách event', variant: 'destructive' })
+      toast({ title: 'Lỗi', description: 'Không tải được danh sách sự kiện', variant: 'destructive' })
     }
   }
 
@@ -1229,7 +1229,7 @@ export default function LayoutsPage() {
       setMappings(nextMappings)
       setMissingClassForms(nextMissingForms)
     } catch (error) {
-      toast({ title: 'Error', description: 'Không tải được ticket classes', variant: 'destructive' })
+      toast({ title: 'Lỗi', description: 'Không tải được hạng vé', variant: 'destructive' })
     }
   }
 
@@ -1237,7 +1237,7 @@ export default function LayoutsPage() {
     if (!selectedEventId) return
     const form = missingClassForms[key]
     if (!form?.name.trim() || !form.price || Number(form.price) < 0) {
-      toast({ title: 'Missing data', description: 'Enter ticket class name and valid price.', variant: 'destructive' })
+      toast({ title: 'Thiếu dữ liệu', description: 'Vui lòng nhập tên hạng vé và giá tiền hợp lệ.', variant: 'destructive' })
       return
     }
 
@@ -1255,9 +1255,9 @@ export default function LayoutsPage() {
         delete next[key]
         return next
       })
-      toast({ title: 'Created', description: `${created.data.name} created and mapped.` })
+      toast({ title: 'Đã tạo', description: `Đã tạo và ánh xạ hạng vé ${created.data.name}.` })
     } catch (error) {
-      toast({ title: 'Error', description: getErrorMessage(error, 'KhÃ´ng táº¡o Ä‘Æ°á»£c ticket class'), variant: 'destructive' })
+      toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không tạo được hạng vé'), variant: 'destructive' })
     } finally {
       setCreatingTicketClassKey(null)
     }
@@ -1273,9 +1273,9 @@ export default function LayoutsPage() {
         })),
       })
       setApplyLayout(null)
-      toast({ title: 'Applied', description: `Created ${created.createdCount} seats.` })
+      toast({ title: 'Đã áp dụng', description: `Đã tạo ${created.createdCount} ghế.` })
     } catch (error) {
-      toast({ title: 'Error', description: getErrorMessage(error, 'Không apply được layout'), variant: 'destructive' })
+      toast({ title: 'Lỗi', description: getErrorMessage(error, 'Không áp dụng được sơ đồ ghế'), variant: 'destructive' })
     }
   }
 
@@ -1285,15 +1285,15 @@ export default function LayoutsPage() {
     const name = classForm.name.trim()
     const color = classForm.color.trim() || '#2563eb'
     if (!key || !name) {
-      toast({ title: 'Missing data', description: 'Nhập đủ key và tên class.', variant: 'destructive' })
+      toast({ title: 'Thiếu dữ liệu', description: 'Nhập đủ key và tên class.', variant: 'destructive' })
       return
     }
     if (!/^[a-z0-9_-]+$/.test(key)) {
-      toast({ title: 'Invalid key', description: 'Key chỉ nên dùng chữ thường, số, dấu gạch ngang hoặc gạch dưới.', variant: 'destructive' })
+      toast({ title: 'Khóa không hợp lệ', description: 'Key chỉ nên dùng chữ thường, số, dấu gạch ngang hoặc gạch dưới.', variant: 'destructive' })
       return
     }
     if (ticketClasses.some((ticketClass) => ticketClass.key === key)) {
-      toast({ title: 'Duplicate key', description: 'Template class key đã tồn tại.', variant: 'destructive' })
+      toast({ title: 'Khóa bị trùng', description: 'Template class key đã tồn tại.', variant: 'destructive' })
       return
     }
     setTicketClasses((current) => [...current, { key, name, color }])
@@ -1331,7 +1331,7 @@ export default function LayoutsPage() {
               <Input
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
-                placeholder="Search layout..."
+                placeholder="Tìm kiếm sơ đồ..."
                 className="pl-9"
               />
             </div>
@@ -1340,10 +1340,10 @@ export default function LayoutsPage() {
               onChange={(event) => setStatusFilter(event.target.value as LayoutStatus | '')}
               className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
             >
-              <option value="">All statuses</option>
-              <option value="DRAFT">Draft</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="ARCHIVED">Archived</option>
+              <option value="">Tất cả trạng thái</option>
+              <option value="DRAFT">Bản nháp</option>
+              <option value="PUBLISHED">Đã xuất bản</option>
+              <option value="ARCHIVED">Đã lưu trữ</option>
             </select>
           </form>
         </div>
@@ -1355,11 +1355,11 @@ export default function LayoutsPage() {
             </div>
           ) : layouts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
-              <p className="font-medium text-slate-800">No layouts yet</p>
-              <p className="mt-1 text-xs text-slate-500">Create a reusable layout template to start drawing seats.</p>
+              <p className="font-medium text-slate-800">Chưa có sơ đồ ghế nào</p>
+              <p className="mt-1 text-xs text-slate-500">Tạo một mẫu sơ đồ để bắt đầu vẽ ghế ngồi.</p>
               <Button size="sm" onClick={newLayout} className="mt-4 bg-indigo-600 text-white hover:bg-indigo-700">
                 <Plus size={15} className="mr-2" />
-                New layout
+                Sơ đồ mới
               </Button>
             </div>
           ) : (
@@ -1448,26 +1448,26 @@ export default function LayoutsPage() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => saveLayout(true)} disabled={saving || readOnly}>
               <Save size={15} className="mr-2" />
-              Save
+              Lưu
             </Button>
             {selectedLayout && selectedLayout.status === 'DRAFT' && (
               <Button size="sm" onClick={publishLayout} className="bg-emerald-600 text-white hover:bg-emerald-700">
-                Publish
+                Xuất bản
               </Button>
             )}
             {selectedLayout && (
               <>
                 <Button variant="outline" size="sm" onClick={() => cloneLayout(selectedLayout)}>
                   <Copy size={15} className="mr-2" />
-                  Clone
+                  Sao chép
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => openApply(selectedLayout)} disabled={selectedLayout.status !== 'PUBLISHED'}>
                   <Send size={15} className="mr-2" />
-                  Apply
+                  Áp dụng
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setArchiveTarget(selectedLayout)}>
                   <Archive size={15} className="mr-2" />
-                  Archive
+                  Lưu trữ
                 </Button>
               </>
             )}
@@ -1796,29 +1796,28 @@ export default function LayoutsPage() {
       <Dialog open={!!archiveTarget} onOpenChange={(open) => !open && setArchiveTarget(null)}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Archive layout?</DialogTitle>
+            <DialogTitle>Lưu trữ sơ đồ?</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm text-slate-600">
             <p>
-              Archive will lock this reusable layout template and move it to ARCHIVED. It does not delete seats already
-              applied to events.
+              Lưu trữ sẽ khóa mẫu sơ đồ ghế tái sử dụng này và chuyển nó vào thư mục LƯU TRỮ. Điều này không xóa các ghế ngồi đã được áp dụng cho các sự kiện.
             </p>
             {archiveTarget && (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <p className="font-medium text-slate-900">{archiveTarget.name}</p>
-                <p className="mt-1 text-xs">{archiveTarget.seatCount} seats - {archiveTarget.status}</p>
+                <p className="mt-1 text-xs">{archiveTarget.seatCount} ghế - {archiveTarget.status === 'PUBLISHED' ? 'Đã xuất bản' : archiveTarget.status === 'DRAFT' ? 'Bản nháp' : archiveTarget.status}</p>
               </div>
             )}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setArchiveTarget(null)}>
-                Cancel
+                Hủy
               </Button>
               <Button
                 className="bg-amber-600 text-white hover:bg-amber-700"
                 onClick={() => archiveTarget && archiveLayout(archiveTarget)}
               >
                 <Archive size={15} className="mr-2" />
-                Archive
+                Lưu trữ
               </Button>
             </div>
           </div>
@@ -1828,17 +1827,16 @@ export default function LayoutsPage() {
       <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Generate from template</DialogTitle>
+            <DialogTitle>Tạo từ mẫu</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {draft.cells.length > 0 && (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                Generate will replace current seats and existing stage/screen decorations. Use undo if you need to go
-                back after generating.
+                Việc tạo sẽ thay thế các ghế hiện tại và các trang trí sân khấu/màn hình hiện có. Sử dụng nút Hoàn tác (Undo) nếu bạn cần quay lại sau khi tạo.
               </div>
             )}
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Template type</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Loại mẫu</label>
               <select
                 value={templateForm.templateType}
                 onChange={(event) => {
@@ -1861,7 +1859,7 @@ export default function LayoutsPage() {
               </p>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Seat count preset</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Số lượng ghế định sẵn</label>
               <select
                 value={templateForm.seatCount}
                 onChange={(event) => setTemplateForm((current) => ({ ...current, seatCount: Number(event.target.value) }))}
@@ -1873,21 +1871,20 @@ export default function LayoutsPage() {
                     value={preset}
                     disabled={templateForm.templateType === 'STADIUM_ELLIPSE' && preset < 500}
                   >
-                    {preset.toLocaleString('vi-VN')} seats
-                    {templateForm.templateType === 'STADIUM_ELLIPSE' && preset < 500 ? ' - unavailable for ellipse' : ''}
+                    {preset.toLocaleString('vi-VN')} ghế
+                    {templateForm.templateType === 'STADIUM_ELLIPSE' && preset < 500 ? ' - không khả dụng cho sân hình ellipse' : ''}
                   </option>
                 ))}
               </select>
               <p className="mt-1 text-xs text-slate-500">
-                Need an exact odd number? Choose the nearest preset, then paint or erase seats manually.
+                Cần số ghế lẻ chính xác? Hãy chọn giá trị gần nhất, sau đó vẽ hoặc xóa bớt ghế bằng tay.
               </p>
               {templateForm.templateType === 'STADIUM_ELLIPSE' && templateForm.seatCount < 500 && (
                 <p className="mt-1 text-xs text-red-600">Sân vận động ellipse không phù hợp quy mô nhỏ.</p>
               )}
             </div>
             <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-              Generated seats use the <span className="font-semibold text-slate-900">standard</span> template class.
-              You can rename or repaint classes after generation.
+              Các ghế được tạo sẽ sử dụng phân hạng ghế tiêu chuẩn. Bạn có thể đổi tên hoặc tô màu lại các hạng ghế sau khi tạo.
             </div>
             <Button
               onClick={applyTemplateGeneration}
@@ -1895,7 +1892,7 @@ export default function LayoutsPage() {
               className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
             >
               <Wand2 size={15} className="mr-2" />
-              Generate layout
+              Tạo sơ đồ
             </Button>
           </div>
         </DialogContent>

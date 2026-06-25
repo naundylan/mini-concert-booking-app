@@ -83,7 +83,7 @@ function PosSuccessContent() {
           </div>
         </div>
 
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-indigo-600">Order complete</p>
+        <p className="text-xs font-bold uppercase tracking-[0.24em] text-indigo-600">Đơn hàng hoàn tất</p>
         <h1 className="mt-2 text-2xl font-bold text-slate-900">{order.orderCode}</h1>
 
         <Card className="relative mx-auto mt-8 overflow-hidden rounded-3xl border-0 bg-indigo-100 p-0 text-left shadow-sm">
@@ -96,7 +96,7 @@ function PosSuccessContent() {
               <p className="text-xs font-medium text-slate-500">Phương thức</p>
               <p className="mt-2 text-sm font-semibold text-slate-900">{paymentMethodLabel(order.paymentMethod)}</p>
               <Badge className="mt-2 border border-emerald-200 bg-emerald-50 text-emerald-700">
-                {order.paymentStatus}
+                {order.paymentStatus === 'PAID' ? 'Đã thanh toán' : order.paymentStatus === 'PENDING' ? 'Chờ xử lý' : order.paymentStatus === 'FAILED' ? 'Thất bại' : order.paymentStatus}
               </Badge>
             </div>
           </div>

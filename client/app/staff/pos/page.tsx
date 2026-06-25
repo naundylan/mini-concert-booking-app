@@ -38,13 +38,13 @@ const PAYMENT_OPTIONS: Array<{
   {
     value: 'CASH',
     title: 'Tiền mặt',
-    description: 'Staff xác nhận khi đã nhận đủ tiền tại quầy.',
+    description: 'Nhân viên xác nhận khi đã nhận đủ tiền tại quầy.',
     icon: Banknote,
   },
   {
     value: 'BANK_TRANSFER',
     title: 'Chuyển khoản',
-    description: 'Staff kiểm tra app ngân hàng riêng trước khi xác nhận.',
+    description: 'Nhân viên kiểm tra app ngân hàng riêng trước khi xác nhận.',
     icon: Landmark,
   },
 ]
@@ -338,8 +338,8 @@ export default function POSPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold text-slate-900">{selectedEvent.name}</h2>
-                  <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
-                    {selectedEvent.status}
+                  <Badge className={`border ${selectedEvent.status === 'ONSALE' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-violet-200 bg-violet-50 text-violet-700'}`}>
+                    {selectedEvent.status === 'ONSALE' ? 'Đang mở bán' : selectedEvent.status === 'TEASING' ? 'Sắp mở bán' : selectedEvent.status}
                   </Badge>
                 </div>
                 <p className="mt-1 flex items-center gap-1 text-sm text-slate-600">
@@ -363,7 +363,7 @@ export default function POSPage() {
             <div>
               <h2 className="text-xl font-bold text-slate-900">Chọn sự kiện để bán vé</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Staff cần chọn sự kiện đang mở bán trước khi nhập khách hàng và chọn ghế.
+                Nhân viên cần chọn sự kiện đang mở bán trước khi nhập khách hàng và chọn ghế.
               </p>
             </div>
             <Button className="bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => setShowEventDialog(true)}>
@@ -655,8 +655,8 @@ export default function POSPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="truncate text-sm font-semibold text-slate-900">{event.name}</h3>
-                        <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
-                          {event.status}
+                        <Badge className={`border ${event.status === 'ONSALE' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-violet-200 bg-violet-50 text-violet-700'}`}>
+                          {event.status === 'ONSALE' ? 'Đang mở bán' : event.status === 'TEASING' ? 'Sắp mở bán' : event.status}
                         </Badge>
                       </div>
                       <p className="mt-2 flex items-center gap-1 text-xs text-slate-600">
