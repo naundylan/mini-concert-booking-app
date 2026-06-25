@@ -98,6 +98,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   SePayProperties sePayProperties;
   CheckoutProperties checkoutProperties;
   VietQrService vietQrService;
+  com.concert.booking.modules.user.UserRepository userRepository;
+
   SePayWebhookVerifier sePayWebhookVerifier;
   TicketDeliveryService ticketDeliveryService;
 
@@ -549,6 +551,9 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
   private CustomerTicketDTO toCustomerTicketDTO(
       Ticket ticket, Order order, Event event, TicketClass ticketClass) {
+    com.concert.booking.modules.user.User customer = userRepository.findById(order.getCustomerId()).orElse(null);
+    Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+
     return CustomerTicketDTO.builder()
         .ticketId(ticket.getId())
         .orderId(order.getId())
@@ -566,6 +571,11 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         .price(ticket.getPrice())
         .status(ticket.getStatus())
         .qrPayload(ticket.getId().toString())
+        .customerPhone(customer != null ? customer.getPhone() : null)
+        .customerEmail(customer != null ? customer.getEmail() : null)
+        .customerName(customer != null ? customer.getFullName() : null)
+        .bookingTime(order.getCreatedAt() != null ? java.sql.Timestamp.from(order.getCreatedAt()) : null)
+        .paymentMethod(payment != null && payment.getPaymentMethod() != null ? payment.getPaymentMethod().name() : "N/A")
         .build();
   }
 

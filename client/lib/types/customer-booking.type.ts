@@ -136,6 +136,11 @@ export interface CustomerTicketDTO {
   status?: CustomerTicketStatus
   qrPayload?: string
   ticketClass?: CustomerTicketClassDTO | null
+  customerPhone?: string | null
+  customerEmail?: string | null
+  customerName?: string | null
+  bookingTime?: string | null
+  paymentMethod?: string | null
 }
 
 export interface SeatSnapshotEvent {

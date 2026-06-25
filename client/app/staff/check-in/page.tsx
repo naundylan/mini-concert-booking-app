@@ -230,13 +230,38 @@ export default function CheckInPage() {
     try {
       setScannerError('')
       const reader = new BrowserMultiFormatReader()
+      const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      
+      const backCamera = videoInputDevices.find((device) => {
+        const label = device.label.toLowerCase()
+        return (
+          label.includes('back') ||
+          label.includes('sau') ||
+          label.includes('environment') ||
+          label.includes('rear')
+        )
+      })
+      
+      const deviceId = backCamera
+        ? backCamera.deviceId
+        : videoInputDevices.length > 0
+        ? videoInputDevices[videoInputDevices.length - 1].deviceId
+        : undefined
+
       controlsRef.current = await reader.decodeFromVideoDevice(
-        undefined,
+        deviceId,
         videoRef.current,
         (result) => {
           const rawValue = result?.getText()
           if (!rawValue || rawValue === lastScannedValueRef.current) return
           lastScannedValueRef.current = rawValue
+          
+          setTimeout(() => {
+            if (lastScannedValueRef.current === rawValue) {
+              lastScannedValueRef.current = ''
+            }
+          }, 3000)
+
           void checkInTicket(extractTicketId(rawValue))
         }
       )

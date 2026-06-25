@@ -26,7 +26,14 @@ const STAFF_MENU_ITEMS = [
   { label: 'History', icon: Clock, href: '/staff/history' },
 ];
 
-export default function Sidebar() {
+import { X } from 'lucide-react';
+
+type SidebarProps = {
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+};
+
+export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
@@ -34,23 +41,31 @@ export default function Sidebar() {
     authService.logout();
   };
 
-  return (
-    <aside className="w-64 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col h-screen border-r border-indigo-900">
+  const content = (
+    <>
       {/* Logo Section */}
-      <div className="p-6 border-b border-indigo-900">
+      <div className="p-6 border-b border-indigo-900 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg">
+          <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg text-white">
             K
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">Kinetic</h1>
+            <h1 className="font-bold text-lg leading-tight text-white">Kinetic</h1>
             <p className="text-xs text-indigo-300">Staff Portal</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={onCloseMobile}
+          className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-800 lg:hidden"
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 py-6 px-3 space-y-2">
+      <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
         {STAFF_MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -58,6 +73,7 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onCloseMobile}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                 isActive
                   ? 'bg-indigo-600 text-white'
@@ -75,14 +91,14 @@ export default function Sidebar() {
       <div className="p-4 border-t border-indigo-900">
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 transition-colors">
+            <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 transition-colors text-left">
               <Avatar className="w-10 h-10">
                 <AvatarFallback className="bg-indigo-600 text-white text-sm font-bold">
                   AR
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-white">Alex Rivera</p>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium text-white truncate">Alex Rivera</p>
                 <p className="text-xs text-slate-400">Staff</p>
               </div>
             </button>
@@ -99,6 +115,32 @@ export default function Sidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-40 bg-slate-950/50 transition-opacity lg:hidden ${
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={onCloseMobile}
+      />
+
+      {/* Mobile Drawer */}
+      <div
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white transition-transform duration-300 lg:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {content}
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex lg:flex-col w-64 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white h-screen border-r border-indigo-900 shrink-0">
+        {content}
+      </aside>
+    </>
   );
 }

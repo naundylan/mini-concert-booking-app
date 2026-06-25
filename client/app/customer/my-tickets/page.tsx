@@ -6,6 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { customerBookingService } from '@/lib/services/customer-booking.service'
 import { CustomerTicketDTO, PageResponse } from '@/lib/types/customer-booking.type'
 
@@ -143,9 +150,101 @@ export default function MyTicketsPage() {
                       <p className="font-semibold text-indigo-600">{formatMoney(ticket.price)}</p>
                     </div>
 
-                    <p className="mt-3 break-all rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                      QR payload: {qrPayload}
-                    </p>
+                    <div className="mt-4 flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                      <p className="text-xs text-slate-500">Đơn hàng: {ticket.orderCode || '--'}</p>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="text-xs font-semibold h-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                            Xem chi tiết
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[480px]">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-bold text-slate-900">Chi tiết vé điện tử</DialogTitle>
+                          </DialogHeader>
+                          <div className="mt-4 space-y-4">
+                            {/* QR Section */}
+                            <div className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 rounded-xl bg-slate-50">
+                              <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`}
+                                alt="Mã QR Vé"
+                                className="h-44 w-44 object-contain"
+                              />
+                              <p className="mt-2 text-xs font-mono text-slate-500 break-all text-center">
+                                Payload: {qrPayload}
+                              </p>
+                            </div>
+
+                            {/* Ticket Stub Information */}
+                            <div className="space-y-3 divide-y divide-slate-100 text-sm">
+                              <div className="pb-3">
+                                <h3 className="font-bold text-slate-950 text-base">{ticket.eventName || 'Sự kiện'}</h3>
+                                <p className="text-xs text-slate-500 mt-0.5">Địa điểm: {ticket.eventLocation || '--'}</p>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-3">
+                                <div>
+                                  <span className="text-xs text-slate-500 block">Mã vé (Ticket ID)</span>
+                                  <span className="font-mono text-xs font-medium text-slate-900 break-all">{ticketId}</span>
+                                </div>
+                                <div>
+                                  <span className="text-xs text-slate-500 block">Mã đơn hàng (Order)</span>
+                                  <span className="font-semibold text-slate-900">{ticket.orderCode || '--'}</span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-3">
+                                <div>
+                                  <span className="text-xs text-slate-500 block">Hạng vé</span>
+                                  <span className="font-semibold text-indigo-600">{ticket.ticketClassName || ticket.ticketClass?.name || 'Hạng vé'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-xs text-slate-500 block">Vị trí / Số ghế</span>
+                                  <span className="font-bold text-slate-900">Ghế {ticket.label || ticket.seatLabel}</span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-3">
+                                <div>
+                                  <span className="text-xs text-slate-500 block">Thời gian diễn ra</span>
+                                  <span className="font-medium text-slate-900">{formatDateTime(ticket.eventStartTime)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-xs text-slate-500 block">Giá vé</span>
+                                  <span className="font-bold text-indigo-600">{formatMoney(ticket.price)}</span>
+                                </div>
+                              </div>
+
+                              <div className="pt-3">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Thông tin đặt vé</h4>
+                                <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">Người đặt:</span>
+                                    <span className="font-semibold text-slate-900">{ticket.customerName || '--'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">Số điện thoại:</span>
+                                    <span className="font-semibold text-slate-900">{ticket.customerPhone || '--'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">Email:</span>
+                                    <span className="font-semibold text-slate-900">{ticket.customerEmail || '--'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">Thời gian đặt:</span>
+                                    <span className="font-semibold text-slate-900">{formatDateTime(ticket.bookingTime)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">Phương thức thanh toán:</span>
+                                    <span className="font-semibold text-slate-900">{ticket.paymentMethod || '--'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </div>
               </Card>

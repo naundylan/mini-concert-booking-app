@@ -33,4 +33,9 @@ public class CustomerTicketDTO {
   BigDecimal price;
   TicketStatus status;
   String qrPayload;
+  String customerPhone;
+  String customerEmail;
+  String customerName;
+  Timestamp bookingTime;
+  String paymentMethod;
 }
