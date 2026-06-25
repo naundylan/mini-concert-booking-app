@@ -28,7 +28,6 @@ const MENU_ITEMS = [
   { label: 'Layouts', icon: Map, href: '/admin/layouts' },
   { label: 'Staff', icon: Users, href: '/admin/staff' },
   { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
-  { label: 'Reports', icon: TrendingUp, href: '/admin/reports' },
 ];
 
 type SidebarProps = {

@@ -512,6 +512,8 @@ public class OrderServiceImpl implements OrderService {
       User salesStaff = order.getStaffId() != null ? userRepository.findById(order.getStaffId()).orElse(null) : null;
       long ticketCount = ticketRepository.countByOrderId(order.getId());
 
+      boolean isOnline = order.getStaffId() == null || order.getStaffId().equals(order.getCustomerId());
+
       return AdminOrderResponseDTO.builder()
           .id(order.getId())
           .orderCode(order.getOrderCode())
@@ -523,8 +525,8 @@ public class OrderServiceImpl implements OrderService {
           .status(order.getStatus())
           .createdAt(order.getCreatedAt())
           .ticketCount(ticketCount)
-          .channel(order.getStaffId() != null ? "POS" : "ONLINE")
-          .salesStaffName(salesStaff != null ? salesStaff.getFullName() : null)
+          .channel(isOnline ? "ONLINE" : "POS")
+          .salesStaffName(isOnline ? null : (salesStaff != null ? salesStaff.getFullName() : null))
           .build();
     });
   }
@@ -555,6 +557,8 @@ public class OrderServiceImpl implements OrderService {
           .build();
     }).collect(Collectors.toList());
 
+    boolean isOnline = order.getStaffId() == null || order.getStaffId().equals(order.getCustomerId());
+
     return AdminOrderDetailResponseDTO.builder()
         .id(order.getId())
         .orderCode(order.getOrderCode())
@@ -565,8 +569,8 @@ public class OrderServiceImpl implements OrderService {
         .totalAmount(order.getTotalAmount())
         .status(order.getStatus())
         .createdAt(order.getCreatedAt())
-        .channel(order.getStaffId() != null ? "POS" : "ONLINE")
-        .salesStaffName(salesStaff != null ? salesStaff.getFullName() : null)
+        .channel(isOnline ? "ONLINE" : "POS")
+        .salesStaffName(isOnline ? null : (salesStaff != null ? salesStaff.getFullName() : null))
         .tickets(ticketDTOs)
         .build();
   }
