@@ -39,6 +39,7 @@ import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
 import com.concert.booking.modules.order.enums.PaymentStatus;
 import com.concert.booking.modules.order.enums.TicketStatus;
+import com.concert.booking.modules.order.enums.EmailStatus;
 import com.concert.booking.modules.seat.Seat;
 import com.concert.booking.modules.seat.SeatHoldService;
 import com.concert.booking.modules.seat.SeatRepository;
@@ -630,6 +631,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .staffId(customerId)
                 .totalAmount(totalAmount)
                 .status(OrderStatus.PAID)
+                .emailStatus(EmailStatus.PENDING)
                 .createdBy(customerId)
                 .build());
 
