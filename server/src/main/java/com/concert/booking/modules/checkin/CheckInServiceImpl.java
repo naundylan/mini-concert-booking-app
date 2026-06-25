@@ -137,10 +137,10 @@ public class CheckInServiceImpl implements CheckInService {
 
   @Override
   @Transactional(readOnly = true)
-  public List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword) {
+  public List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword, UUID staffId) {
     String normalizedKeyword = keyword == null ? "" : keyword.trim();
     return ticketRepository
-        .findCheckInHistory(eventId, normalizedKeyword, PageRequest.of(0, 100))
+        .findCheckInHistory(eventId, normalizedKeyword, staffId, PageRequest.of(0, 100))
         .stream()
         .map(this::toHistoryDTO)
         .toList();

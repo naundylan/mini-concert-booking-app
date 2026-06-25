@@ -150,7 +150,7 @@ public class OrderServiceImpl implements OrderService {
                 .staffId(staffId)
                 .totalAmount(totalAmount)
                 .status(OrderStatus.PAID)
-                .emailStatus(EmailStatus.PENDING)
+                .emailStatus(EmailStatus.UNSENT)
                 .createdBy(staffId)
                 .build());
 

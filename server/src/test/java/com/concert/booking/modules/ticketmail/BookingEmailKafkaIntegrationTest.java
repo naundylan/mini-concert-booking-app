@@ -89,6 +89,7 @@ class BookingEmailKafkaIntegrationTest extends BaseIntegrationTest {
         .eventId(event.getId())
         .totalAmount(new BigDecimal("1000000"))
         .status(OrderStatus.PAID)
+        .emailStatus(EmailStatus.UNSENT)
         .build();
     order = orderRepository.save(order);
 

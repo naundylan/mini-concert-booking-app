@@ -631,7 +631,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .staffId(customerId)
                 .totalAmount(totalAmount)
                 .status(OrderStatus.PAID)
-                .emailStatus(EmailStatus.PENDING)
+                .emailStatus(EmailStatus.UNSENT)
                 .createdBy(customerId)
                 .build());
 
