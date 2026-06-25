@@ -111,8 +111,12 @@ export default function MyTicketsPage() {
             return (
               <Card key={ticketId} className="border border-slate-200 bg-white p-4">
                 <div className="flex gap-4">
-                  <div className="flex h-28 w-28 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                    <QrCode size={44} className="text-slate-700" />
+                  <div className="flex h-28 w-28 flex-shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 p-1.5 shadow-sm">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrPayload)}`}
+                      alt="Mã QR Vé"
+                      className="h-full w-full object-contain"
+                    />
                   </div>
 
                   <div className="min-w-0 flex-1">

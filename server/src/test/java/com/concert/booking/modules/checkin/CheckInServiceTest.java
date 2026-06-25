@@ -140,7 +140,7 @@ class CheckInServiceTest {
   void search_success() {
     // Arrange
     when(eventRepository.findById(eventId)).thenReturn(Optional.of(activeEvent));
-    when(orderRepository.searchCheckInOrders(eventId, "Nguyen")).thenReturn(List.of(paidOrder));
+    when(orderRepository.searchCheckInOrders(eventId, "Nguyen", null)).thenReturn(List.of(paidOrder));
     when(userRepository.findById(customerId)).thenReturn(Optional.of(customer));
     when(ticketRepository.findByOrderId(orderId)).thenReturn(List.of(unusedTicket));
     when(ticketClassRepository.findByEventId(eventId)).thenReturn(List.of(ticketClass));

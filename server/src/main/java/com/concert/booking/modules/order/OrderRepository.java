@@ -28,18 +28,24 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
   @Query(
       """
-      SELECT o
+      SELECT DISTINCT o
       FROM Order o
       JOIN User u ON u.id = o.customerId
+      LEFT JOIN Ticket t ON t.orderId = o.id
       WHERE o.eventId = :eventId
         AND (
           LOWER(o.orderCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
           OR u.phone LIKE CONCAT('%', :keyword, '%')
+          OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR (:keywordUuid IS NOT NULL AND t.id = :keywordUuid)
         )
       ORDER BY o.createdAt DESC
       """)
   java.util.List<Order> searchCheckInOrders(
-      @Param("eventId") UUID eventId, @Param("keyword") String keyword);
+      @Param("eventId") UUID eventId,
+      @Param("keyword") String keyword,
+      @Param("keywordUuid") UUID keywordUuid);
 
   @Query(
       """

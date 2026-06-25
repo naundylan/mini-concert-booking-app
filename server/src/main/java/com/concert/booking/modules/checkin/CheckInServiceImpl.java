@@ -69,7 +69,15 @@ public class CheckInServiceImpl implements CheckInService {
     }
     ensureCheckInEvent(eventId);
 
-    List<Order> orders = orderRepository.searchCheckInOrders(eventId, normalizedKeyword);
+    UUID keywordUuid = null;
+    try {
+      keywordUuid = UUID.fromString(normalizedKeyword);
+    } catch (IllegalArgumentException e) {
+      // not a UUID
+    }
+
+    List<Order> orders =
+        orderRepository.searchCheckInOrders(eventId, normalizedKeyword, keywordUuid);
     return orders.stream().map(this::toOrderDTO).toList();
   }
 
