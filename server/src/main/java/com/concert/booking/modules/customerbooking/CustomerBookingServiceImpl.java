@@ -161,6 +161,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     return CustomerSeatCatalogDTO.builder()
         .eventId(event.getId())
         .eventName(event.getName())
+        .layoutTemplateType(event.getLayoutTemplateType())
+        .layoutDecorations(event.getLayoutDecorations())
         .generatedAt(Instant.now())
         .seats(seats)
         .build();

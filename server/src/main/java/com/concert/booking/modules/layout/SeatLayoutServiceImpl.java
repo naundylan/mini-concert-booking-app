@@ -193,30 +193,42 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
     LayoutDataDTO data = normalizeData(layout.getLayoutData());
     ensureAllKeysMapped(data, mapping, ticketClassById);
 
+    // Save layout details on the event
+    event.setLayoutId(layoutId);
+    event.setLayoutTemplateType(data.getTemplateType());
+    event.setLayoutDecorations(data.getDecorations());
+    eventRepository.save(event);
+
     if (seatRepository.countByEventId(eventId) > 0) {
       seatRepository.deleteByEventId(eventId);
     }
 
-    // Seat rows/columns are copied from the layout, but labels are recomputed here.
-    // layoutData.cells.previewLabel is editor-only. Seat.label is the source of truth for POS,
-    // tickets, and check-in.
-    LayoutMetrics metrics = calculateMetrics(data);
-    List<Seat> seats =
-        data.getCells().stream()
-            .map(
-                cell -> {
-                  UUID ticketClassId = mapping.get(cell.getTicketClassKey());
-                  return Seat.builder()
-                      .eventId(eventId)
-                      .ticketClassId(ticketClassId)
-                      .gridRow(cell.getRow())
-                      .gridColumn(cell.getCol())
-                      .label(toOfficialLabel(cell, metrics))
-                      .status(SeatStatus.AVAILABLE)
-                      .createdBy(currentUserId)
-                      .build();
-                })
-            .collect(Collectors.toList());
+    int currentRawRow = -1;
+    int currentRowNumber = 0;
+    int seatIndexInRow = 0;
+
+    List<Seat> seats = new ArrayList<>();
+    for (LayoutCellDTO cell : data.getCells()) {
+      if (cell.getRow() != currentRawRow) {
+        currentRawRow = cell.getRow();
+        currentRowNumber++;
+        seatIndexInRow = 1;
+      } else {
+        seatIndexInRow++;
+      }
+
+      UUID ticketClassId = mapping.get(cell.getTicketClassKey());
+      seats.add(
+          Seat.builder()
+              .eventId(eventId)
+              .ticketClassId(ticketClassId)
+              .gridRow(cell.getRow())
+              .gridColumn(cell.getCol())
+              .label(currentRowNumber + "-" + seatIndexInRow)
+              .status(SeatStatus.AVAILABLE)
+              .createdBy(currentUserId)
+              .build());
+    }
     seatRepository.saveAll(seats);
     return LayoutApplyResponseDTO.builder().createdCount(seats.size()).build();
   }
@@ -331,13 +343,6 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
         .build();
   }
 
-  private String toOfficialLabel(LayoutCellDTO cell, LayoutMetrics metrics) {
-    // Example: painted cells at (5,8), (5,9), (6,8) have minRow=5 and minCol=8.
-    // Their official labels become 1-1, 1-2, and 2-1 regardless of workspace position.
-    int normalizedRow = cell.getRow() - metrics.minRow();
-    int normalizedCol = cell.getCol() - metrics.minCol() + 1;
-    return (normalizedRow + 1) + "-" + normalizedCol;
-  }
 
   private String trimToNull(String value) {
     if (value == null || value.trim().isBlank()) {

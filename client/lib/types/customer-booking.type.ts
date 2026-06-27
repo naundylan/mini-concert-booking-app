@@ -59,6 +59,17 @@ export interface CustomerSeatDTO {
 export interface CustomerSeatCatalogDTO {
   eventId: string
   eventName: string
+  layoutTemplateType?: string | null
+  layoutDecorations?: Array<{
+    id: string
+    type: string
+    label: string
+    row: number
+    col: number
+    rowSpan: number
+    colSpan: number
+    shape?: string | null
+  }> | null
   generatedAt: string
   seats: CustomerSeatDTO[]
 }

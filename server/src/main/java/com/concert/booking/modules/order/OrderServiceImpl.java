@@ -110,6 +110,8 @@ public class OrderServiceImpl implements OrderService {
     return SeatCatalogDTO.builder()
         .eventId(event.getId())
         .eventName(event.getName())
+        .layoutTemplateType(event.getLayoutTemplateType())
+        .layoutDecorations(event.getLayoutDecorations())
         .ticketClasses(ticketClasses.stream().map(this::toTicketClassDTO).toList())
         .seats(seats)
         .build();

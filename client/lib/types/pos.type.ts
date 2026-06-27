@@ -42,6 +42,17 @@ export interface OrderItemResponseDTO {
 export interface SeatCatalogDTO {
   eventId: string
   eventName: string
+  layoutTemplateType?: string | null
+  layoutDecorations?: Array<{
+    id: string
+    type: string
+    label: string
+    row: number
+    col: number
+    rowSpan: number
+    colSpan: number
+    shape?: string | null
+  }> | null
   ticketClasses: Array<{
     id: string
     name: string

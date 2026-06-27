@@ -18,6 +18,8 @@ import lombok.experimental.FieldDefaults;
 public class CustomerSeatCatalogDTO {
   UUID eventId;
   String eventName;
+  String layoutTemplateType;
+  List<com.concert.booking.modules.layout.dto.LayoutDataDTO.LayoutDecorationDTO> layoutDecorations;
   Instant generatedAt;
   List<CustomerSeatDTO> seats;
 }

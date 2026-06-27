@@ -182,29 +182,50 @@ export default function POSPage() {
     return catalog.seats.filter((seat) => selectedSeatIds.includes(getSeatId(seat)))
   }, [catalog, selectedSeatIds])
 
+  const parseSeatLabel = (label: string) => {
+    if (!label) return { row: '1', seat: '1' }
+    if (label.includes('-')) {
+      const parts = label.split('-')
+      return { row: parts[0], seat: parts[1] }
+    }
+    const match = label.match(/^([A-Z]+)(\d+)$/i)
+    if (match) {
+      return { row: match[1], seat: match[2] }
+    }
+    return { row: '1', seat: label }
+  }
+
   const seatBounds = useMemo(() => {
-    if (!catalog || catalog.seats.length === 0) return { minCol: 0, maxCol: 0 }
-    const cols = catalog.seats.map((seat) => seat.gridColumn ?? 0)
+    if (!catalog || catalog.seats.length === 0) return { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }
+    const seatRows = catalog.seats.map((seat) => seat.gridRow ?? 0)
+    const seatCols = catalog.seats.map((seat) => seat.gridColumn ?? 0)
+
+    const decRows = (catalog.layoutDecorations || []).map((d) => d.row)
+    const decRowsMax = (catalog.layoutDecorations || []).map((d) => d.row + d.rowSpan - 1)
+    const decCols = (catalog.layoutDecorations || []).map((d) => d.col)
+    const decColsMax = (catalog.layoutDecorations || []).map((d) => d.col + d.colSpan - 1)
+
+    const allRows = [...seatRows, ...decRows, ...decRowsMax]
+    const allCols = [...seatCols, ...decCols, ...decColsMax]
+
     return {
-      minCol: Math.min(...cols),
-      maxCol: Math.max(...cols),
+      minRow: Math.min(...allRows),
+      maxRow: Math.max(...allRows),
+      minCol: Math.min(...allCols),
+      maxCol: Math.max(...allCols),
     }
   }, [catalog])
 
-  const seatsByRow = useMemo(() => {
+  const activeRows = useMemo(() => {
     if (!catalog) return []
-    const rows = new Map<number, OrderItemResponseDTO[]>()
+    const rowsMap = new Map<number, string>()
     for (const seat of catalog.seats) {
-      const row = seat.gridRow ?? 0
-      rows.set(row, [...(rows.get(row) || []), seat])
+      const rowNum = seat.gridRow ?? 0
+      if (!rowsMap.has(rowNum)) {
+        rowsMap.set(rowNum, parseSeatLabel(getSeatLabel(seat)).row)
+      }
     }
-    return Array.from(rows.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([row, seats]) => ({
-        row,
-        label: `Hàng ${row + 1}`,
-        seats: seats.sort((a, b) => (a.gridColumn ?? 0) - (b.gridColumn ?? 0)),
-      }))
+    return Array.from(rowsMap.entries()).sort(([a], [b]) => a - b)
   }, [catalog])
 
   const totalAmount = selectedSeats.reduce((sum, seat) => sum + getSeatPrice(seat), 0)
@@ -478,44 +499,79 @@ export default function POSPage() {
                       <Loader2 className="mr-2 h-5 w-5 animate-spin text-indigo-600" />
                       Đang tải sơ đồ ghế...
                     </div>
-                  ) : seatsByRow.length === 0 ? (
+                  ) : !catalog || catalog.seats.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">
                       Sự kiện này chưa có sơ đồ ghế.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <div className="mb-6 rounded-b-full border-b-8 border-indigo-200 py-3 text-center text-xs font-semibold tracking-[0.2em] text-slate-500">
-                        SÂN KHẤU
-                      </div>
-                      <div className="min-w-max space-y-3">
-                        {seatsByRow.map((row) => (
-                          <div key={row.row} className="flex items-center gap-3">
-                            <span className="w-16 shrink-0 text-left text-sm font-semibold text-slate-500">{row.label}</span>
-                            <div className="relative h-8" style={{ width: `${(seatBounds.maxCol - seatBounds.minCol + 1) * 38 - 6}px` }}>
-                              {row.seats.map((seat) => {
-                                const normalizedCol = (seat.gridColumn ?? 0) - seatBounds.minCol
-                                return (
-                                  <button
-                                    key={getSeatId(seat)}
-                                    type="button"
-                                    onClick={() => toggleSeat(seat)}
-                                    disabled={getSeatStatus(seat) !== 'AVAILABLE'}
-                                    title={`${getSeatLabel(seat)} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
-                                    style={{
-                                      position: 'absolute',
-                                      left: `${normalizedCol * 38}px`,
-                                      top: 0,
-                                      ...(getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : {})
-                                    }}
-                                    className={`h-8 w-8 rounded-md text-[11px] font-semibold transition ${getSeatClassName(seat)}`}
-                                  >
-                                    {normalizedCol + 1}
-                                  </button>
-                                )
-                              })}
-                            </div>
+                    <div className="overflow-x-auto rounded-xl bg-slate-50 p-6 border border-slate-200 shadow-inner">
+                      <div className="relative" style={{
+                        width: `${(seatBounds.maxCol - seatBounds.minCol + 1) * 38 + 80}px`,
+                        height: `${(seatBounds.maxRow - seatBounds.minRow + 1) * 38}px`
+                      }}>
+                        {/* Hàng ghế nhãn trái */}
+                        {activeRows.map(([gridRow, rowLabel]) => (
+                          <span
+                            key={`row-label-${gridRow}`}
+                            style={{
+                              position: 'absolute',
+                              left: '0px',
+                              top: `${(gridRow - seatBounds.minRow) * 38}px`,
+                              width: '64px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-start',
+                            }}
+                            className="text-xs font-bold text-slate-500 select-none"
+                          >
+                            Hàng {rowLabel}
+                          </span>
+                        ))}
+
+                        {/* Decorations sân khấu */}
+                        {(catalog.layoutDecorations || []).map((dec) => (
+                          <div
+                            key={`dec-${dec.id}`}
+                            style={{
+                              position: 'absolute',
+                              left: `${(dec.col - seatBounds.minCol) * 38 + 80}px`,
+                              top: `${(dec.row - seatBounds.minRow) * 38}px`,
+                              width: `${dec.colSpan * 38 - 6}px`,
+                              height: `${dec.rowSpan * 38 - 6}px`,
+                              borderRadius: dec.shape === 'ellipse' ? '50%' : '8px',
+                            }}
+                            className="absolute flex items-center justify-center bg-slate-900 border-2 border-amber-500 text-slate-100 font-bold text-[11px] shadow-md opacity-90 select-none"
+                          >
+                            {dec.label}
                           </div>
                         ))}
+
+                        {/* Ghế ngồi */}
+                        {catalog.seats.map((seat) => {
+                          const normalizedCol = (seat.gridColumn ?? 0) - seatBounds.minCol
+                          const normalizedRow = (seat.gridRow ?? 0) - seatBounds.minRow
+                          return (
+                            <button
+                              key={getSeatId(seat)}
+                              type="button"
+                              onClick={() => toggleSeat(seat)}
+                              disabled={getSeatStatus(seat) !== 'AVAILABLE'}
+                              title={`${getSeatLabel(seat)} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
+                              style={{
+                                position: 'absolute',
+                                left: `${normalizedCol * 38 + 80}px`,
+                                top: `${normalizedRow * 38}px`,
+                                width: '32px',
+                                height: '32px',
+                                ...(getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : {})
+                              }}
+                              className={`rounded-md text-[10px] font-bold transition flex items-center justify-center ${getSeatClassName(seat)}`}
+                            >
+                              {parseSeatLabel(getSeatLabel(seat)).seat}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
