@@ -333,20 +333,10 @@ public class SeatLayoutServiceImpl implements SeatLayoutService {
 
   private String toOfficialLabel(LayoutCellDTO cell, LayoutMetrics metrics) {
     // Example: painted cells at (5,8), (5,9), (6,8) have minRow=5 and minCol=8.
-    // Their official labels become A1, A2, and B1 regardless of workspace position.
+    // Their official labels become 1-1, 1-2, and 2-1 regardless of workspace position.
     int normalizedRow = cell.getRow() - metrics.minRow();
     int normalizedCol = cell.getCol() - metrics.minCol() + 1;
-    return toRowLabel(normalizedRow) + normalizedCol;
-  }
-
-  private String toRowLabel(int rowIndex) {
-    StringBuilder label = new StringBuilder();
-    int index = rowIndex;
-    do {
-      label.insert(0, (char) ('A' + (index % 26)));
-      index = index / 26 - 1;
-    } while (index >= 0);
-    return label.toString();
+    return (normalizedRow + 1) + "-" + normalizedCol;
   }
 
   private String trimToNull(String value) {

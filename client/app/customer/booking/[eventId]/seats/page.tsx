@@ -103,6 +103,15 @@ export default function SeatSelectionPage() {
     onReconnect: loadCatalog,
   })
 
+  const seatBounds = useMemo(() => {
+    if (!catalog || catalog.seats.length === 0) return { minCol: 0, maxCol: 0 }
+    const cols = catalog.seats.map((seat) => seat.gridColumn ?? 0)
+    return {
+      minCol: Math.min(...cols),
+      maxCol: Math.max(...cols),
+    }
+  }, [catalog])
+
   const seatsByRow = useMemo(() => {
     if (!catalog) return []
     const rows = new Map<number, CustomerSeatDTO[]>()
@@ -113,7 +122,7 @@ export default function SeatSelectionPage() {
       .sort(([a], [b]) => a - b)
       .map(([row, seats]) => ({
         row,
-        label: String.fromCharCode(65 + row),
+        label: `Hàng ${row + 1}`,
         seats: seats.sort((a, b) => a.gridColumn - b.gridColumn),
       }))
   }, [catalog])
@@ -221,25 +230,31 @@ export default function SeatSelectionPage() {
                 <div className="min-w-max space-y-2">
                   {seatsByRow.map((row) => (
                     <div key={row.row} className="flex items-center gap-3">
-                      <span className="w-7 text-sm font-semibold text-slate-500">{row.label}</span>
-                      <div className="flex gap-1.5">
-                        {row.seats.map((seat) => (
-                          <button
-                            key={seat.id}
-                            type="button"
-                            onClick={() => toggleSeat(seat)}
-                            disabled={seat.status !== 'AVAILABLE'}
-                            title={`${seat.label} - ${seat.ticketClassName} - ${formatMoney(seat.price)}`}
-                            style={
-                              seat.status === 'AVAILABLE' && !selectedSeatIds.includes(seat.id)
-                                ? { backgroundColor: seat.colorCode || '#4f46e5' }
-                                : undefined
-                            }
-                            className={`h-8 w-8 rounded-md text-[10px] font-semibold transition ${getSeatClassName(seat)}`}
-                          >
-                            {seat.label}
-                          </button>
-                        ))}
+                      <span className="w-16 shrink-0 text-left text-sm font-semibold text-slate-500">{row.label}</span>
+                      <div className="relative h-8" style={{ width: `${(seatBounds.maxCol - seatBounds.minCol + 1) * 38 - 6}px` }}>
+                        {row.seats.map((seat) => {
+                          const normalizedCol = (seat.gridColumn ?? 0) - seatBounds.minCol
+                          return (
+                            <button
+                              key={seat.id}
+                              type="button"
+                              onClick={() => toggleSeat(seat)}
+                              disabled={seat.status !== 'AVAILABLE'}
+                              title={`${seat.label} - ${seat.ticketClassName} - ${formatMoney(seat.price)}`}
+                              style={{
+                                position: 'absolute',
+                                left: `${normalizedCol * 38}px`,
+                                top: 0,
+                                ...(seat.status === 'AVAILABLE' && !selectedSeatIds.includes(seat.id)
+                                  ? { backgroundColor: seat.colorCode || '#4f46e5' }
+                                  : {})
+                              }}
+                              className={`h-8 w-8 rounded-md text-[10px] font-semibold transition ${getSeatClassName(seat)}`}
+                            >
+                              {normalizedCol + 1}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   ))}

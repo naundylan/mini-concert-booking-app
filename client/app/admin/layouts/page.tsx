@@ -141,13 +141,7 @@ const roundUpToBlock = (value: number) =>
 const makeKey = (row: number, col: number) => `${row}:${col}`
 
 const rowToLabel = (rowIndex: number) => {
-  let label = ''
-  let index = rowIndex
-  do {
-    label = String.fromCharCode(65 + (index % 26)) + label
-    index = Math.floor(index / 26) - 1
-  } while (index >= 0)
-  return label
+  return String(rowIndex + 1)
 }
 
 const calculateBounds = (cells: LayoutCell[]) => {
@@ -176,7 +170,7 @@ const withPreviewLabels = (cells: LayoutCell[]) => {
   const bounds = calculateBounds(cells)
   return cells.map((cell) => {
     if (cell.customPreviewLabel) return cell
-    const previewLabel = `${rowToLabel(cell.row - bounds.minRow)}${cell.col - bounds.minCol + 1}`
+    const previewLabel = `${rowToLabel(cell.row - bounds.minRow)}-${cell.col - bounds.minCol + 1}`
     return { ...cell, previewLabel }
   })
 }

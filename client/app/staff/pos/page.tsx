@@ -182,6 +182,15 @@ export default function POSPage() {
     return catalog.seats.filter((seat) => selectedSeatIds.includes(getSeatId(seat)))
   }, [catalog, selectedSeatIds])
 
+  const seatBounds = useMemo(() => {
+    if (!catalog || catalog.seats.length === 0) return { minCol: 0, maxCol: 0 }
+    const cols = catalog.seats.map((seat) => seat.gridColumn ?? 0)
+    return {
+      minCol: Math.min(...cols),
+      maxCol: Math.max(...cols),
+    }
+  }, [catalog])
+
   const seatsByRow = useMemo(() => {
     if (!catalog) return []
     const rows = new Map<number, OrderItemResponseDTO[]>()
@@ -193,7 +202,7 @@ export default function POSPage() {
       .sort(([a], [b]) => a - b)
       .map(([row, seats]) => ({
         row,
-        label: String.fromCharCode(65 + row),
+        label: `Hàng ${row + 1}`,
         seats: seats.sort((a, b) => (a.gridColumn ?? 0) - (b.gridColumn ?? 0)),
       }))
   }, [catalog])
@@ -481,21 +490,29 @@ export default function POSPage() {
                       <div className="min-w-max space-y-3">
                         {seatsByRow.map((row) => (
                           <div key={row.row} className="flex items-center gap-3">
-                            <span className="w-6 text-sm font-semibold text-slate-500">{row.label}</span>
-                            <div className="flex gap-2">
-                              {row.seats.map((seat) => (
-                                <button
-                                  key={getSeatId(seat)}
-                                  type="button"
-                                  onClick={() => toggleSeat(seat)}
-                                  disabled={getSeatStatus(seat) !== 'AVAILABLE'}
-                                  title={`${getSeatLabel(seat)} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
-                                  style={getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : undefined}
-                                  className={`h-8 w-8 rounded-md text-[11px] font-semibold transition ${getSeatClassName(seat)}`}
-                                >
-                                  {(seat.gridColumn ?? 0) + 1}
-                                </button>
-                              ))}
+                            <span className="w-16 shrink-0 text-left text-sm font-semibold text-slate-500">{row.label}</span>
+                            <div className="relative h-8" style={{ width: `${(seatBounds.maxCol - seatBounds.minCol + 1) * 38 - 6}px` }}>
+                              {row.seats.map((seat) => {
+                                const normalizedCol = (seat.gridColumn ?? 0) - seatBounds.minCol
+                                return (
+                                  <button
+                                    key={getSeatId(seat)}
+                                    type="button"
+                                    onClick={() => toggleSeat(seat)}
+                                    disabled={getSeatStatus(seat) !== 'AVAILABLE'}
+                                    title={`${getSeatLabel(seat)} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
+                                    style={{
+                                      position: 'absolute',
+                                      left: `${normalizedCol * 38}px`,
+                                      top: 0,
+                                      ...(getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : {})
+                                    }}
+                                    className={`h-8 w-8 rounded-md text-[11px] font-semibold transition ${getSeatClassName(seat)}`}
+                                  >
+                                    {normalizedCol + 1}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         ))}
