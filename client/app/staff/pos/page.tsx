@@ -505,29 +505,38 @@ export default function POSPage() {
                     </div>
                   ) : (
                     <div className="overflow-x-auto rounded-xl bg-slate-50 p-6 border border-slate-200 shadow-inner">
+                      {/* Fallback stage ở phía trên nếu không có decorations (layout cũ) */}
+                      {(!catalog.layoutDecorations || catalog.layoutDecorations.length === 0) && (
+                        <div className="mb-6 rounded-b-full border-b-8 border-indigo-200 py-3 text-center text-xs font-semibold tracking-[0.2em] text-slate-500">
+                          SÂN KHẤU
+                        </div>
+                      )}
+
                       <div className="relative" style={{
                         width: `${(seatBounds.maxCol - seatBounds.minCol + 1) * 38 + 80}px`,
-                        height: `${(seatBounds.maxRow - seatBounds.minRow + 1) * 38}px`
+                        height: `${(seatBounds.maxRow - seatBounds.minRow + 1) * 38 + (!catalog.layoutDecorations || catalog.layoutDecorations.length === 0 ? 60 : 0)}px`
                       }}>
-                        {/* Hàng ghế nhãn trái */}
-                        {activeRows.map(([gridRow, rowLabel]) => (
-                          <span
-                            key={`row-label-${gridRow}`}
-                            style={{
-                              position: 'absolute',
-                              left: '0px',
-                              top: `${(gridRow - seatBounds.minRow) * 38}px`,
-                              width: '64px',
-                              height: '32px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'flex-start',
-                            }}
-                            className="text-xs font-bold text-slate-500 select-none"
-                          >
-                            Hàng {rowLabel}
-                          </span>
-                        ))}
+                        {activeRows.map(([gridRow, rowLabel]) => {
+                          const topOffset = !catalog.layoutDecorations || catalog.layoutDecorations.length === 0 ? 60 : 0
+                          return (
+                            <span
+                              key={`row-label-${gridRow}`}
+                              style={{
+                                position: 'absolute',
+                                left: '0px',
+                                top: `${(gridRow - seatBounds.minRow) * 38 + topOffset}px`,
+                                width: '64px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                              }}
+                              className="text-xs font-bold text-slate-500 select-none"
+                            >
+                              Hàng {rowLabel}
+                            </span>
+                          )
+                        })}
 
                         {/* Decorations sân khấu */}
                         {(catalog.layoutDecorations || []).map((dec) => (
@@ -551,24 +560,28 @@ export default function POSPage() {
                         {catalog.seats.map((seat) => {
                           const normalizedCol = (seat.gridColumn ?? 0) - seatBounds.minCol
                           const normalizedRow = (seat.gridRow ?? 0) - seatBounds.minRow
+                          const topOffset = !catalog.layoutDecorations || catalog.layoutDecorations.length === 0 ? 60 : 0
+                          const seatLabelText = getSeatLabel(seat)
+                          // Giảm size chữ nếu nhãn quá dài (như dạng số 12-14)
+                          const isLongLabel = seatLabelText.length >= 4
                           return (
                             <button
                               key={getSeatId(seat)}
                               type="button"
                               onClick={() => toggleSeat(seat)}
                               disabled={getSeatStatus(seat) !== 'AVAILABLE'}
-                              title={`${getSeatLabel(seat)} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
+                              title={`${seatLabelText} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
                               style={{
                                 position: 'absolute',
                                 left: `${normalizedCol * 38 + 80}px`,
-                                top: `${normalizedRow * 38}px`,
+                                top: `${normalizedRow * 38 + topOffset}px`,
                                 width: '32px',
                                 height: '32px',
                                 ...(getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : {})
                               }}
-                              className={`rounded-md text-[10px] font-bold transition flex items-center justify-center ${getSeatClassName(seat)}`}
+                              className={`rounded-md font-bold transition flex items-center justify-center ${isLongLabel ? 'text-[8px]' : 'text-[10px]'} ${getSeatClassName(seat)}`}
                             >
-                              {parseSeatLabel(getSeatLabel(seat)).seat}
+                              {seatLabelText}
                             </button>
                           )
                         })}
