@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart3,
   Calendar,
@@ -46,6 +46,7 @@ export default function Sidebar({
   const [isOpen, setIsOpen] = useState(false);
   const [userFullName, setUserFullName] = useState('Khách');
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     authService
@@ -61,7 +62,13 @@ export default function Sidebar({
   };
 
   const handleMyProfile = () => {
-    console.log('Navigate to profile');
+    if (role === 'ADMIN') {
+      router.push('/admin/settings/profile');
+    } else if (role === 'STAFF') {
+      router.push('/staff/settings/profile');
+    } else if (role === 'CUSTOMER') {
+      router.push('/customer/settings/account');
+    }
   };
 
   // Define menu items based on role

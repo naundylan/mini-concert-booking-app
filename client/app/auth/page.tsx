@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -193,12 +194,12 @@ export default function AuthPage() {
                     <label htmlFor="password" className="text-xs font-medium text-gray-600">
                       Mật khẩu
                     </label>
-                    <button
-                      type="button"
+                    <Link
+                      href="/auth/forgot-password"
                       className="text-xs text-indigo-500 hover:text-indigo-700 font-medium focus:outline-none"
                     >
                       Quên mật khẩu?
-                    </button>
+                    </Link>
                   </div>
                   <input
                     id="password"

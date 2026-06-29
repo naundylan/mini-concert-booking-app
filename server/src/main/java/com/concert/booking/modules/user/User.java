@@ -72,6 +72,12 @@ public class User extends AbstractAuditEntity {
   @Column(name = "tokens_valid_from")
   Instant tokensValidFrom; // Timestamp để invalidate tất cả tokens cũ
 
+  @Column(name = "reset_password_token_hash", length = 255)
+  String resetPasswordTokenHash;
+
+  @Column(name = "reset_password_token_expired_at")
+  Instant resetPasswordTokenExpiredAt;
+
   @Builder.Default
   @Column(name = "online_verified", nullable = false)
   Boolean onlineVerified = false;

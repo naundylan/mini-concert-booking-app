@@ -43,7 +43,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         </button>
 
         <Link
-          href="/admin/settings/security"
+          href="/admin/settings/profile"
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           title="Đi tới Cài đặt"
         >

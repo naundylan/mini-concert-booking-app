@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Bell, Settings, Menu } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -33,9 +34,13 @@ export default function Header({ onOpenSidebar = () => {} }: HeaderProps) {
         </button>
 
         {/* Settings Icon */}
-        <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+        <Link
+          href="/staff/settings/profile"
+          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          title="Đi tới Cài đặt"
+        >
           <Settings size={20} className="text-slate-600" />
-        </button>
+        </Link>
 
         {/* User Avatar */}
         <Avatar className="w-9 h-9 cursor-pointer">
