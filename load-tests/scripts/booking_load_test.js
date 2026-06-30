@@ -112,7 +112,12 @@ export default function (data) {
   };
 
   // 2. Select a unique seat for this VU and iteration to prevent collisions.
-  const seatIndex = ((vuId - 1) + (__ITER * totalVUs)) % data.seatIds.length;
+  // We divide the available seats equally among all VUs to ensure they never overlap.
+  const seatsPerVU = Math.floor(data.seatIds.length / totalVUs);
+  if (seatsPerVU === 0) {
+    throw new Error(`Not enough seats (${data.seatIds.length}) for the number of VUs (${totalVUs})`);
+  }
+  const seatIndex = (vuId - 1) * seatsPerVU + (__ITER % seatsPerVU);
   const selectedSeatId = data.seatIds[seatIndex];
 
   // 3. Create POS Order (CASH payment)
