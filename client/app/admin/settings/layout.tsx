@@ -3,14 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Palette, Lock, Bell } from 'lucide-react';
+import { User, Palette, Lock, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SETTINGS_MENU = [
-  { label: 'Profile', href: '/admin/settings/profile', icon: User },
-  { label: 'Appearance', href: '/admin/settings/appearance', icon: Palette },
-  { label: 'Security', href: '/admin/settings/security', icon: Lock },
-  { label: 'Notifications', href: '/admin/settings/notifications', icon: Bell },
+  { label: 'Thông tin cá nhân', href: '/admin/settings/profile', icon: User },
+  { label: 'Giao diện', href: '/admin/settings/appearance', icon: Palette },
+  { label: 'Bảo mật', href: '/admin/settings/security', icon: Lock },
+  { label: 'Nhật ký hoạt động', href: '/admin/settings/audit-logs', icon: ClipboardList },
 ];
 
 export default function SettingsLayout({
@@ -23,7 +23,7 @@ export default function SettingsLayout({
   return (
     <div className="flex h-full flex-col lg:flex-row">
       <aside className="w-full border-b border-slate-200 bg-white px-4 py-4 lg:w-56 lg:border-b-0 lg:border-r lg:px-6 lg:py-8">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900 lg:mb-8">Settings</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900 lg:mb-8">Cài đặt</h2>
         <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:gap-3">
           {SETTINGS_MENU.map(({ label, href, icon: Icon }) => {
             const isActive = pathname === href;

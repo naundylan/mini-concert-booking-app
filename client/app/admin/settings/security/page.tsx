@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { authService } from '@/lib/services/auth.service';
+import { toast } from '@/hooks/use-toast';
 
 // ============ Zod Schema ============
 const passwordSchema = z.object({
@@ -49,22 +51,25 @@ export default function SecurityPage() {
       setIsSubmitting(true);
       setSuccessMessage('');
 
-      // TODO: Integrate with backend API to update password
-      console.log('Password update request:', {
-        oldPassword: data.oldPassword,
+      await authService.changePassword({
+        currentPassword: data.oldPassword,
         newPassword: data.newPassword,
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setSuccessMessage('Password updated successfully!');
+      setSuccessMessage('Đổi mật khẩu thành công! Hệ thống sẽ tự động đăng xuất sau 2 giây...');
       reset();
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
+      setTimeout(() => {
+        authService.logout();
+      }, 2000);
+    } catch (error: any) {
       console.error('Error updating password:', error);
+      const errorMessage = error.response?.data?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.';
+      toast({
+        title: 'Lỗi',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

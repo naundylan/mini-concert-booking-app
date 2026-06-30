@@ -11,5 +11,5 @@ public interface CheckInService {
 
   CheckInResponseDTO checkInTicket(UUID ticketId, UUID eventId, UUID staffId);
 
-  List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword);
+  List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword, UUID staffId);
 }

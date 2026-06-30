@@ -37,8 +37,8 @@ export default function StaffManagementPage() {
     } catch (err: any) {
       console.error('Failed to fetch staff:', err)
       toast({
-        title: 'Error',
-        description: err?.response?.data?.message || 'Failed to load staff list.',
+        title: 'Lỗi',
+        description: err?.response?.data?.message || 'Không thể tải danh sách nhân viên.',
         variant: 'destructive',
       })
     } finally {
@@ -69,8 +69,8 @@ export default function StaffManagementPage() {
       const original = staffList.find((s) => s.id === selectedStaff.id)
       if (!original) {
         toast({
-          title: 'Error',
-          description: 'Staff member not found in list.',
+          title: 'Lỗi',
+          description: 'Không tìm thấy nhân viên trong danh sách.',
           variant: 'destructive',
         })
         return
@@ -106,16 +106,16 @@ export default function StaffManagementPage() {
       }
 
       toast({
-        title: 'Success',
-        description: 'Staff member updated successfully!',
+        title: 'Thành công',
+        description: 'Cập nhật thông tin nhân viên thành công!',
       })
       await fetchStaff()
       handleCloseDialog()
     } catch (err: any) {
       console.error('Failed to update staff:', err)
       toast({
-        title: 'Error',
-        description: err?.response?.data?.message || 'Failed to update staff member.',
+        title: 'Lỗi',
+        description: err?.response?.data?.message || 'Không thể cập nhật thông tin nhân viên.',
         variant: 'destructive',
       })
     } finally {
@@ -126,8 +126,8 @@ export default function StaffManagementPage() {
   const handleAddStaff = async () => {
     if (!newStaff.username || !newStaff.fullName || !newStaff.password) {
       toast({
-        title: 'Validation Error',
-        description: 'Username, Full Name, and Password are required.',
+        title: 'Lỗi xác thực',
+        description: 'Tên đăng nhập, Họ và tên, và Mật khẩu là bắt buộc.',
         variant: 'destructive',
       })
       return
@@ -144,8 +144,8 @@ export default function StaffManagementPage() {
       })
 
       toast({
-        title: 'Success',
-        description: 'New staff member added successfully!',
+        title: 'Thành công',
+        description: 'Thêm nhân viên mới thành công!',
       })
 
       // Reset form and close dialog
@@ -161,8 +161,8 @@ export default function StaffManagementPage() {
     } catch (err: any) {
       console.error('Failed to create staff:', err)
       toast({
-        title: 'Error',
-        description: err?.response?.data?.message || 'Failed to add staff member.',
+        title: 'Lỗi',
+        description: err?.response?.data?.message || 'Không thể thêm nhân viên.',
         variant: 'destructive',
       })
     } finally {
@@ -196,15 +196,15 @@ export default function StaffManagementPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Staff Management</h1>
-          <p className="text-slate-600 text-sm mt-1">Manage access and roles for your team</p>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Quản lý nhân viên</h1>
+          <p className="text-slate-600 text-sm mt-1">Quản lý quyền truy cập và vai trò của các thành viên trong đội ngũ của bạn</p>
         </div>
         <Button
           className="w-full gap-2 bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
           onClick={() => setShowAddDialog(true)}
         >
           <span>+</span>
-          Add New Staff
+          Thêm nhân viên mới
         </Button>
       </div>
 
@@ -236,7 +236,7 @@ export default function StaffManagementPage() {
         </div>
       ) : staffList.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
-          <p className="text-slate-500">No staff members found.</p>
+          <p className="text-slate-500">Không tìm thấy nhân viên nào.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -258,7 +258,7 @@ export default function StaffManagementPage() {
                   <h3 className="font-semibold text-slate-900 text-sm truncate">
                     {staff.fullName}
                   </h3>
-                  <p className="text-xs text-slate-500">@{staff.username || 'no-username'}</p>
+                  <p className="text-xs text-slate-500">@{staff.username || 'chưa đặt'}</p>
                 </div>
               </div>
 
@@ -269,7 +269,7 @@ export default function StaffManagementPage() {
                     staff.status
                   )} ${staff.status === 'ACTIVE' ? 'before:content-["●"] before:mr-1' : ''}`}
                 >
-                  {staff.status}
+                  {staff.status === 'ACTIVE' ? 'Hoạt động' : 'Bị khóa'}
                 </Badge>
               </div>
 
@@ -280,7 +280,7 @@ export default function StaffManagementPage() {
                   <span className="truncate">{staff.email || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-400">Phone:</span>
+                  <span className="font-medium text-slate-400">SĐT:</span>
                   <span>{staff.phone || '—'}</span>
                 </div>
               </div>
@@ -293,7 +293,7 @@ export default function StaffManagementPage() {
                   className="w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 text-xs"
                   onClick={() => handleEditStaff(staff)}
                 >
-                  Edit
+                  Chỉnh sửa
                 </Button>
               </div>
             </div>
@@ -305,16 +305,16 @@ export default function StaffManagementPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Staff Member</DialogTitle>
+            <DialogTitle>Thêm nhân viên mới</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="add-username" className="text-xs font-medium text-slate-700">
-                Username *
+                Tên đăng nhập *
               </Label>
               <Input
                 id="add-username"
-                placeholder="e.g. s.jenkins"
+                placeholder="Ví dụ: s.jenkins"
                 value={newStaff.username}
                 onChange={(e) =>
                   setNewStaff({ ...newStaff, username: e.target.value })
@@ -324,12 +324,12 @@ export default function StaffManagementPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-password" className="text-xs font-medium text-slate-700">
-                Password *
+                Mật khẩu *
               </Label>
               <Input
                 id="add-password"
                 type="password"
-                placeholder="Enter temporary password"
+                placeholder="Nhập mật khẩu tạm thời"
                 value={newStaff.password}
                 onChange={(e) =>
                   setNewStaff({ ...newStaff, password: e.target.value })
@@ -339,11 +339,11 @@ export default function StaffManagementPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-fullName" className="text-xs font-medium text-slate-700">
-                Full Name *
+                Họ và tên *
               </Label>
               <Input
                 id="add-fullName"
-                placeholder="e.g. Sarah Jenkins"
+                placeholder="Ví dụ: Nguyễn Văn A"
                 value={newStaff.fullName}
                 onChange={(e) =>
                   setNewStaff({ ...newStaff, fullName: e.target.value })
@@ -353,12 +353,12 @@ export default function StaffManagementPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-email" className="text-xs font-medium text-slate-700">
-                Email (Optional)
+                Email (Không bắt buộc)
               </Label>
               <Input
                 id="add-email"
                 type="email"
-                placeholder="e.g. sarah.jenkins@kinetic.com"
+                placeholder="Ví dụ: nguyenvana@kinetic.com"
                 value={newStaff.email}
                 onChange={(e) =>
                   setNewStaff({ ...newStaff, email: e.target.value })
@@ -368,11 +368,11 @@ export default function StaffManagementPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-phone" className="text-xs font-medium text-slate-700">
-                Phone (Optional)
+                Số điện thoại (Không bắt buộc)
               </Label>
               <Input
                 id="add-phone"
-                placeholder="e.g. 0123456789"
+                placeholder="Ví dụ: 0123456789"
                 value={newStaff.phone}
                 onChange={(e) =>
                   setNewStaff({ ...newStaff, phone: e.target.value })
@@ -388,14 +388,14 @@ export default function StaffManagementPage() {
               className="text-slate-700"
               disabled={isSaving}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
               onClick={handleAddStaff}
               disabled={isSaving}
             >
-              {isSaving ? 'Adding...' : 'Add Staff'}
+              {isSaving ? 'Đang thêm...' : 'Thêm nhân viên'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -405,13 +405,13 @@ export default function StaffManagementPage() {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Staff Member</DialogTitle>
+            <DialogTitle>Chỉnh sửa thông tin nhân viên</DialogTitle>
           </DialogHeader>
           {selectedStaff && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-xs font-medium text-slate-700">
-                  Username
+                  Tên đăng nhập
                 </Label>
                 <Input
                   id="username"
@@ -424,20 +424,20 @@ export default function StaffManagementPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-xs font-medium text-slate-700">
-                  Reset Password (leave blank to keep current)
+                  Đặt lại mật khẩu (để trống nếu muốn giữ nguyên)
                 </Label>
                 <Input
                   id="password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
+                  placeholder="Nhập mật khẩu mới"
                   className="text-sm"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-xs font-medium text-slate-700">
-                  Full Name
+                  Họ và tên
                 </Label>
                 <Input
                   id="fullName"
@@ -450,7 +450,7 @@ export default function StaffManagementPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs font-medium text-slate-700">
-                  Email (Optional)
+                  Email (Không bắt buộc)
                 </Label>
                 <Input
                   id="email"
@@ -464,7 +464,7 @@ export default function StaffManagementPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-xs font-medium text-slate-700">
-                  Phone (Optional)
+                  Số điện thoại (Không bắt buộc)
                 </Label>
                 <Input
                   id="phone"
@@ -477,7 +477,7 @@ export default function StaffManagementPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status" className="text-xs font-medium text-slate-700">
-                  Status
+                  Trạng thái
                 </Label>
                 <select
                   id="status"
@@ -487,8 +487,8 @@ export default function StaffManagementPage() {
                   }
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
+                  <option value="ACTIVE">Hoạt động</option>
+                  <option value="INACTIVE">Bị khóa</option>
                 </select>
               </div>
             </div>
@@ -500,14 +500,14 @@ export default function StaffManagementPage() {
               className="text-slate-700"
               disabled={isSaving}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
               onClick={handleSaveChanges}
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -4,9 +4,14 @@ import com.concert.booking.common.constants.JwtProperties;
 import com.concert.booking.common.exception.AppException;
 import com.concert.booking.core.auth.TokenBlacklistService;
 import com.concert.booking.core.ratelimit.RateLimiterService;
-// import com.concert.booking.modules.audit.AuditLogService;
+import com.concert.booking.core.mail.MailService;
+import com.concert.booking.modules.audit.AuditLogService;
+import com.concert.booking.modules.audit.enums.AuditLogAction;
+import com.concert.booking.modules.audit.enums.AuditLogEntity;
+import com.concert.booking.modules.audit.enums.AuditLogStatus;
 import com.concert.booking.modules.auth.dto.*;
 import com.concert.booking.modules.auth.security.JwtService;
+import com.concert.booking.modules.auth.security.AuthUtils;
 import com.concert.booking.modules.user.*;
 import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
@@ -33,8 +38,8 @@ public class AuthServiceImpl implements AuthService {
   PasswordEncoder passwordEncoder;
   RateLimiterService rateLimiterService;
   TokenBlacklistService tokenBlacklistService;
-
-  //   AuditLogService auditLogService;
+  AuditLogService auditLogService;
+  MailService mailService;
 
   @Override
   @Transactional
@@ -49,6 +54,15 @@ public class AuthServiceImpl implements AuthService {
     User user = findUserByUsername(dto.getUsername());
 
     if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
+      auditLogService.log(
+          user.getId(),
+          user.getUsername(),
+          AuditLogAction.LOGIN,
+          AuditLogEntity.AUTH,
+          user.getId().toString(),
+          AuditLogStatus.FAILED,
+          "Đăng nhập thất bại do sai mật khẩu"
+      );
       throw new AppException(HttpStatus.UNAUTHORIZED, "Sai thông tin đăng nhập");
     }
 
@@ -59,6 +73,16 @@ public class AuthServiceImpl implements AuthService {
 
     String accessToken = jwtService.generateAccessToken(user.getId());
     String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+    auditLogService.log(
+        user.getId(),
+        user.getUsername(),
+        AuditLogAction.LOGIN,
+        AuditLogEntity.AUTH,
+        user.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Đăng nhập thành công"
+    );
 
     return TokenDTO.builder()
         .accessToken(accessToken)
@@ -104,6 +128,19 @@ public class AuthServiceImpl implements AuthService {
     if (accessToken != null && tokenExpiration != null) {
       tokenBlacklistService.blacklistToken(accessToken, tokenExpiration);
     }
+    if (userId != null) {
+      userRepository.findById(userId).ifPresent(user -> {
+        auditLogService.log(
+            user.getId(),
+            user.getUsername(),
+            AuditLogAction.LOGOUT,
+            AuditLogEntity.AUTH,
+            user.getId().toString(),
+            AuditLogStatus.SUCCESS,
+            "Đăng xuất thành công"
+        );
+      });
+    }
   }
 
   @Override
@@ -123,6 +160,15 @@ public class AuthServiceImpl implements AuthService {
             .orElseThrow(
                 () -> new AppException(HttpStatus.NOT_FOUND, UserMessage.NOT_FOUND.getMessage()));
     if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPasswordHash())) {
+      auditLogService.log(
+          user.getId(),
+          user.getUsername(),
+          AuditLogAction.CHANGE_PASSWORD,
+          AuditLogEntity.USER,
+          user.getId().toString(),
+          AuditLogStatus.FAILED,
+          "Đổi mật khẩu thất bại do sai mật khẩu hiện tại"
+      );
       throw new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
     }
 
@@ -136,89 +182,96 @@ public class AuthServiceImpl implements AuthService {
 
     // Reset rate limit on successful password change
     rateLimiterService.reset(userId.toString(), "changePassword");
+
+    auditLogService.log(
+        user.getId(),
+        user.getUsername(),
+        AuditLogAction.CHANGE_PASSWORD,
+        AuditLogEntity.USER,
+        user.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Đổi mật khẩu thành công"
+    );
   }
 
-  //   @Override
-  //   public void forgotPassword(ForgotPasswordDTO dto) {
-  //     User user = userRepository.findByEmail(dto.getEmail()).orElse(null);
-  //     if (user == null) {
-  //       auditLogService.log(
-  //           null,
-  //           dto.getEmail(),
-  //           AuditLogAction.FORGOT_PASSWORD,
-  //           AuditLogEntity.AUTH,
-  //           null,
-  //           AuditLogStatus.FAILED,
-  //           "Gửi yêu cầu quên mật khẩu cho email không tồn tại");
-  //       return;
-  //     }
+  @Override
+  @Transactional
+  public void forgotPassword(ForgotPasswordDTO dto) {
+    User user = userRepository.findByEmail(dto.getEmail()).orElse(null);
+    if (user == null) {
+      auditLogService.log(
+          null,
+          dto.getEmail(),
+          AuditLogAction.FORGOT_PASSWORD,
+          AuditLogEntity.AUTH,
+          null,
+          AuditLogStatus.FAILED,
+          "Gửi yêu cầu quên mật khẩu cho email không tồn tại");
+      return;
+    }
 
-  //     String token = AuthUtils.generateToken(64);
-  //     String tokenHash = AuthUtils.hashToken(token);
+    String token = AuthUtils.generateToken(64);
+    String tokenHash = AuthUtils.hashToken(token);
 
-  //     user.setResetPasswordTokenHash(tokenHash);
-  //     user.setResetPasswordTokenExpiredAt(Instant.now().plusSeconds(15 * 60));
+    user.setResetPasswordTokenHash(tokenHash);
+    user.setResetPasswordTokenExpiredAt(Instant.now().plusSeconds(15 * 60));
 
-  //     userRepository.save(user);
+    userRepository.save(user);
 
-  //     mailService.sendForgotPasswordMail(user.getEmail(), token);
-  //     auditLogService.log(
-  //         user.getId(),
-  //         user.getUsername(),
-  //         AuditLogAction.FORGOT_PASSWORD,
-  //         AuditLogEntity.USER,
-  //         user.getId().toString(),
-  //         AuditLogStatus.SUCCESS,
-  //         "Gửi email đặt lại mật khẩu thành công");
-  //   }
+    mailService.sendForgotPasswordMail(user.getEmail(), token);
+    auditLogService.log(
+        user.getId(),
+        user.getUsername(),
+        AuditLogAction.FORGOT_PASSWORD,
+        AuditLogEntity.USER,
+        user.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Gửi email đặt lại mật khẩu thành công");
+  }
 
-  //   @Override
-  //   @Transactional
-  //   public void resetPassword(ResetPasswordDTO dto) {
-  //     String tokenHash = AuthUtils.hashToken(dto.getToken());
+  @Override
+  @Transactional
+  public void resetPassword(ResetPasswordDTO dto) {
+    String tokenHash = AuthUtils.hashToken(dto.getToken());
 
-  //     User user =
-  //         userRepository
-  //             .findByResetPasswordTokenHash(tokenHash)
-  //             .orElseThrow(this::invalidResetPasswordTokenException);
+    User user =
+        userRepository
+            .findByResetPasswordTokenHash(tokenHash)
+            .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_RESET_PASSWORD_TOKEN.getMessage()));
 
-  //     Instant now = Instant.now();
-  //     Instant resetPasswordTokenExpiredAt = user.getResetPasswordTokenExpiredAt();
-  //     if (resetPasswordTokenExpiredAt == null || !resetPasswordTokenExpiredAt.isAfter(now)) {
-  //       user.setResetPasswordTokenHash(null);
-  //       user.setResetPasswordTokenExpiredAt(null);
-  //       userRepository.save(user);
-  //       auditLogService.log(
-  //           user.getId(),
-  //           user.getUsername(),
-  //           AuditLogAction.RESET_PASSWORD,
-  //           AuditLogEntity.USER,
-  //           user.getId().toString(),
-  //           AuditLogStatus.FAILED,
-  //           "Đặt lại mật khẩu thất bại do token hết hạn");
-  //       throw new AppException(
-  //           HttpStatus.UNAUTHORIZED, AuthMessage.EXPIRED_RESET_PASSWORD_TOKEN.getMessage());
-  //     }
+    Instant now = Instant.now();
+    Instant resetPasswordTokenExpiredAt = user.getResetPasswordTokenExpiredAt();
+    if (resetPasswordTokenExpiredAt == null || !resetPasswordTokenExpiredAt.isAfter(now)) {
+      user.setResetPasswordTokenHash(null);
+      user.setResetPasswordTokenExpiredAt(null);
+      userRepository.save(user);
+      auditLogService.log(
+          user.getId(),
+          user.getUsername(),
+          AuditLogAction.RESET_PASSWORD,
+          AuditLogEntity.USER,
+          user.getId().toString(),
+          AuditLogStatus.FAILED,
+          "Đặt lại mật khẩu thất bại do token hết hạn");
+      throw new AppException(
+          HttpStatus.UNAUTHORIZED, AuthMessage.EXPIRED_RESET_PASSWORD_TOKEN.getMessage());
+    }
 
-  //     user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
-  //     user.setPasswordChanged(true);
+    user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+    user.setResetPasswordTokenHash(null);
+    user.setResetPasswordTokenExpiredAt(null);
+    user.setTokensValidFrom(Instant.now()); // Vô hiệu hóa tất cả các session/token cũ
 
-  //     user.setResetPasswordTokenHash(null);
-  //     user.setResetPasswordTokenExpiredAt(null);
-
-  //     user.setRefreshTokenHash(null);
-  //     user.setRefreshTokenExpiredAt(null);
-
-  //     userRepository.save(user);
-  //     auditLogService.log(
-  //         user.getId(),
-  //         user.getUsername(),
-  //         AuditLogAction.RESET_PASSWORD,
-  //         AuditLogEntity.USER,
-  //         user.getId().toString(),
-  //         AuditLogStatus.SUCCESS,
-  //         "Đặt lại mật khẩu thành công");
-  //   }
+    userRepository.save(user);
+    auditLogService.log(
+        user.getId(),
+        user.getUsername(),
+        AuditLogAction.RESET_PASSWORD,
+        AuditLogEntity.USER,
+        user.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Đặt lại mật khẩu thành công");
+  }
 
   private User findUserByUsername(String username) {
     return userRepository
@@ -228,27 +281,51 @@ public class AuthServiceImpl implements AuthService {
 
   private void validateUserCanAuthenticate(User user) {
     if (user.getStatus() != UserStatus.ACTIVE) {
+      auditLogService.log(
+          user.getId(),
+          user.getUsername(),
+          AuditLogAction.LOGIN,
+          AuditLogEntity.AUTH,
+          user.getId().toString(),
+          AuditLogStatus.FAILED,
+          "Đăng nhập thất bại do tài khoản bị khóa hoặc không hoạt động: " + user.getStatus());
       throw new AppException(HttpStatus.FORBIDDEN, "Tài khoản không hoạt động");
     }
 
     if (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.STAFF) {
+      auditLogService.log(
+          user.getId(),
+          user.getUsername(),
+          AuditLogAction.LOGIN,
+          AuditLogEntity.AUTH,
+          user.getId().toString(),
+          AuditLogStatus.FAILED,
+          "Đăng nhập thất bại do quyền không hợp lệ: " + user.getRole());
       throw new AppException(HttpStatus.FORBIDDEN, "Chỉ Admin và Staff mới được đăng nhập");
     }
 
     if (user.getAuthProvider() != AuthProvider.LOCAL) {
+      auditLogService.log(
+          user.getId(),
+          user.getUsername(),
+          AuditLogAction.LOGIN,
+          AuditLogEntity.AUTH,
+          user.getId().toString(),
+          AuditLogStatus.FAILED,
+          "Đăng nhập thất bại do phương thức đăng nhập không phải LOCAL: " + user.getAuthProvider());
       throw new AppException(HttpStatus.FORBIDDEN, "Chỉ hỗ trợ đăng nhập LOCAL");
     }
   }
 
   private AppException invalidCredentialsException(String username) {
-    //     auditLogService.log(
-    //         null,
-    //         username,
-    //         AuditLogAction.LOGIN,
-    //         AuditLogEntity.AUTH,
-    //         null,
-    //         AuditLogStatus.FAILED,
-    //         "Đăng nhập thất bại do username không tồn tại");
+    auditLogService.log(
+        null,
+        username,
+        AuditLogAction.LOGIN,
+        AuditLogEntity.AUTH,
+        null,
+        AuditLogStatus.FAILED,
+        "Đăng nhập thất bại do tên đăng nhập không tồn tại");
     return new AppException(HttpStatus.UNAUTHORIZED, AuthMessage.INVALID_CREDENTIALS.getMessage());
   }
 

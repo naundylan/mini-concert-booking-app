@@ -1,12 +1,27 @@
 'use client';
 
 import React from 'react';
-import { Bell, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, Settings, Menu } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-export default function Header() {
+type HeaderProps = {
+  onOpenSidebar?: () => void;
+};
+
+export default function Header({ onOpenSidebar = () => {} }: HeaderProps) {
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+      {/* Mobile Menu Toggle */}
+      <button
+        type="button"
+        onClick={onOpenSidebar}
+        className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 lg:hidden mr-2"
+        aria-label="Mở menu nhân viên"
+      >
+        <Menu size={20} />
+      </button>
+
       {/* Spacer for alignment */}
       <div className="flex-1" />
 
@@ -19,9 +34,13 @@ export default function Header() {
         </button>
 
         {/* Settings Icon */}
-        <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+        <Link
+          href="/staff/settings/profile"
+          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          title="Đi tới Cài đặt"
+        >
           <Settings size={20} className="text-slate-600" />
-        </button>
+        </Link>
 
         {/* User Avatar */}
         <Avatar className="w-9 h-9 cursor-pointer">

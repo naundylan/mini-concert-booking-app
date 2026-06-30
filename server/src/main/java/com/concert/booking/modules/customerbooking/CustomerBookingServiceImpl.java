@@ -39,6 +39,7 @@ import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
 import com.concert.booking.modules.order.enums.PaymentStatus;
 import com.concert.booking.modules.order.enums.TicketStatus;
+import com.concert.booking.modules.order.enums.EmailStatus;
 import com.concert.booking.modules.seat.Seat;
 import com.concert.booking.modules.seat.SeatHoldService;
 import com.concert.booking.modules.seat.SeatRepository;
@@ -69,6 +70,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Slf4j
@@ -95,6 +98,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
   SePayProperties sePayProperties;
   CheckoutProperties checkoutProperties;
   VietQrService vietQrService;
+  com.concert.booking.modules.user.UserRepository userRepository;
+
   SePayWebhookVerifier sePayWebhookVerifier;
   TicketDeliveryService ticketDeliveryService;
 
@@ -156,6 +161,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     return CustomerSeatCatalogDTO.builder()
         .eventId(event.getId())
         .eventName(event.getName())
+        .layoutTemplateType(event.getLayoutTemplateType())
+        .layoutDecorations(event.getLayoutDecorations())
         .generatedAt(Instant.now())
         .seats(seats)
         .build();
@@ -335,12 +342,32 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
       return Map.of("success", true);
     }
 
+    // Lock/Mark webhook as processed in Redis at the very beginning of processing
+    boolean marked = vietQrService.markSePayWebhookProcessed(payload.getId());
+    if (!marked) {
+      log.info("SePay webhook already processed or in progress: {}", payload.getId());
+      return Map.of("success", true);
+    }
+
+    // Register synchronization to remove the Redis lock in case of rollback
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+              if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                log.warn("SePay webhook transaction rolled back; removing Redis mark for sePayId={}", payload.getId());
+                vietQrService.deleteSePayWebhookProcessed(payload.getId());
+              }
+            }
+          });
+    }
+
     String reference = parseVietQrReference(payload);
     if (reference == null) {
       return Map.of("success", true);
     }
     if (paymentRepository.findByTransactionRef(reference).isPresent()) {
-      vietQrService.markSePayWebhookProcessed(payload.getId());
       return Map.of("success", true);
     }
 
@@ -374,7 +401,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
     completePaidCheckoutSession(
         paymentSessionId, session.getCustomerId(), PaymentMethod.VIETQR, reference);
-    vietQrService.markSePayWebhookProcessed(payload.getId());
     return Map.of("success", true);
   }
 
@@ -527,6 +553,9 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
   private CustomerTicketDTO toCustomerTicketDTO(
       Ticket ticket, Order order, Event event, TicketClass ticketClass) {
+    com.concert.booking.modules.user.User customer = userRepository.findById(order.getCustomerId()).orElse(null);
+    Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+
     return CustomerTicketDTO.builder()
         .ticketId(ticket.getId())
         .orderId(order.getId())
@@ -544,6 +573,11 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         .price(ticket.getPrice())
         .status(ticket.getStatus())
         .qrPayload(ticket.getId().toString())
+        .customerPhone(customer != null ? customer.getPhone() : null)
+        .customerEmail(customer != null ? customer.getEmail() : null)
+        .customerName(customer != null ? customer.getFullName() : null)
+        .bookingTime(order.getCreatedAt() != null ? java.sql.Timestamp.from(order.getCreatedAt()) : null)
+        .paymentMethod(payment != null && payment.getPaymentMethod() != null ? payment.getPaymentMethod().name() : "N/A")
         .build();
   }
 
@@ -609,6 +643,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .staffId(customerId)
                 .totalAmount(totalAmount)
                 .status(OrderStatus.PAID)
+                .emailStatus(EmailStatus.UNSENT)
                 .createdBy(customerId)
                 .build());
 
@@ -643,10 +678,24 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
     seatHoldService.confirmSold(seats, customerId);
     ticketRepository.saveAll(tickets);
-    seatHoldRedisService.releaseSeats(event.getId(), seatIds);
-    checkoutSessionRedisService.delete(paymentSessionId);
-    checkoutSessionRedisService.deleteActiveSession(event.getId(), customerId, paymentSessionId);
-    seatSocketService.emitSeatSold(event.getId(), seatIds);
+    UUID eventId = event.getId();
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              seatHoldRedisService.releaseSeats(eventId, seatIds);
+              checkoutSessionRedisService.delete(paymentSessionId);
+              checkoutSessionRedisService.deleteActiveSession(eventId, customerId, paymentSessionId);
+              seatSocketService.emitSeatSold(eventId, seatIds);
+            }
+          });
+    } else {
+      seatHoldRedisService.releaseSeats(eventId, seatIds);
+      checkoutSessionRedisService.delete(paymentSessionId);
+      checkoutSessionRedisService.deleteActiveSession(eventId, customerId, paymentSessionId);
+      seatSocketService.emitSeatSold(eventId, seatIds);
+    }
 
     OrderResponseDTO response = toOrderResponse(order, payment, tickets, ticketClassById);
     deliverTicketsAfterCommit(response, payment.getTransactionRef(), seatIds);

@@ -57,8 +57,8 @@ const getTicketClassName = (ticket?: CheckInTicket | null) => ticket?.ticketClas
 
 const getEventCheckInBadge = (event: CheckInEvent) =>
   event.status === 'ENDED'
-    ? { label: 'Đang diễn ra / check-in', className: 'bg-amber-100 text-amber-700' }
-    : { label: 'Đang bán / có thể check-in', className: 'bg-green-100 text-green-700' }
+    ? { label: 'Đang diễn ra / soát vé', className: 'bg-amber-100 text-amber-700' }
+    : { label: 'Đang bán / có thể soát vé', className: 'bg-green-100 text-green-700' }
 
 const extractTicketId = (rawValue: string) => {
   const uuid = rawValue.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
@@ -173,7 +173,7 @@ export default function CheckInPage() {
     if (!selectedEventId) {
       setScanResult({
         result: 'ERROR',
-        message: 'Vui lòng chọn sự kiện trước khi check-in.',
+        message: 'Vui lòng chọn sự kiện trước khi soát vé.',
         orderId: '',
         orderCode: '',
         eventId: '',
@@ -230,13 +230,38 @@ export default function CheckInPage() {
     try {
       setScannerError('')
       const reader = new BrowserMultiFormatReader()
+      const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      
+      const backCamera = videoInputDevices.find((device) => {
+        const label = device.label.toLowerCase()
+        return (
+          label.includes('back') ||
+          label.includes('sau') ||
+          label.includes('environment') ||
+          label.includes('rear')
+        )
+      })
+      
+      const deviceId = backCamera
+        ? backCamera.deviceId
+        : videoInputDevices.length > 0
+        ? videoInputDevices[videoInputDevices.length - 1].deviceId
+        : undefined
+
       controlsRef.current = await reader.decodeFromVideoDevice(
-        undefined,
+        deviceId,
         videoRef.current,
         (result) => {
           const rawValue = result?.getText()
           if (!rawValue || rawValue === lastScannedValueRef.current) return
           lastScannedValueRef.current = rawValue
+          
+          setTimeout(() => {
+            if (lastScannedValueRef.current === rawValue) {
+              lastScannedValueRef.current = ''
+            }
+          }, 3000)
+
           void checkInTicket(extractTicketId(rawValue))
         }
       )
@@ -263,8 +288,8 @@ export default function CheckInPage() {
       return (
         <div className="flex min-h-80 flex-col items-center justify-center p-6 text-center">
           <QrCode size={36} className="text-slate-300" />
-          <h2 className="mt-4 text-lg font-bold text-slate-900">Recent Scan</h2>
-          <p className="mt-2 text-sm text-slate-500">Đang chờ quét vé hoặc check-in thủ công.</p>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">Lượt quét gần đây</h2>
+          <p className="mt-2 text-sm text-slate-500">Đang chờ quét vé hoặc soát thủ công.</p>
         </div>
       )
     }
@@ -346,7 +371,7 @@ export default function CheckInPage() {
         </div>
         <div className="w-full lg:w-80">
           <Label htmlFor="event-select" className="mb-2 block text-xs font-medium text-slate-700">
-            Sự kiện check-in
+            Sự kiện soát vé
           </Label>
           <select
             id="event-select"

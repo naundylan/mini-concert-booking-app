@@ -70,7 +70,7 @@ class TicketMailServiceTest {
             .orderCode("O1234567")
             .totalAmount(new BigDecimal("500000"))
             .status(OrderStatus.PAID)
-            .emailStatus(null) // Starts as null
+            .emailStatus(EmailStatus.UNSENT) // Starts as UNSENT
             .build();
 
     customer =

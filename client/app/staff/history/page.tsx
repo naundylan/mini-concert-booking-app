@@ -53,10 +53,10 @@ function getInitials(name?: string | null) {
 function getErrorMessage(error: unknown) {
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: { message?: string } } }).response
-    return response?.data?.message || 'Không tải được lịch sử check-in'
+    return response?.data?.message || 'Không tải được lịch sử soát vé'
   }
 
-  return 'Không tải được lịch sử check-in'
+  return 'Không tải được lịch sử soát vé'
 }
 
 export default function HistoryPage() {
@@ -129,9 +129,9 @@ export default function HistoryPage() {
     <main className="flex-1 overflow-auto bg-slate-50">
       <div className="border-b border-slate-200 bg-white px-8 py-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-slate-950">Lịch sử check-in</h1>
+          <h1 className="text-3xl font-bold text-slate-950">Lịch sử soát vé</h1>
           <p className="text-sm text-slate-600">
-            Theo dõi các vé đã được soát tại cổng, nhân viên xử lý và thời điểm check-in.
+            Theo dõi các vé đã được soát tại cổng, nhân viên xử lý và thời điểm soát.
           </p>
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function HistoryPage() {
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
               <TicketCheck size={20} />
             </div>
-            <p className="text-sm text-slate-500">Vé đã check-in</p>
+            <p className="text-sm text-slate-500">Vé đã soát</p>
             <p className="mt-1 text-2xl font-semibold text-slate-950">{totalTickets}</p>
           </div>
 
@@ -239,7 +239,7 @@ export default function HistoryPage() {
                 {isLoading && (
                   <tr>
                     <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
-                      Đang tải lịch sử check-in...
+                      Chưa có lịch sử soát vé phù hợp.
                     </td>
                   </tr>
                 )}
@@ -247,7 +247,7 @@ export default function HistoryPage() {
                 {!isLoading && paginatedHistory.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
-                      Chưa có lịch sử check-in phù hợp.
+                      Chưa có lịch sử soát vé phù hợp.
                     </td>
                   </tr>
                 )}

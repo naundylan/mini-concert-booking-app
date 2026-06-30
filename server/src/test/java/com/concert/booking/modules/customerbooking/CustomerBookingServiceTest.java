@@ -355,6 +355,7 @@ class CustomerBookingServiceTest {
             .build();
 
     when(sePayWebhookVerifier.verify(authHeader)).thenReturn(true);
+    when(vietQrService.markSePayWebhookProcessed(999L)).thenReturn(true);
     when(paymentRepository.findByTransactionRef(reference)).thenReturn(Optional.empty());
     when(vietQrService.findPaymentSessionId(reference)).thenReturn(Optional.of(paymentSessionId));
     when(checkoutSessionRedisService.findById(paymentSessionId))
@@ -414,6 +415,7 @@ class CustomerBookingServiceTest {
         SePayWebhookDTO.builder().id(999L).transferType("in").code(reference).build();
 
     when(sePayWebhookVerifier.verify(authHeader)).thenReturn(true);
+    when(vietQrService.markSePayWebhookProcessed(999L)).thenReturn(true);
     when(paymentRepository.findByTransactionRef(reference)).thenReturn(Optional.of(new Payment()));
 
     // Act
@@ -440,6 +442,7 @@ class CustomerBookingServiceTest {
             .build();
 
     when(sePayWebhookVerifier.verify(authHeader)).thenReturn(true);
+    when(vietQrService.markSePayWebhookProcessed(999L)).thenReturn(true);
     when(paymentRepository.findByTransactionRef(reference)).thenReturn(Optional.empty());
     when(vietQrService.findPaymentSessionId(reference)).thenReturn(Optional.of(paymentSessionId));
     when(checkoutSessionRedisService.findById(paymentSessionId))

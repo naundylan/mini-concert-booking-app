@@ -111,11 +111,29 @@ export default function BookingSuccessPage() {
           <div className="grid gap-4 p-6 sm:grid-cols-3">
             <div className="rounded-lg bg-slate-50 p-4">
               <p className="text-xs text-slate-500">Trạng thái</p>
-              <p className="mt-1 font-bold text-emerald-600">{order.status}</p>
+              <p className="mt-1 font-bold text-emerald-600">
+                {order.status === 'PENDING'
+                  ? 'Chờ xử lý'
+                  : order.status === 'SUCCESS' || order.status === 'COMPLETED' || order.status === 'PAID'
+                  ? 'Thành công'
+                  : order.status === 'CANCELED' || order.status === 'CANCELLED'
+                  ? 'Đã hủy'
+                  : order.status}
+              </p>
             </div>
             <div className="rounded-lg bg-slate-50 p-4">
               <p className="text-xs text-slate-500">Thanh toán</p>
-              <p className="mt-1 font-bold text-slate-900">{order.paymentStatus}</p>
+              <p className="mt-1 font-bold text-slate-900">
+                {order.paymentStatus === 'PENDING'
+                  ? 'Chờ thanh toán'
+                  : order.paymentStatus === 'PAID'
+                  ? 'Đã thanh toán'
+                  : order.paymentStatus === 'FAILED'
+                  ? 'Thất bại'
+                  : order.paymentStatus === 'REFUNDED'
+                  ? 'Đã hoàn tiền'
+                  : order.paymentStatus}
+              </p>
             </div>
             <div className="rounded-lg bg-slate-50 p-4">
               <p className="text-xs text-slate-500">Tổng tiền</p>
@@ -130,8 +148,12 @@ export default function BookingSuccessPage() {
               const qrPayload = ticket.qrPayload || ticketId
               return (
                 <div key={ticketId} className="flex flex-col gap-4 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center">
-                  <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                    <QrCode size={42} className="text-slate-700" />
+                  <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 p-1.5 shadow-sm">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrPayload)}`}
+                      alt="Mã QR Vé"
+                      className="h-full w-full object-contain"
+                    />
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-slate-950">Ghế {ticket.label || ticket.seatLabel}</p>

@@ -5,6 +5,9 @@ import {
   LoginRequest,
   LoginResponse,
   OAuth2LoginResponse,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
 } from "../types/auth.type";
 
 const getBaseUrl = () => {
@@ -41,5 +44,17 @@ export const authService = {
     } finally {
       window.location.href = "/auth";
     }
+  },
+
+  changePassword: async (data: ChangePasswordRequest): Promise<void> => {
+    await axiosClient.post("/auth/change-password", data);
+  },
+
+  forgotPassword: async (data: ForgotPasswordRequest): Promise<void> => {
+    await axiosClient.post("/auth/forgot-password", data);
+  },
+
+  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
+    await axiosClient.post("/auth/reset-password", data);
   }
 };

@@ -43,6 +43,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
       JOIN User customer ON customer.id = o.customerId
       WHERE t.status = com.concert.booking.modules.order.enums.TicketStatus.USED
         AND t.checkInTime IS NOT NULL
+        AND t.checkInBy = :staffId
         AND (:eventId IS NULL OR o.eventId = :eventId)
         AND (
           :keyword IS NULL
@@ -55,5 +56,8 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
       ORDER BY t.checkInTime DESC
       """)
   List<Ticket> findCheckInHistory(
-      @Param("eventId") UUID eventId, @Param("keyword") String keyword, Pageable pageable);
+      @Param("eventId") UUID eventId,
+      @Param("keyword") String keyword,
+      @Param("staffId") UUID staffId,
+      Pageable pageable);
 }

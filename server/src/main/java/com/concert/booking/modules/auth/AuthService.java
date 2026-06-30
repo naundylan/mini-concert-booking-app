@@ -16,9 +16,9 @@ public interface AuthService {
   void changePassword(
       UUID userId, String accessToken, Instant tokenExpiration, ChangePasswordDTO dto);
 
-  //   void forgotPassword(ForgotPasswordDTO dto);
+  void forgotPassword(ForgotPasswordDTO dto);
 
-  //   void resetPassword(ResetPasswordDTO dto);
+  void resetPassword(ResetPasswordDTO dto);
 
   // OAuth2 cho Customer
   OAuth2LoginDTO processOAuth2Customer(OAuth2User oAuth2User);

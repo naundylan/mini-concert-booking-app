@@ -76,6 +76,13 @@ public class VietQrServiceImpl implements VietQrService {
   }
 
   @Override
+  public void deleteSePayWebhookProcessed(Long sePayId) {
+    if (sePayId != null) {
+      stringRedisTemplate.delete(SEPAY_WEBHOOK_PREFIX + sePayId);
+    }
+  }
+
+  @Override
   public String buildQrUrl(BigDecimal amount, String content) {
     validateConfigured();
     String rawAmount = amount.setScale(0, RoundingMode.UNNECESSARY).toPlainString();

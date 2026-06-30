@@ -83,7 +83,7 @@ function StatCard({ title, value, change, icon }: StatCardProps) {
               <span
                 className={`text-xs font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}
               >
-                {isPositive ? '+' : ''}{change}% from last month
+                {isPositive ? '+' : ''}{change}% so với tháng trước
               </span>
             </div>
           </div>
@@ -110,7 +110,7 @@ function SystemStatus({ name, status, color }: SystemStatusProps) {
     <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-slate-50 border border-slate-200">
       <span className="text-sm font-medium text-slate-700">{name}</span>
       <span className={`text-xs font-bold px-3 py-1 rounded-full ${colorMap[color]}`}>
-        {status}
+        {status === 'HEALTHY' ? 'Hoạt động' : status === 'WARNING' ? 'Cảnh báo' : 'Ngừng hoạt động'}
       </span>
     </div>
   );
@@ -192,7 +192,7 @@ export default function DashboardContent() {
           <p className="text-xs font-bold text-indigo-600 tracking-widest uppercase mb-2">
             Tổng quan
           </p>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard Thống kê</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Bảng điều khiển thống kê</h1>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Select value={timeRange} onValueChange={setTimeRange}>

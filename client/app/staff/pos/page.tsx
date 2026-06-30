@@ -38,13 +38,13 @@ const PAYMENT_OPTIONS: Array<{
   {
     value: 'CASH',
     title: 'Tiền mặt',
-    description: 'Staff xác nhận khi đã nhận đủ tiền tại quầy.',
+    description: 'Nhân viên xác nhận khi đã nhận đủ tiền tại quầy.',
     icon: Banknote,
   },
   {
     value: 'BANK_TRANSFER',
     title: 'Chuyển khoản',
-    description: 'Staff kiểm tra app ngân hàng riêng trước khi xác nhận.',
+    description: 'Nhân viên kiểm tra app ngân hàng riêng trước khi xác nhận.',
     icon: Landmark,
   },
 ]
@@ -182,20 +182,50 @@ export default function POSPage() {
     return catalog.seats.filter((seat) => selectedSeatIds.includes(getSeatId(seat)))
   }, [catalog, selectedSeatIds])
 
-  const seatsByRow = useMemo(() => {
-    if (!catalog) return []
-    const rows = new Map<number, OrderItemResponseDTO[]>()
-    for (const seat of catalog.seats) {
-      const row = seat.gridRow ?? 0
-      rows.set(row, [...(rows.get(row) || []), seat])
+  const parseSeatLabel = (label: string) => {
+    if (!label) return { row: '1', seat: '1' }
+    if (label.includes('-')) {
+      const parts = label.split('-')
+      return { row: parts[0], seat: parts[1] }
     }
-    return Array.from(rows.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([row, seats]) => ({
-        row,
-        label: String.fromCharCode(65 + row),
-        seats: seats.sort((a, b) => (a.gridColumn ?? 0) - (b.gridColumn ?? 0)),
-      }))
+    const match = label.match(/^([A-Z]+)(\d+)$/i)
+    if (match) {
+      return { row: match[1], seat: match[2] }
+    }
+    return { row: '1', seat: label }
+  }
+
+  const seatBounds = useMemo(() => {
+    if (!catalog || catalog.seats.length === 0) return { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }
+    const seatRows = catalog.seats.map((seat) => seat.gridRow ?? 0)
+    const seatCols = catalog.seats.map((seat) => seat.gridColumn ?? 0)
+
+    const decRows = (catalog.layoutDecorations || []).map((d) => d.row)
+    const decRowsMax = (catalog.layoutDecorations || []).map((d) => d.row + d.rowSpan - 1)
+    const decCols = (catalog.layoutDecorations || []).map((d) => d.col)
+    const decColsMax = (catalog.layoutDecorations || []).map((d) => d.col + d.colSpan - 1)
+
+    const allRows = [...seatRows, ...decRows, ...decRowsMax]
+    const allCols = [...seatCols, ...decCols, ...decColsMax]
+
+    return {
+      minRow: Math.min(...allRows),
+      maxRow: Math.max(...allRows),
+      minCol: Math.min(...allCols),
+      maxCol: Math.max(...allCols),
+    }
+  }, [catalog])
+
+  const activeRows = useMemo(() => {
+    if (!catalog) return []
+    const rowsMap = new Map<number, string>()
+    for (const seat of catalog.seats) {
+      const rowNum = seat.gridRow ?? 0
+      if (!rowsMap.has(rowNum)) {
+        rowsMap.set(rowNum, parseSeatLabel(getSeatLabel(seat)).row)
+      }
+    }
+    return Array.from(rowsMap.entries()).sort(([a], [b]) => a - b)
   }, [catalog])
 
   const totalAmount = selectedSeats.reduce((sum, seat) => sum + getSeatPrice(seat), 0)
@@ -229,7 +259,10 @@ export default function POSPage() {
 
   const validateCustomerAndSeats = () => {
     if (!selectedEventId) return 'Vui lòng chọn sự kiện trước khi bán vé.'
-    if (!customerPhone.trim()) return 'SĐT khách hàng là bắt buộc.'
+    const phone = customerPhone.trim()
+    if (!phone) return 'SĐT khách hàng là bắt buộc.'
+    if (!/^\d{10}$/.test(phone)) return 'SĐT phải có đúng 10 chữ số.'
+    if (!/^(0[35789])\d{8}$/.test(phone)) return 'SĐT không hợp lệ. Vui lòng nhập SĐT Việt Nam (ví dụ: 0909123456).'
     if (!customerName.trim()) return 'Tên khách hàng là bắt buộc.'
     if (customerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
       return 'Email khách hàng không hợp lệ.'
@@ -338,8 +371,8 @@ export default function POSPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold text-slate-900">{selectedEvent.name}</h2>
-                  <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
-                    {selectedEvent.status}
+                  <Badge className={`border ${selectedEvent.status === 'ONSALE' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-violet-200 bg-violet-50 text-violet-700'}`}>
+                    {selectedEvent.status === 'ONSALE' ? 'Đang mở bán' : selectedEvent.status === 'TEASING' ? 'Sắp mở bán' : selectedEvent.status}
                   </Badge>
                 </div>
                 <p className="mt-1 flex items-center gap-1 text-sm text-slate-600">
@@ -363,7 +396,7 @@ export default function POSPage() {
             <div>
               <h2 className="text-xl font-bold text-slate-900">Chọn sự kiện để bán vé</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Staff cần chọn sự kiện đang mở bán trước khi nhập khách hàng và chọn ghế.
+                Nhân viên cần chọn sự kiện đang mở bán trước khi nhập khách hàng và chọn ghế.
               </p>
             </div>
             <Button className="bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => setShowEventDialog(true)}>
@@ -402,16 +435,18 @@ export default function POSPage() {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label htmlFor="phone" className="mb-2 block text-xs font-medium text-slate-700">
-                        SĐT bắt buộc
+                        Số điện thoại <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="0909123456"
+                        placeholder="Ví dụ: 0909123456"
                         value={customerPhone}
                         onChange={(event) => setCustomerPhone(event.target.value)}
+                        maxLength={10}
                         className="bg-indigo-50 text-sm"
                       />
+                      <p className="mt-1 text-[11px] text-slate-400">10 chữ số, bắt đầu bằng 03x / 05x / 07x / 08x / 09x</p>
                     </div>
                     <div>
                       <Label htmlFor="name" className="mb-2 block text-xs font-medium text-slate-700">
@@ -428,12 +463,12 @@ export default function POSPage() {
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor="email" className="mb-2 block text-xs font-medium text-slate-700">
-                        Email nhận vé điện tử tùy chọn
+                        Email nhận vé điện tử <span className="text-slate-400">(tùy chọn)</span>
                       </Label>
                       <Input
                         id="email"
                         type="email"
-                        placeholder="customer@example.com"
+                        placeholder="khachhang@gmail.com"
                         value={customerEmail}
                         onChange={(event) => setCustomerEmail(event.target.value)}
                         className="bg-indigo-50 text-sm"
@@ -464,36 +499,81 @@ export default function POSPage() {
                       <Loader2 className="mr-2 h-5 w-5 animate-spin text-indigo-600" />
                       Đang tải sơ đồ ghế...
                     </div>
-                  ) : seatsByRow.length === 0 ? (
+                  ) : !catalog || catalog.seats.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">
                       Sự kiện này chưa có sơ đồ ghế.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <div className="mb-6 rounded-b-full border-b-8 border-indigo-200 py-3 text-center text-xs font-semibold tracking-[0.2em] text-slate-500">
-                        SÂN KHẤU
-                      </div>
-                      <div className="min-w-max space-y-3">
-                        {seatsByRow.map((row) => (
-                          <div key={row.row} className="flex items-center gap-3">
-                            <span className="w-6 text-sm font-semibold text-slate-500">{row.label}</span>
-                            <div className="flex gap-2">
-                              {row.seats.map((seat) => (
-                                <button
-                                  key={getSeatId(seat)}
-                                  type="button"
-                                  onClick={() => toggleSeat(seat)}
-                                  disabled={getSeatStatus(seat) !== 'AVAILABLE'}
-                                  title={`${getSeatLabel(seat)} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
-                                  style={getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : undefined}
-                                  className={`h-8 w-8 rounded-md text-[11px] font-semibold transition ${getSeatClassName(seat)}`}
-                                >
-                                  {(seat.gridColumn ?? 0) + 1}
-                                </button>
-                              ))}
-                            </div>
+                    <div className="overflow-x-auto rounded-xl bg-slate-50 p-6 border border-slate-200 shadow-inner">
+                      <div className="relative" style={{
+                        width: `${(seatBounds.maxCol - seatBounds.minCol + 1) * 38 + 80}px`,
+                        height: `${(seatBounds.maxRow - seatBounds.minRow + 1) * 38}px`
+                      }}>
+                        {activeRows.map(([gridRow, rowLabel]) => (
+                          <span
+                            key={`row-label-${gridRow}`}
+                            style={{
+                              position: 'absolute',
+                              left: '0px',
+                              top: `${(gridRow - seatBounds.minRow) * 38}px`,
+                              width: '64px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-start',
+                            }}
+                            className="text-xs font-bold text-slate-500 select-none"
+                          >
+                            Hàng {rowLabel}
+                          </span>
+                        ))}
+
+                        {/* Decorations sân khấu */}
+                        {(catalog.layoutDecorations || []).map((dec) => (
+                          <div
+                            key={`dec-${dec.id}`}
+                            style={{
+                              position: 'absolute',
+                              left: `${(dec.col - seatBounds.minCol) * 38 + 80}px`,
+                              top: `${(dec.row - seatBounds.minRow) * 38}px`,
+                              width: `${dec.colSpan * 38 - 6}px`,
+                              height: `${dec.rowSpan * 38 - 6}px`,
+                              borderRadius: dec.shape === 'ellipse' ? '50%' : '8px',
+                            }}
+                            className="absolute flex items-center justify-center bg-slate-900 border-2 border-amber-500 text-slate-100 font-bold text-[11px] shadow-md opacity-90 select-none"
+                          >
+                            {dec.label}
                           </div>
                         ))}
+
+                        {/* Ghế ngồi */}
+                        {catalog.seats.map((seat) => {
+                          const normalizedCol = (seat.gridColumn ?? 0) - seatBounds.minCol
+                          const normalizedRow = (seat.gridRow ?? 0) - seatBounds.minRow
+                          const seatLabelText = getSeatLabel(seat)
+                          // Giảm size chữ nếu nhãn quá dài (như dạng số 12-14)
+                          const isLongLabel = seatLabelText.length >= 4
+                          return (
+                            <button
+                              key={getSeatId(seat)}
+                              type="button"
+                              onClick={() => toggleSeat(seat)}
+                              disabled={getSeatStatus(seat) !== 'AVAILABLE'}
+                              title={`${seatLabelText} - ${getTicketClassName(seat)} - ${formatMoney(getSeatPrice(seat))}`}
+                              style={{
+                                position: 'absolute',
+                                left: `${normalizedCol * 38 + 80}px`,
+                                top: `${normalizedRow * 38}px`,
+                                width: '32px',
+                                height: '32px',
+                                ...(getSeatStatus(seat) === 'AVAILABLE' && !selectedSeatIds.includes(getSeatId(seat)) ? { backgroundColor: getTicketClassColor(seat) } : {})
+                              }}
+                              className={`rounded-md font-bold transition flex items-center justify-center ${isLongLabel ? 'text-[8px]' : 'text-[10px]'} ${getSeatClassName(seat)}`}
+                            >
+                              {seatLabelText}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -655,8 +735,8 @@ export default function POSPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="truncate text-sm font-semibold text-slate-900">{event.name}</h3>
-                        <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
-                          {event.status}
+                        <Badge className={`border ${event.status === 'ONSALE' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-violet-200 bg-violet-50 text-violet-700'}`}>
+                          {event.status === 'ONSALE' ? 'Đang mở bán' : event.status === 'TEASING' ? 'Sắp mở bán' : event.status}
                         </Badge>
                       </div>
                       <p className="mt-2 flex items-center gap-1 text-xs text-slate-600">

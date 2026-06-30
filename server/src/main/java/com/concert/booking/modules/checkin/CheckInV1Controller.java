@@ -49,7 +49,8 @@ public class CheckInV1Controller {
   public DataApiResponse<List<CheckInHistoryDTO>> getHistory(
       @RequestParam(required = false) UUID eventId,
       @RequestParam(required = false) String keyword) {
+    UUID staffId = AuthUtils.getCurrentUserId();
     return DataApiResponse.success(
-        checkInService.getHistory(eventId, keyword), "Lay lich su check-in thanh cong");
+        checkInService.getHistory(eventId, keyword, staffId), "Lấy lịch sử check-in thành công");
   }
 }
