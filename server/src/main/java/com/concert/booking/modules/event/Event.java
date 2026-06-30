@@ -51,5 +51,15 @@ public class Event extends AbstractAuditEntity {
   @Column(nullable = false, length = 20)
   EventStatus status = EventStatus.DRAFT;
 
+  @Column(name = "layout_id")
+  UUID layoutId;
+
+  @Column(name = "layout_template_type", length = 50)
+  String layoutTemplateType;
+
+  @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+  @Column(name = "layout_decorations", columnDefinition = "jsonb")
+  java.util.List<com.concert.booking.modules.layout.dto.LayoutDataDTO.LayoutDecorationDTO> layoutDecorations;
+
   @Version int version; // Hỗ trợ Optimistic Locking theo ERD
 }

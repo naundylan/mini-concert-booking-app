@@ -11,6 +11,7 @@ import com.concert.booking.modules.order.enums.OrderStatus;
 import com.concert.booking.modules.order.enums.PaymentMethod;
 import com.concert.booking.modules.order.enums.PaymentStatus;
 import com.concert.booking.modules.order.enums.TicketStatus;
+import com.concert.booking.modules.order.enums.EmailStatus;
 import com.concert.booking.modules.seat.Seat;
 import com.concert.booking.modules.seat.SeatHoldService;
 import com.concert.booking.modules.seat.SeatRepository;
@@ -109,6 +110,8 @@ public class OrderServiceImpl implements OrderService {
     return SeatCatalogDTO.builder()
         .eventId(event.getId())
         .eventName(event.getName())
+        .layoutTemplateType(event.getLayoutTemplateType())
+        .layoutDecorations(event.getLayoutDecorations())
         .ticketClasses(ticketClasses.stream().map(this::toTicketClassDTO).toList())
         .seats(seats)
         .build();
@@ -149,6 +152,7 @@ public class OrderServiceImpl implements OrderService {
                 .staffId(staffId)
                 .totalAmount(totalAmount)
                 .status(OrderStatus.PAID)
+                .emailStatus(EmailStatus.UNSENT)
                 .createdBy(staffId)
                 .build());
 
@@ -510,6 +514,8 @@ public class OrderServiceImpl implements OrderService {
       User salesStaff = order.getStaffId() != null ? userRepository.findById(order.getStaffId()).orElse(null) : null;
       long ticketCount = ticketRepository.countByOrderId(order.getId());
 
+      boolean isOnline = order.getStaffId() == null || order.getStaffId().equals(order.getCustomerId());
+
       return AdminOrderResponseDTO.builder()
           .id(order.getId())
           .orderCode(order.getOrderCode())
@@ -521,8 +527,8 @@ public class OrderServiceImpl implements OrderService {
           .status(order.getStatus())
           .createdAt(order.getCreatedAt())
           .ticketCount(ticketCount)
-          .channel(order.getStaffId() != null ? "POS" : "ONLINE")
-          .salesStaffName(salesStaff != null ? salesStaff.getFullName() : null)
+          .channel(isOnline ? "ONLINE" : "POS")
+          .salesStaffName(isOnline ? null : (salesStaff != null ? salesStaff.getFullName() : null))
           .build();
     });
   }
@@ -553,6 +559,8 @@ public class OrderServiceImpl implements OrderService {
           .build();
     }).collect(Collectors.toList());
 
+    boolean isOnline = order.getStaffId() == null || order.getStaffId().equals(order.getCustomerId());
+
     return AdminOrderDetailResponseDTO.builder()
         .id(order.getId())
         .orderCode(order.getOrderCode())
@@ -563,8 +571,8 @@ public class OrderServiceImpl implements OrderService {
         .totalAmount(order.getTotalAmount())
         .status(order.getStatus())
         .createdAt(order.getCreatedAt())
-        .channel(order.getStaffId() != null ? "POS" : "ONLINE")
-        .salesStaffName(salesStaff != null ? salesStaff.getFullName() : null)
+        .channel(isOnline ? "ONLINE" : "POS")
+        .salesStaffName(isOnline ? null : (salesStaff != null ? salesStaff.getFullName() : null))
         .tickets(ticketDTOs)
         .build();
   }

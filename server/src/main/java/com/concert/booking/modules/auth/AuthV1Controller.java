@@ -113,8 +113,9 @@ public class AuthV1Controller {
 
   @Operation(summary = "Quên mật khẩu", description = "Gửi yêu cầu khôi phục mật khẩu qua email.")
   @PostMapping("/forgot-password")
-  public DataApiResponse<Void> forgotPassword() {
-    return DataApiResponse.success(null, "Chức năng chưa được hỗ trợ trong Phase 1");
+  public DataApiResponse<Void> forgotPassword(@RequestBody @Valid ForgotPasswordDTO dto) {
+    authService.forgotPassword(dto);
+    return DataApiResponse.success(null, "Gửi email đặt lại mật khẩu thành công");
   }
 
   @Operation(
@@ -138,8 +139,11 @@ public class AuthV1Controller {
         "Đăng nhập thành công");
   }
 
-  public DataApiResponse<Void> resetPassword() {
-    return DataApiResponse.success(null, "Chức năng chưa được hỗ trợ trong Phase 1");
+  @Operation(summary = "Đặt lại mật khẩu", description = "Đặt lại mật khẩu mới thông qua token.")
+  @PostMapping("/reset-password")
+  public DataApiResponse<Void> resetPassword(@RequestBody @Valid ResetPasswordDTO dto) {
+    authService.resetPassword(dto);
+    return DataApiResponse.success(null, "Đặt lại mật khẩu thành công");
   }
 
   private User getCurrentUser() {

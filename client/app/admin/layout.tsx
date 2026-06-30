@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Sidebar from '@/components/admin/sidebar';
+import Sidebar from '@/components/shared/sidebar';
 import Header from '@/components/admin/header';
 import RoleGuard from '@/components/auth/role-guard';
 
@@ -17,6 +17,7 @@ export default function AdminLayout({
     <RoleGuard allowedRole="ADMIN">
       <div className="flex h-screen overflow-hidden bg-slate-50">
         <Sidebar
+          role="ADMIN"
           collapsed={sidebarCollapsed}
           mobileOpen={sidebarOpen}
           onToggleCollapse={() => setSidebarCollapsed((current) => !current)}

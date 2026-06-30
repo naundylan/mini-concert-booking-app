@@ -14,5 +14,7 @@ public interface VietQrService {
 
   boolean markSePayWebhookProcessed(Long sePayId);
 
+  void deleteSePayWebhookProcessed(Long sePayId);
+
   String buildQrUrl(BigDecimal amount, String content);
 }

@@ -14,6 +14,8 @@ import lombok.experimental.FieldDefaults;
 public class SeatCatalogDTO {
   UUID eventId;
   String eventName;
+  String layoutTemplateType;
+  List<com.concert.booking.modules.layout.dto.LayoutDataDTO.LayoutDecorationDTO> layoutDecorations;
   List<TicketClassDTO> ticketClasses;
   List<OrderItemResponseDTO> seats;
 

@@ -59,6 +59,17 @@ export interface CustomerSeatDTO {
 export interface CustomerSeatCatalogDTO {
   eventId: string
   eventName: string
+  layoutTemplateType?: string | null
+  layoutDecorations?: Array<{
+    id: string
+    type: string
+    label: string
+    row: number
+    col: number
+    rowSpan: number
+    colSpan: number
+    shape?: string | null
+  }> | null
   generatedAt: string
   seats: CustomerSeatDTO[]
 }
@@ -136,6 +147,11 @@ export interface CustomerTicketDTO {
   status?: CustomerTicketStatus
   qrPayload?: string
   ticketClass?: CustomerTicketClassDTO | null
+  customerPhone?: string | null
+  customerEmail?: string | null
+  customerName?: string | null
+  bookingTime?: string | null
+  paymentMethod?: string | null
 }
 
 export interface SeatSnapshotEvent {

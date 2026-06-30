@@ -129,6 +129,22 @@ export default function AdminOrdersPage() {
     return 'bg-blue-50 text-blue-700 border-blue-200';
   };
 
+  const translateOrderStatus = (status: string) => {
+    switch (status) {
+      case 'PAID': return 'Đã thanh toán';
+      case 'CANCELED': return 'Đã hủy';
+      default: return status;
+    }
+  };
+
+  const translateOrderChannel = (channel: string) => {
+    switch (channel) {
+      case 'POS': return 'Tại quầy';
+      case 'ONLINE': return 'Trực tuyến';
+      default: return channel;
+    }
+  };
+
   const orders = ordersPage?.content || [];
   const totalPages = ordersPage?.totalPages || 0;
   const totalElements = ordersPage?.totalElements || 0;
@@ -186,8 +202,8 @@ export default function AdminOrdersPage() {
               className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-44"
             >
               <option value="ALL">Tất cả trạng thái</option>
-              <option value="PAID">Đã thanh toán (PAID)</option>
-              <option value="CANCELED">Bị hủy (CANCELED)</option>
+              <option value="PAID">Đã thanh toán</option>
+              <option value="CANCELED">Bị hủy</option>
             </select>
           </div>
         </div>
@@ -242,12 +258,12 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-4 px-6 text-center">
                       <Badge className={`text-xs font-medium border ${getChannelBadgeStyle(order.channel)}`}>
-                        {order.channel}
+                        {translateOrderChannel(order.channel)}
                       </Badge>
                     </td>
                     <td className="py-4 px-6 text-center">
                       <Badge className={`text-xs font-medium border ${getStatusBadgeStyle(order.status)}`}>
-                        {order.status}
+                        {translateOrderStatus(order.status)}
                       </Badge>
                     </td>
                     <td className="py-4 px-6 text-center text-xs text-slate-500">
@@ -356,7 +372,7 @@ export default function AdminOrdersPage() {
                       <span className="font-medium">Kênh bán:</span>
                       <div className="flex gap-2">
                         <Badge className={`text-xs font-semibold ${getChannelBadgeStyle(orderDetail.channel)}`}>
-                          {orderDetail.channel}
+                          {translateOrderChannel(orderDetail.channel)}
                         </Badge>
                         {orderDetail.salesStaffName && (
                           <span className="text-xs text-slate-500 self-center">
@@ -379,7 +395,7 @@ export default function AdminOrdersPage() {
                           <th className="py-3 px-4">Hạng vé</th>
                           <th className="py-3 px-4 text-right">Giá</th>
                           <th className="py-3 px-4 text-center">Trạng thái vé</th>
-                          <th className="py-3 px-4">Thông tin Check-in</th>
+                          <th className="py-3 px-4">Thông tin soát vé</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -404,7 +420,7 @@ export default function AdminOrdersPage() {
                                     : 'bg-red-50 text-red-700 border-red-200'
                                 }`}
                               >
-                                {ticket.status === 'USED' ? 'ĐÃ CHECK-IN' : ticket.status === 'UNUSED' ? 'CHƯA DÙNG' : 'ĐÃ HỦY'}
+                                {ticket.status === 'USED' ? 'ĐÃ SOÁT VÉ' : ticket.status === 'UNUSED' ? 'CHƯA DÙNG' : 'ĐÃ HỦY'}
                               </Badge>
                             </td>
                             <td className="py-3 px-4 text-[11px] text-slate-500">
@@ -412,7 +428,7 @@ export default function AdminOrdersPage() {
                                 <div>
                                   <div>{formatDateTime(ticket.checkInTime)}</div>
                                   <div className="text-[10px] text-slate-400">
-                                    Soát vé: {ticket.checkInStaffName || 'N/A'}
+                                    Nhân viên soát vé: {ticket.checkInStaffName || 'Không rõ'}
                                   </div>
                                 </div>
                               ) : (
@@ -428,7 +444,7 @@ export default function AdminOrdersPage() {
 
                 {/* Footnote indicating read-only constraints */}
                 <div className="rounded-lg bg-indigo-50/50 border border-indigo-100 p-3 text-xs text-indigo-700">
-                  ⚠️ <strong>Thông tin Giao dịch:</strong> Chi tiết hóa đơn và trạng thái vé hiển thị dưới dạng <strong>Chỉ đọc (Read-only)</strong> để bảo vệ dữ liệu giao dịch concert. Mọi hành động chỉnh sửa hoặc hủy vé cần liên hệ bộ phận kiểm toán.
+                  ⚠️ <strong>Thông tin Giao dịch:</strong> Chi tiết hóa đơn và trạng thái vé hiển thị dưới dạng <strong>Chỉ đọc</strong> để bảo vệ dữ liệu giao dịch concert. Mọi hành động chỉnh sửa hoặc hủy vé cần liên hệ bộ phận kiểm toán.
                 </div>
               </div>
             )

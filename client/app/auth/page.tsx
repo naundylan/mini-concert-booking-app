@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -10,8 +11,8 @@ import { getDefaultRouteByRole, normalizeRole } from "@/lib/auth-client"
 import { toast } from "@/hooks/use-toast"
 
 const staffLoginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, 'Vui lòng nhập tên đăng nhập.'),
+  password: z.string().min(1, 'Vui lòng nhập mật khẩu.'),
 })
 
 type StaffLoginForm = z.infer<typeof staffLoginSchema>
@@ -125,7 +126,7 @@ export default function AuthPage() {
       <div className="text-center mb-6 z-10">
         <h1 className="text-3xl font-bold text-indigo-700 tracking-tight">Mini Concert Booking</h1>
         <p className="text-xs font-semibold text-indigo-400 tracking-[0.2em] uppercase mt-1">
-          Sign In
+          Đăng nhập
         </p>
       </div>
 
@@ -142,7 +143,7 @@ export default function AuthPage() {
             aria-selected={activeTab === "staff"}
             role="tab"
           >
-            Admin &amp; Staff
+            Quản trị &amp; Nhân viên
           </button>
           <button
             onClick={() => setActiveTab("customer")}
@@ -155,27 +156,27 @@ export default function AuthPage() {
             aria-selected={activeTab === "customer"}
             role="tab"
           >
-            Customer
+            Khách hàng
           </button>
         </div>
 
         <div className="p-6">
           {activeTab === "staff" && (
             <div role="tabpanel">
-              <h2 className="text-base font-semibold text-gray-800 mb-0.5">Internal Access</h2>
+              <h2 className="text-base font-semibold text-gray-800 mb-0.5">Truy cập nội bộ</h2>
               <p className="text-xs text-gray-400 mb-5">
-                Enter your credentials to manage concerts, bookings, and more.
+                Nhập thông tin đăng nhập để quản lý sự kiện, đơn hàng và hơn thế nữa.
               </p>
 
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <label htmlFor="username" className="text-xs font-medium text-gray-600">
-                    Username
+                  Tên đăng nhập
                   </label>
                   <input
                     id="username"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder="Nhập tên đăng nhập"
                     autoComplete="username"
                     {...register("username")}
                     className={cn(
@@ -191,14 +192,14 @@ export default function AuthPage() {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
                     <label htmlFor="password" className="text-xs font-medium text-gray-600">
-                      Password
+                      Mật khẩu
                     </label>
-                    <button
-                      type="button"
+                    <Link
+                      href="/auth/forgot-password"
                       className="text-xs text-indigo-500 hover:text-indigo-700 font-medium focus:outline-none"
                     >
-                      Forgot?
-                    </button>
+                      Quên mật khẩu?
+                    </Link>
                   </div>
                   <input
                     id="password"
@@ -221,7 +222,7 @@ export default function AuthPage() {
                   disabled={isLoading}
                   className="mt-1 w-full h-9 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-700 text-white text-sm font-semibold hover:from-indigo-600 hover:to-indigo-800 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                 >
-                  {isLoading ? "Logging in..." : "Login"}
+                  {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                 </button>
               </form>
             </div>
@@ -230,14 +231,14 @@ export default function AuthPage() {
           {activeTab === "customer" && (
             <div role="tabpanel" className="flex flex-col items-center py-4 gap-4">
               <p className="text-xs text-gray-400 text-center">
-                Sign in with your Google account to browse and book tickets.
+                Đăng nhập bằng tài khoản Google để duyệt và đặt vé sự kiện.
               </p>
               <button
                 onClick={handleGoogleLogin}
                 className="flex items-center gap-2.5 w-full h-9 rounded-full border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 justify-center"
               >
                 <GoogleIcon className="w-4 h-4 shrink-0" />
-                <span>Sign in with Google</span>
+                <span>Đăng nhập với Google</span>
               </button>
             </div>
           )}
@@ -246,20 +247,20 @@ export default function AuthPage() {
 
       <div className="mt-5 text-center z-10">
         <p className="text-xs text-gray-400">
-          {"Don't have an account? "}
+          {"Chưa có tài khoản? "}
           <button
             onClick={() => setActiveTab("customer")}
             className="text-indigo-500 font-semibold hover:text-indigo-700 transition-colors focus:outline-none"
           >
-            Apply for Access
+            Đăng ký với Google
           </button>
         </p>
         <div className="flex items-center justify-center gap-4 mt-2">
           <button className="text-[11px] text-gray-400 hover:text-gray-500 transition-colors focus:outline-none">
-            Privacy Policy
+            Chính sách riêng tư
           </button>
           <button className="text-[11px] text-gray-400 hover:text-gray-500 transition-colors focus:outline-none">
-            Terms of Service
+            Điều khoản dịch vụ
           </button>
           <button className="text-[11px] text-gray-400 hover:text-gray-500 flex items-center gap-1 transition-colors focus:outline-none">
             <svg
@@ -276,7 +277,7 @@ export default function AuthPage() {
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
               <path d="M12 17h.01" />
             </svg>
-            Support
+            Hỗ trợ
           </button>
         </div>
       </div>

@@ -11,6 +11,10 @@ import java.util.List;
 import com.concert.booking.modules.user.enums.AuthProvider;
 import com.concert.booking.modules.user.enums.UserRole;
 import com.concert.booking.modules.user.enums.UserStatus;
+import com.concert.booking.modules.audit.AuditLogService;
+import com.concert.booking.modules.audit.enums.AuditLogAction;
+import com.concert.booking.modules.audit.enums.AuditLogEntity;
+import com.concert.booking.modules.audit.enums.AuditLogStatus;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -28,6 +32,7 @@ public class UserServiceImpl implements UserService {
 
   UserRepository userRepository;
   PasswordEncoder passwordEncoder;
+  AuditLogService auditLogService;
 
   @Override
   @Transactional
@@ -58,7 +63,19 @@ public class UserServiceImpl implements UserService {
             .createdBy(createdBy)
             .build();
 
-    return userRepository.save(user);
+    User saved = userRepository.save(user);
+
+    auditLogService.log(
+        createdBy,
+        "ADMIN",
+        AuditLogAction.CREATE,
+        AuditLogEntity.USER,
+        saved.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Admin tạo nhân viên mới: " + saved.getUsername()
+    );
+
+    return saved;
   }
 
   @Override
@@ -103,6 +120,7 @@ public class UserServiceImpl implements UserService {
       throw new AppException(HttpStatus.BAD_REQUEST, "Người dùng này không phải là Staff");
     }
 
+    UserStatus oldStatus = staff.getStatus();
     staff.setStatus(dto.getStatus());
     staff.setUpdatedBy(updatedBy);
 
@@ -111,7 +129,17 @@ public class UserServiceImpl implements UserService {
       staff.setTokensValidFrom(Instant.now());
     }
 
-    userRepository.save(staff);
+    User saved = userRepository.save(staff);
+
+    auditLogService.log(
+        updatedBy,
+        "ADMIN",
+        AuditLogAction.UPDATE,
+        AuditLogEntity.USER,
+        saved.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Admin cập nhật trạng thái nhân viên " + saved.getUsername() + " từ " + oldStatus + " sang " + dto.getStatus()
+    );
   }
 
   @Override
@@ -131,7 +159,17 @@ public class UserServiceImpl implements UserService {
     // Force logout by invalidating all existing tokens
     staff.setTokensValidFrom(Instant.now());
 
-    userRepository.save(staff);
+    User saved = userRepository.save(staff);
+
+    auditLogService.log(
+        updatedBy,
+        "ADMIN",
+        AuditLogAction.UPDATE,
+        AuditLogEntity.USER,
+        saved.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Admin đặt lại mật khẩu cho nhân viên: " + saved.getUsername()
+    );
   }
 
   @Override
@@ -193,7 +231,19 @@ public class UserServiceImpl implements UserService {
     staff.setUsername(username);
     staff.setUpdatedBy(updatedBy);
 
-    return userRepository.save(staff);
+    User saved = userRepository.save(staff);
+
+    auditLogService.log(
+        updatedBy,
+        "ADMIN",
+        AuditLogAction.UPDATE,
+        AuditLogEntity.USER,
+        saved.getId().toString(),
+        AuditLogStatus.SUCCESS,
+        "Admin cập nhật thông tin chi tiết của nhân viên: " + saved.getUsername()
+    );
+
+    return saved;
   }
 
   @Override

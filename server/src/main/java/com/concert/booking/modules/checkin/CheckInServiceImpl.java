@@ -69,7 +69,15 @@ public class CheckInServiceImpl implements CheckInService {
     }
     ensureCheckInEvent(eventId);
 
-    List<Order> orders = orderRepository.searchCheckInOrders(eventId, normalizedKeyword);
+    UUID keywordUuid = null;
+    try {
+      keywordUuid = UUID.fromString(normalizedKeyword);
+    } catch (IllegalArgumentException e) {
+      // not a UUID
+    }
+
+    List<Order> orders =
+        orderRepository.searchCheckInOrders(eventId, normalizedKeyword, keywordUuid);
     return orders.stream().map(this::toOrderDTO).toList();
   }
 
@@ -137,10 +145,10 @@ public class CheckInServiceImpl implements CheckInService {
 
   @Override
   @Transactional(readOnly = true)
-  public List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword) {
+  public List<CheckInHistoryDTO> getHistory(UUID eventId, String keyword, UUID staffId) {
     String normalizedKeyword = keyword == null ? "" : keyword.trim();
     return ticketRepository
-        .findCheckInHistory(eventId, normalizedKeyword, PageRequest.of(0, 100))
+        .findCheckInHistory(eventId, normalizedKeyword, staffId, PageRequest.of(0, 100))
         .stream()
         .map(this::toHistoryDTO)
         .toList();
