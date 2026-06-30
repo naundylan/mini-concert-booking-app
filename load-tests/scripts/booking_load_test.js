@@ -5,12 +5,14 @@ import exec from 'k6/execution';
 // Base URL of the API. Can be overridden via env: -e BASE_URL=https://mini-concert-booking-app.duckdns.org/api/v1
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081/api/v1';
 
-// Default options for k6. Can be overridden via command line: k6 run --vus 100 --duration 30s
+// Default options for k6. Can be overridden via command line
 export const options = {
   stages: [
-    { duration: '10s', target: 50 },  // Ramp-up to 50 concurrent users
-    { duration: '20s', target: 100 }, // Stay at 100 users
-    { duration: '10s', target: 0 },   // Ramp-down to 0
+    { duration: '15s', target: 200 },  // Ramp-up to 200 VUs
+    { duration: '15s', target: 500 },  // Ramp-up to 500 VUs
+    { duration: '30s', target: 1000 }, // Ramp-up to 1000 VUs
+    { duration: '30s', target: 1000 }, // Hold 1000 VUs
+    { duration: '15s', target: 0 },    // Ramp-down to 0
   ],
   thresholds: {
     http_req_failed: ['rate<0.01'],   // Error rate must be less than 1%
@@ -30,7 +32,7 @@ function extractToken(res) {
   return null;
 }
 
-// Setup phase: runs once at the beginning to fetch active event and available seats
+// Setup phase: runs once at the beginning to fetch active event, available seats, and a shared login token
 export function setup() {
   const loginUrl = `${BASE_URL}/auth/sign-in`;
   const loginPayload = JSON.stringify({
@@ -95,58 +97,21 @@ export function setup() {
   return {
     eventId: eventId,
     seatIds: availableSeats,
+    token: token // Share the token with all VUs
   };
 }
-
-// Global variable within the VU context. Each VU runs in its own JS runtime instance,
-// so this token variable is local to each VU and persists across all iterations of the VU.
-let token = null;
 
 // VU (Virtual User) phase: runs concurrently for each user
 export default function (data) {
   const vuId = exec.vu.idInTest; // 1-indexed Virtual User ID across the entire test
   const totalVUs = exec.instance.vusInitialized; // Total initialized VUs for the scenario
-  const username = `staff_load_${vuId}`;
-  
-  // 1. Sign In as Staff - ONLY ON THE FIRST ITERATION
-  if (__ITER === 0 || !token) {
-    const loginUrl = `${BASE_URL}/auth/sign-in`;
-    const loginPayload = JSON.stringify({
-      username: username,
-      password: 'change-me',
-    });
-    const headers = { 'Content-Type': 'application/json' };
-    
-    const loginRes = http.post(loginUrl, loginPayload, { headers });
-    
-    const loginCheck = check(loginRes, {
-      'login status is 200': (r) => r.status === 200,
-    });
-
-    if (!loginCheck) {
-      console.error(`VU ${vuId} failed to log in: ${loginRes.status} ${loginRes.body}`);
-      sleep(1);
-      return;
-    }
-
-    token = extractToken(loginRes);
-    if (!token) {
-      console.error(`VU ${vuId} failed to extract accessToken from login cookies`);
-      sleep(1);
-      return;
-    }
-  }
 
   const authHeaders = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    'Authorization': `Bearer ${data.token}`
   };
 
   // 2. Select a unique seat for this VU and iteration to prevent collisions.
-  // We use exec.vu.idInTest and exec.instance.vusInitialized to distribute seats sequentially.
-  // e.g. For 5 VUs:
-  //      Iter 0: VU 1 -> index 0, VU 2 -> index 1, ..., VU 5 -> index 4
-  //      Iter 1: VU 1 -> index 5, VU 2 -> index 6, ..., VU 5 -> index 9
   const seatIndex = ((vuId - 1) + (__ITER * totalVUs)) % data.seatIds.length;
   const selectedSeatId = data.seatIds[seatIndex];
 
